@@ -1,0 +1,138 @@
+
+We want to build a cross-platform mobile and web app for managing and tracking go-karting leagues, competitions, and individual races. The goal is to provide organisers, racers, teams, and fans with a powerful, flexible tool to input results, track performance, and customise league rules. The core experience should be intuitive, data-rich, and highly customisable.
+
+Core Features
+
+⸻
+
+✅ 1. User Accounts & Roles
+	•	User types: Admin/Organiser, Racer, Team Manager, Spectator
+	•	Authentication via email, social login, and phone number
+	•	Permissions based on role (e.g., only Admins can edit rules, create competitions)
+
+⸻
+
+✅ 2. League & Competition Management
+
+Admins should be able to:
+	•	Create multiple Leagues (e.g., “Spring Championship”, “Amateur Cup”, “Head-to-Head Series”)
+	•	Define season dates, locations, and formats per league
+	•	Create multiple Competitions within a league:
+	•	Series Championship
+	•	Head-to-Head
+	•	Time Attack
+	•	Knockout brackets
+	•	One-off races / Time trials
+
+Customisation options per competition:
+	•	Points allocation rules
+	•	Bonus point rules (fastest lap, pole position, most overtakes etc.)
+	•	Race weights (e.g., double points for finals)
+	•	Tie-breaker rules
+	•	Minimum starters to award points
+
+⸻
+
+✅ 3. Race & Results Input
+	•	Create a Race Event with:
+	•	Date, track/location
+	•	Weather conditions (optional)
+	•	Heat/Qualifying/Final categories
+	•	Input racer times via:
+	•	Manual entry
+	•	CSV or spreadsheet upload
+	•	(Optional future) integration with timing hardware
+	•	Assign racers to heats or groups
+	•	Validate and approve results
+
+⸻
+
+✅ 4. League Tables & Standings
+
+Standings should:
+	•	Auto-calculate points by finishing position
+	•	Display breakdown:
+	•	Total points
+	•	Bonus points
+	•	Podium count
+	•	Best lap
+	•	DNF / DNS tallies
+	•	Allow sorting/filtering by team, individual, class, or competition type
+	•	Live leaderboards (optional real time feeds)
+
+⸻
+
+✅ 5. Custom Points & Rules Engine
+
+Admins can define:
+	•	Finishing position → point scale (e.g., 1st = 25, 2nd = 20, etc.)
+	•	Bonus point rules:
+	•	Fastest lap = +1
+	•	Pole position = +3
+	•	Most passed positions = +2
+	•	Scoring curves (e.g., exponential, linear, custom)
+	•	Weighted races (e.g., finale = 1.5× points)
+	•	Rule sets can be saved & reused across leagues
+
+⸻
+
+✅ 6. Racer & Team Profiles
+
+Profiles include:
+	•	Bio, photo, kart class
+	•	Team affiliation
+	•	Season history
+	•	Race results & stats
+	•	Achievements & badges
+
+⸻
+
+7. Notifications & Alerts
+	•	Push/Email/SMS
+	•	Race time changes, results posted, standings updated
+	•	Competition invites
+	•	Rule changes
+
+⸻
+
+8. Reporting & Analytics
+	•	Downloadable results
+	•	Historical performance charts
+	•	Export standings as PDF/CSV
+	•	Visual graphs (points over time, lap distributions)
+
+⸻
+
+9. Social & Sharing
+	•	Share race results & league tables on social media
+	•	Embedded links for leaderboards
+	•	Public “Spectator” view with live updating standings
+
+⸻
+
+10. UI/UX Requirements
+	•	Clean dashboards for organisers
+	•	Intuitive race entry forms
+	•	Mobile first — iOS & Android
+	•	Optional dark mode
+	•	Minimal data entry friction
+
+⸻
+
+Bonus Features (Nice to Have)
+
+✨ Race replay support — upload video and time sync
+✨ Photo uploads for results
+✨ QR code scanning for quick racer input
+✨ API for timing hardware or third-party integrations
+✨ Multi-language support
+✨ Subscription model + in-app purchases
+⸻
+
+Technical Stack Suggestions (Optional)
+	•	Frontend: React Native or Flutter (iOS & Android)
+	•	Backend: Node.js or Django
+	•	Database: PostgreSQL
+	•	Hosting: AWS / GCP
+	•	Auth: Auth0 or Firebase Auth
+	•	Analytics: Google Analytics / amplitude 
