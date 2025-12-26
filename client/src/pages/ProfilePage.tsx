@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCircle, Shield, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -20,11 +21,12 @@ export default function ProfilePage() {
     defaultValues: {
       bio: profile?.bio || "",
       kartNumber: profile?.kartNumber || "",
-      // Role is readonly for user usually, managed by admin or preset
+      role: profile?.role || "spectator",
     },
     values: { // Use 'values' to react to data loading
       bio: profile?.bio || "",
       kartNumber: profile?.kartNumber || "",
+      role: profile?.role || "spectator",
     }
   });
 
@@ -67,6 +69,30 @@ export default function ProfilePage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Account Role</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="bg-secondary/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="racer">Racer</SelectItem>
+                    <SelectItem value="team_manager">Team Manager</SelectItem>
+                    <SelectItem value="spectator">Spectator</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="kartNumber"
             render={({ field }) => (
               <FormItem>
@@ -97,7 +123,7 @@ export default function ProfilePage() {
             )}
           />
 
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending}>
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending} data-testid="button-save-profile">
             {updateProfile.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </form>
