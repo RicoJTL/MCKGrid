@@ -78,3 +78,22 @@ export function useAdminUpdateProfile() {
   });
 }
 
+export function useCreateDriver() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: { driverName: string; fullName: string; role?: string }) => {
+      const res = await apiRequest("POST", "/api/profiles/create-driver", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({ title: "Driver Created", description: "New driver has been added" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create driver", variant: "destructive" });
+    }
+  });
+}
+

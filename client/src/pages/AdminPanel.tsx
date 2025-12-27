@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAllProfiles, useAdminUpdateProfile } from "@/hooks/use-profile";
+import { useAllProfiles, useAdminUpdateProfile, useCreateDriver } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,23 +9,34 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield } from "lucide-react";
+import { Pencil, Users, Shield, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
-  fullName: z.string().optional(),
+  fullName: z.string().min(1, "Full name is required"),
   role: z.enum(["admin", "racer", "spectator"]),
 });
 
 export default function AdminPanel() {
   const { data: profiles, isLoading } = useAllProfiles();
   const updateProfile = useAdminUpdateProfile();
+  const createDriver = useCreateDriver();
   const [editingProfile, setEditingProfile] = useState<any>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const editForm = useForm<z.infer<typeof driverSchema>>({
+    resolver: zodResolver(driverSchema),
+    defaultValues: {
+      driverName: "",
+      fullName: "",
+      role: "racer",
+    },
+  });
+
+  const createForm = useForm<z.infer<typeof driverSchema>>({
     resolver: zodResolver(driverSchema),
     defaultValues: {
       driverName: "",
@@ -44,6 +55,15 @@ export default function AdminPanel() {
     });
   };
 
+  const onCreateDriver = (data: z.infer<typeof driverSchema>) => {
+    createDriver.mutate(data, {
+      onSuccess: () => {
+        setShowCreateDialog(false);
+        createForm.reset();
+      }
+    });
+  };
+
   const admins = profiles?.filter(p => p.role === 'admin') || [];
   const drivers = profiles?.filter(p => p.driverName && p.fullName) || [];
 
@@ -55,6 +75,9 @@ export default function AdminPanel() {
             <h1 className="text-3xl font-display font-bold italic">Admin Panel</h1>
             <p className="text-muted-foreground">Manage drivers and user roles</p>
           </div>
+          <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-driver">
+            <Plus className="w-4 h-4 mr-2" /> Create Driver
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -191,7 +214,7 @@ export default function AdminPanel() {
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name (optional)</FormLabel>
+                      <FormLabel>Full Name</FormLabel>
                       <FormControl>
                         <Input placeholder="Real name" {...field} data-testid="input-edit-full-name" />
                       </FormControl>
@@ -223,6 +246,69 @@ export default function AdminPanel() {
                 />
                 <Button type="submit" className="w-full bg-primary" disabled={updateProfile.isPending} data-testid="button-save-driver">
                   Save Changes
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle>Create Driver</DialogTitle>
+            </DialogHeader>
+            <Form {...createForm}>
+              <form onSubmit={createForm.handleSubmit(onCreateDriver)} className="space-y-4">
+                <FormField
+                  control={createForm.control}
+                  name="driverName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Driver Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Racing nickname" {...field} data-testid="input-create-driver-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Real name" {...field} data-testid="input-create-full-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-role">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="racer">Racer</SelectItem>
+                          <SelectItem value="spectator">Spectator</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full bg-primary" disabled={createDriver.isPending} data-testid="button-submit-create-driver">
+                  Create Driver
                 </Button>
               </form>
             </Form>

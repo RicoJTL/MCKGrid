@@ -87,6 +87,22 @@ export async function registerRoutes(
     res.json(profiles);
   });
 
+  // Admin: Create a new driver profile
+  app.post("/api/profiles/create-driver", requireAdmin, async (req: any, res) => {
+    const { driverName, fullName, role } = req.body;
+    if (!driverName || !fullName) {
+      return res.status(400).json({ error: "Driver name and full name are required" });
+    }
+    const validRole = role && ['admin', 'racer', 'spectator'].includes(role) ? role : 'racer';
+    const newProfile = await storage.createProfile({
+      userId: `manual-${Date.now()}`,
+      driverName,
+      fullName,
+      role: validRole,
+    });
+    res.status(201).json(newProfile);
+  });
+
   // Admin: Update any profile (whitelist allowed fields)
   app.patch("/api/profiles/:id", requireAdmin, async (req: any, res) => {
     const { driverName, fullName, role } = req.body;
