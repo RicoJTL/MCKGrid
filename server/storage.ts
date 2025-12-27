@@ -164,7 +164,10 @@ export class DatabaseStorage implements IStorage {
     return newProfile;
   }
   async hasAnyAdmin(): Promise<boolean> {
-    const admins = await db.select().from(profiles).where(eq(profiles.role, 'admin')).limit(1);
+    const { or } = await import('drizzle-orm');
+    const admins = await db.select().from(profiles).where(
+      or(eq(profiles.adminLevel, 'admin'), eq(profiles.adminLevel, 'super_admin'))
+    ).limit(1);
     return admins.length > 0;
   }
   async updateProfile(id: number, profileData: Partial<InsertProfile>): Promise<Profile> {

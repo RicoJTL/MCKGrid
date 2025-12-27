@@ -6,6 +6,7 @@ export * from "./models/auth";
 import { users } from "./models/auth";
 
 export const roleEnum = pgEnum("role", ["admin", "racer", "spectator"]);
+export const adminLevelEnum = pgEnum("admin_level", ["none", "admin", "super_admin"]);
 export const competitionTypeEnum = pgEnum("competition_type", ["series", "single_event", "head_to_head", "time_attack"]);
 export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "cancelled"]);
 
@@ -20,6 +21,7 @@ export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
   role: roleEnum("role").default("spectator").notNull(),
+  adminLevel: adminLevelEnum("admin_level").default("none").notNull(),
   teamId: integer("team_id").references(() => teams.id),
   fullName: text("full_name"),
   driverName: text("driver_name"),

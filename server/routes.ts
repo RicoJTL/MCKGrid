@@ -6,13 +6,24 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { api } from "@shared/routes";
 import { z } from "zod";
 
-// Middleware to check if user is admin
+// Middleware to check if user is admin or super_admin
 async function requireAdmin(req: any, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) return res.sendStatus(401);
   const userId = req.user.claims.sub;
   const profile = await storage.getProfile(userId);
-  if (!profile || profile.role !== "admin") {
+  if (!profile || (profile.adminLevel !== "admin" && profile.adminLevel !== "super_admin")) {
     return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
+// Middleware to check if user is super_admin
+async function requireSuperAdmin(req: any, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  const userId = req.user.claims.sub;
+  const profile = await storage.getProfile(userId);
+  if (!profile || profile.adminLevel !== "super_admin") {
+    return res.status(403).json({ error: "Super Admin access required" });
   }
   next();
 }
@@ -40,19 +51,24 @@ export async function registerRoutes(
   app.patch(api.profiles.me.path, async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = req.user.claims.sub;
+    const userEmail = req.user.claims.email;
     const profile = await storage.getProfile(userId);
     
     // Parse input - allow partial updates
     const { userId: _ignore, ...updateData } = req.body;
     
     if (!profile) {
-      // Auto-promote first user to admin if no admins exist
+      // Auto-promote first user to super_admin if no admins exist
+      // Also make ibzmebude@gmail.com a super_admin
       const hasAdmin = await storage.hasAnyAdmin();
-      const role = hasAdmin ? (updateData.role || "spectator") : "admin";
+      const isSuperAdminEmail = userEmail === 'ibzmebude@gmail.com';
+      const adminLevel = (!hasAdmin || isSuperAdminEmail) ? 'super_admin' : 'none';
+      const role = updateData.role || 'spectator';
       
       const newProfile = await storage.createProfile({
         userId,
         role,
+        adminLevel,
         fullName: updateData.fullName || null,
         driverName: updateData.driverName || null,
         profileImage: updateData.profileImage || null,
@@ -60,14 +76,19 @@ export async function registerRoutes(
       return res.json(newProfile);
     }
     
-    // Auto-promote existing user to admin if no admins exist in the system
+    // Auto-promote ibzmebude@gmail.com to super_admin if they aren't already
+    if (userEmail === 'ibzmebude@gmail.com' && profile.adminLevel !== 'super_admin') {
+      await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
+    }
+    
+    // Auto-promote existing user to super_admin if no admins exist in the system
     const hasAdmin = await storage.hasAnyAdmin();
-    if (!hasAdmin && profile.role !== 'admin') {
-      const promoted = await storage.updateProfile(profile.id, { role: 'admin' });
+    if (!hasAdmin && profile.adminLevel === 'none') {
+      const promoted = await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
       return res.json(promoted);
     }
     
-    // Only allow updating fields that are used by the profile page
+    // Only allow updating fields that are used by the profile page (NOT adminLevel)
     const allowedFields = ['role', 'fullName', 'driverName', 'profileImage'];
     const filteredUpdate: Record<string, any> = {};
     for (const key of allowedFields) {
@@ -121,6 +142,16 @@ export async function registerRoutes(
   app.delete("/api/profiles/:id", requireAdmin, async (req: any, res) => {
     await storage.deleteProfile(Number(req.params.id));
     res.sendStatus(204);
+  });
+
+  // Super Admin: Grant or revoke admin access
+  app.patch("/api/profiles/:id/admin-level", requireSuperAdmin, async (req: any, res) => {
+    const { adminLevel } = req.body;
+    if (!adminLevel || !['none', 'admin', 'super_admin'].includes(adminLevel)) {
+      return res.status(400).json({ error: "Invalid admin level" });
+    }
+    const updated = await storage.updateProfile(Number(req.params.id), { adminLevel });
+    res.json(updated);
   });
 
   // Get profile race history
