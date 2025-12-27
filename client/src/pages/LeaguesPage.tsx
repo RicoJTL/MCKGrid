@@ -1,5 +1,5 @@
-import { useLeagues, useCreateLeague } from "@/hooks/use-leagues";
-import { Plus, Trophy, Calendar, ArrowRight } from "lucide-react";
+import { useLeagues, useCreateLeague, useUpdateLeague, useDeleteLeague } from "@/hooks/use-leagues";
+import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -8,6 +8,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +39,11 @@ export default function LeaguesPage() {
   const { data: leagues, isLoading } = useLeagues();
   const { data: profile } = useProfile();
   const createLeague = useCreateLeague();
+  const updateLeague = useUpdateLeague();
+  const deleteLeague = useDeleteLeague();
   const [open, setOpen] = useState(false);
+  const [editingLeague, setEditingLeague] = useState<any>(null);
+  const [deletingLeague, setDeletingLeague] = useState<any>(null);
 
   const isAdmin = profile?.role === 'admin';
 
@@ -36,6 +56,13 @@ export default function LeaguesPage() {
     },
   });
 
+  const editForm = useForm({
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
   const onSubmit = (data: any) => {
     createLeague.mutate(data, {
       onSuccess: () => {
@@ -45,11 +72,25 @@ export default function LeaguesPage() {
     });
   };
 
+  const onUpdate = (data: any) => {
+    if (!editingLeague) return;
+    updateLeague.mutate({ id: editingLeague.id, data }, {
+      onSuccess: () => setEditingLeague(null)
+    });
+  };
+
+  const onDelete = () => {
+    if (!deletingLeague) return;
+    deleteLeague.mutate(deletingLeague.id, {
+      onSuccess: () => setDeletingLeague(null)
+    });
+  };
+
   if (isLoading) return <div className="text-center py-20 animate-pulse text-muted-foreground">Loading leagues...</div>;
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">Leagues</h1>
           <p className="text-muted-foreground">Championship series and ongoing competitions</p>
@@ -107,13 +148,40 @@ export default function LeaguesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {leagues?.map((league) => (
-          <Link key={league.id} href={`/leagues/${league.id}`}>
-            <div className="group relative p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 cursor-pointer overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Trophy className="w-24 h-24 rotate-12" />
+          <div key={league.id} className="group relative p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Trophy className="w-24 h-24 rotate-12" />
+            </div>
+            
+            {isAdmin && (
+              <div className="absolute top-2 right-2 z-20">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-league-menu-${league.id}`}>
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      editForm.reset({ name: league.name, description: league.description || "" });
+                      setEditingLeague(league);
+                    }}>
+                      <Pencil className="w-4 h-4 mr-2" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingLeague(league);
+                    }} className="text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              
-              <div className="relative z-10">
+            )}
+            
+            <Link href={`/leagues/${league.id}`}>
+              <div className="relative z-10 cursor-pointer">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
                   <Trophy className="w-6 h-6 text-primary group-hover:text-white" />
                 </div>
@@ -126,7 +194,7 @@ export default function LeaguesPage() {
                   {league.description || "No description provided."}
                 </p>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-white/5 pt-4">
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground border-t border-white/5 pt-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3 h-3" />
                     <span>
@@ -138,10 +206,70 @@ export default function LeaguesPage() {
                   </span>
                 </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
         ))}
       </div>
+
+      {/* Edit League Dialog */}
+      <Dialog open={!!editingLeague} onOpenChange={(open) => !open && setEditingLeague(null)}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Edit League</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onUpdate)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>League Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full bg-primary font-bold" disabled={updateLeague.isPending}>
+                Save Changes
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete League Alert */}
+      <AlertDialog open={!!deletingLeague} onOpenChange={(open) => !open && setDeletingLeague(null)}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete League?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deletingLeague?.name}" and all its competitions, races, and results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
