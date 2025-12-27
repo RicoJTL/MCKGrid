@@ -36,6 +36,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { z } from "zod";
 
 export default function CompetitionDetails() {
   const [match, params] = useRoute("/competitions/:id");
@@ -59,13 +61,17 @@ export default function CompetitionDetails() {
 
   const isAdmin = profile?.role === 'admin';
 
+  const raceFormSchema = insertRaceSchema.extend({
+    date: z.coerce.date({ message: "Select a valid date & time" }),
+  });
+
   const form = useForm({
-    resolver: zodResolver(insertRaceSchema),
+    resolver: zodResolver(raceFormSchema),
     defaultValues: {
       competitionId: compId,
       name: "",
       location: "",
-      date: new Date().toISOString(),
+      date: new Date(),
       status: "scheduled"
     },
   });
@@ -81,7 +87,7 @@ export default function CompetitionDetails() {
     defaultValues: {
       name: "",
       location: "",
-      date: "",
+      date: new Date() as Date | string,
       status: "scheduled",
     },
   });
@@ -212,7 +218,10 @@ export default function CompetitionDetails() {
                           <FormItem>
                             <FormLabel>Date & Time</FormLabel>
                             <FormControl>
-                              <Input type="datetime-local" {...field} className="block w-full" />
+                              <DateTimePicker
+                                value={field.value instanceof Date ? field.value : new Date(field.value)}
+                                onChange={(date) => field.onChange(date)}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -532,7 +541,10 @@ export default function CompetitionDetails() {
                   <FormItem>
                     <FormLabel>Date & Time</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} className="block w-full" />
+                      <DateTimePicker
+                        value={field.value instanceof Date ? field.value : (field.value ? new Date(field.value) : new Date())}
+                        onChange={(date) => field.onChange(date)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

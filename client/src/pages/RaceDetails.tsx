@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   Table,
   TableBody,
@@ -66,7 +67,7 @@ export default function RaceDetails() {
     defaultValues: {
       name: "",
       location: "",
-      date: "",
+      date: new Date() as Date | string,
       status: "scheduled",
     },
   });
@@ -240,7 +241,10 @@ export default function RaceDetails() {
                   <FormItem>
                     <FormLabel>Date & Time</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} className="block w-full" />
+                      <DateTimePicker
+                        value={field.value instanceof Date ? field.value : (field.value ? new Date(field.value) : new Date())}
+                        onChange={(date) => field.onChange(date)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
