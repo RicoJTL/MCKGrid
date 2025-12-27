@@ -139,3 +139,92 @@ export function useCreateRace() {
     },
   });
 }
+
+// Competition standings (league table)
+export function useCompetitionStandings(competitionId: number) {
+  return useQuery({
+    queryKey: ['standings', competitionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/competitions/${competitionId}/standings`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch standings");
+      return await res.json() as Array<{
+        racerId: number;
+        driverName: string | null;
+        fullName: string | null;
+        points: number;
+        podiums: number;
+      }>;
+    },
+    enabled: !!competitionId,
+  });
+}
+
+// Competition info
+export function useCompetition(id: number) {
+  return useQuery<Competition>({
+    queryKey: ['competition', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/competitions/${id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch competition");
+      return await res.json();
+    },
+    enabled: !!id,
+  });
+}
+
+// Dashboard data hook - fetches main competition standings and upcoming races
+export function useDashboardData() {
+  return useQuery({
+    queryKey: ['dashboard-data'],
+    queryFn: async () => {
+      // Get all leagues
+      const leaguesRes = await fetch('/api/leagues', { credentials: "include" });
+      if (!leaguesRes.ok) {
+        return { standings: [], competition: null, upcomingRaces: [] };
+      }
+      const leagues: League[] = await leaguesRes.json();
+      if (leagues.length === 0) {
+        return { standings: [], competition: null, upcomingRaces: [] };
+      }
+      
+      // Get competitions for first league
+      const compsRes = await fetch(`/api/leagues/${leagues[0].id}/competitions`, { credentials: "include" });
+      if (!compsRes.ok) {
+        return { standings: [], competition: null, upcomingRaces: [] };
+      }
+      const comps: Competition[] = await compsRes.json();
+      if (comps.length === 0) {
+        return { standings: [], competition: null, upcomingRaces: [] };
+      }
+      
+      const mainComp = comps[0];
+      
+      // Fetch standings and races in parallel
+      const [standingsRes, racesRes] = await Promise.all([
+        fetch(`/api/competitions/${mainComp.id}/standings`, { credentials: "include" }),
+        fetch(`/api/competitions/${mainComp.id}/races`, { credentials: "include" }),
+      ]);
+      
+      const standings = standingsRes.ok ? await standingsRes.json() : [];
+      const allRaces: Race[] = racesRes.ok ? await racesRes.json() : [];
+      
+      // Filter upcoming races (scheduled status)
+      const upcomingRaces = allRaces
+        .filter(r => r.status === 'scheduled')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      return {
+        standings: standings as Array<{
+          racerId: number;
+          driverName: string | null;
+          fullName: string | null;
+          points: number;
+          podiums: number;
+        }>,
+        competition: mainComp,
+        upcomingRaces,
+      };
+    },
+    staleTime: 30000, // Cache for 30 seconds
+  });
+}

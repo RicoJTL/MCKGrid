@@ -4,7 +4,7 @@ import {
   type League, type Competition, type Race, type Result, type Profile, type Team,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Leagues
@@ -36,6 +36,10 @@ export interface IStorage {
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
   getProfileRaceHistory(profileId: number): Promise<any[]>;
+  
+  // Standings
+  getCompetitionStandings(competitionId: number): Promise<any[]>;
+  getUpcomingRaces(competitionId?: number): Promise<Race[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -82,12 +86,9 @@ export class DatabaseStorage implements IStorage {
   async replaceRaceResults(raceId: number, resultsData: Omit<InsertResult, 'raceId'>[]): Promise<Result[]> {
     if (resultsData.length === 0) return [];
     
-    // Use transaction to atomically clear and insert new results
     return await db.transaction(async (tx) => {
-      // Clear existing results for this race
       await tx.delete(results).where(eq(results.raceId, raceId));
       
-      // Insert new results with raceId
       const fullResults: InsertResult[] = resultsData.map(r => ({
         ...r,
         raceId,
@@ -135,6 +136,64 @@ export class DatabaseStorage implements IStorage {
       .where(eq(results.racerId, profileId))
       .orderBy(desc(races.date));
     return profileResults;
+  }
+
+  async getCompetitionStandings(competitionId: number): Promise<any[]> {
+    // Get all races for this competition
+    const competitionRaces = await db.select().from(races).where(eq(races.competitionId, competitionId));
+    if (competitionRaces.length === 0) return [];
+
+    const raceIds = competitionRaces.map(r => r.id);
+    
+    // Get all results for all races in this competition using inArray
+    const allRaceResults = await db
+      .select({
+        racerId: results.racerId,
+        position: results.position,
+        points: results.points,
+        driverName: profiles.driverName,
+        fullName: profiles.fullName,
+      })
+      .from(results)
+      .innerJoin(profiles, eq(results.racerId, profiles.id))
+      .where(inArray(results.raceId, raceIds));
+
+    // Aggregate by racer
+    const standingsMap = new Map<number, { racerId: number; driverName: string | null; fullName: string | null; points: number; podiums: number }>();
+    
+    for (const result of allRaceResults) {
+      const existing = standingsMap.get(result.racerId);
+      if (existing) {
+        existing.points += result.points;
+        if (result.position <= 3) existing.podiums += 1;
+      } else {
+        standingsMap.set(result.racerId, {
+          racerId: result.racerId,
+          driverName: result.driverName,
+          fullName: result.fullName,
+          points: result.points,
+          podiums: result.position <= 3 ? 1 : 0,
+        });
+      }
+    }
+
+    // Sort by points descending
+    return Array.from(standingsMap.values()).sort((a, b) => b.points - a.points);
+  }
+
+  async getUpcomingRaces(competitionId?: number): Promise<Race[]> {
+    if (competitionId) {
+      // Filter by competition AND scheduled status
+      return await db.select().from(races)
+        .where(and(
+          eq(races.competitionId, competitionId),
+          eq(races.status, 'scheduled')
+        ))
+        .orderBy(races.date);
+    }
+    
+    // All scheduled races
+    return await db.select().from(races).where(eq(races.status, 'scheduled')).orderBy(races.date);
   }
 }
 

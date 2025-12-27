@@ -111,6 +111,18 @@ export async function registerRoutes(
     if (!competition) return res.sendStatus(404);
     res.json(competition);
   });
+
+  // Competition standings (league table)
+  app.get("/api/competitions/:id/standings", async (req, res) => {
+    const standings = await storage.getCompetitionStandings(Number(req.params.id));
+    res.json(standings);
+  });
+
+  // Upcoming races for a competition
+  app.get("/api/competitions/:id/upcoming", async (req, res) => {
+    const upcoming = await storage.getUpcomingRaces(Number(req.params.id));
+    res.json(upcoming);
+  });
   
   app.post(api.competitions.create.path, requireAdmin, async (req, res) => {
     const input = api.competitions.create.input.parse(req.body);

@@ -21,17 +21,19 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">
-      <div className="p-6 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <Flag className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-xl font-bold font-display italic tracking-wider text-white">
-              GRID<span className="text-primary">LINE</span>
-            </h1>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">Racing</p>
+      <Link href="/">
+        <div className="p-6 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors">
+          <div className="flex items-center gap-3">
+            <Flag className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-xl font-bold font-display italic tracking-wider text-white">
+                GRID<span className="text-primary">LINE</span>
+              </h1>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase">Racing</p>
+            </div>
           </div>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {

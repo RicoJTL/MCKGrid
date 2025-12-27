@@ -1,42 +1,61 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
+import { useDashboardData } from "@/hooks/use-leagues";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Activity, Crown } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: dashboardData, isLoading: dashboardLoading } = useDashboardData();
   const [, setLocation] = useLocation();
 
-  // Redirect to profile creation if no profile exists
-  if (!isLoading && !profile) {
+  if (!profileLoading && !profile) {
     setLocation("/profile");
     return null;
   }
+
+  const isLoading = profileLoading || dashboardLoading;
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-40 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="h-80 rounded-2xl" />
+          <Skeleton className="h-80 rounded-2xl" />
         </div>
       </div>
     );
   }
 
   const roleDisplay = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Racer';
+  
+  const standings = dashboardData?.standings || [];
+  const competition = dashboardData?.competition;
+  const upcomingRaces = dashboardData?.upcomingRaces || [];
+  const nextRace = upcomingRaces[0];
+  
+  // Find current user's position
+  const userStanding = standings.find((s) => s.racerId === profile?.id);
+  const userPosition = userStanding ? standings.indexOf(userStanding) + 1 : null;
+  const leader = standings[0];
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">
-            Welcome back, <span className="text-primary">{user?.firstName}</span>
+            Welcome back, <span className="text-primary">{profile?.driverName || user?.firstName || 'Racer'}</span>
           </h1>
           <p className="text-muted-foreground flex items-center gap-2">
             <User className="w-4 h-4" />
@@ -55,37 +74,106 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: "Active League", value: "Summer Cup", icon: Trophy, color: "text-yellow-500" },
-          { label: "Next Race", value: "Monza GP", icon: Calendar, color: "text-blue-500" },
-          { label: "Current Rank", value: "P3", icon: Crown, color: "text-primary" },
-          { label: "Best Lap", value: "1:24.5", icon: Activity, color: "text-green-500" },
-        ].map((stat, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.1 }}
-            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <stat.icon className="w-16 h-16" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0 }}
+          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Trophy className="w-16 h-16" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-white/5 text-yellow-500">
+              <Trophy className="w-5 h-5" />
             </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-2 rounded-lg bg-white/5 ${stat.color}`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">{stat.label}</span>
+            <span className="text-sm font-medium text-muted-foreground">Active Championship</span>
+          </div>
+          <div className="text-xl font-bold font-display italic truncate">
+            {competition?.name || 'No active competition'}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Calendar className="w-16 h-16" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-white/5 text-blue-500">
+              <Calendar className="w-5 h-5" />
             </div>
-            <div className="text-2xl font-bold font-display italic">{stat.value}</div>
-          </motion.div>
-        ))}
+            <span className="text-sm font-medium text-muted-foreground">Next Race</span>
+          </div>
+          <div className="text-xl font-bold font-display italic truncate">
+            {nextRace?.name || 'No scheduled races'}
+          </div>
+          {nextRace && (
+            <div className="text-sm text-muted-foreground mt-1">
+              {format(new Date(nextRace.date), 'MMM dd, yyyy')}
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Crown className="w-16 h-16" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-white/5 text-primary">
+              <Crown className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-medium text-muted-foreground">Your Position</span>
+          </div>
+          <div className="text-2xl font-bold font-display italic">
+            {userPosition ? `P${userPosition}` : '--'}
+          </div>
+          {userStanding && (
+            <div className="text-sm text-muted-foreground mt-1">
+              {userStanding.points} points
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Medal className="w-16 h-16" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-white/5 text-green-500">
+              <Medal className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
+          </div>
+          <div className="text-xl font-bold font-display italic truncate">
+            {leader?.driverName || leader?.fullName || 'TBD'}
+          </div>
+          {leader && (
+            <div className="text-sm text-muted-foreground mt-1">
+              {leader.points} points
+            </div>
+          )}
+        </motion.div>
       </div>
 
-      {/* Recent Activity / Upcoming */}
+      {/* Upcoming Races & Standings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="p-6 rounded-2xl bg-secondary/30 border border-white/5">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 gap-2">
             <h3 className="text-xl font-bold font-display italic">Upcoming Races</h3>
             <Link href="/leagues">
               <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">
@@ -94,38 +182,88 @@ export default function Dashboard() {
             </Link>
           </div>
           
-          <div className="space-y-4">
-            {[1, 2, 3].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold font-display italic">
-                    {12 + i}
-                    <span className="text-[10px] ml-0.5">MAY</span>
+          {upcomingRaces.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingRaces.slice(0, 4).map((race) => (
+                <Link key={race.id} href={`/races/${race.id}`}>
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary font-bold font-display">
+                        <span className="text-sm">{format(new Date(race.date), 'dd')}</span>
+                        <span className="text-[10px]">{format(new Date(race.date), 'MMM')}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold">{race.name}</h4>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> {race.location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20">
+                      Scheduled
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold">Grand Prix {i + 1}</h4>
-                    <p className="text-sm text-muted-foreground">Silverstone Circuit</p>
-                  </div>
-                </div>
-                <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20">
-                  Scheduled
-                </div>
-              </div>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[200px] text-center text-muted-foreground">
+              <Calendar className="w-12 h-12 mb-4 opacity-20" />
+              <p>No upcoming races.</p>
+              <p className="text-sm">Schedule some races to see them here!</p>
+            </div>
+          )}
         </div>
 
         <div className="p-6 rounded-2xl bg-secondary/30 border border-white/5">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold font-display italic">Recent Results</h3>
+          <div className="flex items-center justify-between mb-6 gap-2">
+            <h3 className="text-xl font-bold font-display italic">Championship Standings</h3>
+            {competition && (
+              <Link href={`/competitions/${competition.id}`}>
+                <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">
+                  Full Table <ArrowRight className="w-3 h-3" />
+                </span>
+              </Link>
+            )}
           </div>
           
-          {/* Placeholder for when no results exist */}
-          <div className="flex flex-col items-center justify-center h-[240px] text-center text-muted-foreground">
-            <Trophy className="w-12 h-12 mb-4 opacity-20" />
-            <p>No race results yet.</p>
-            <p className="text-sm">Complete your first race to see stats!</p>
-          </div>
+          {standings.length > 0 ? (
+            <div className="space-y-2">
+              {standings.slice(0, 5).map((driver, index: number) => (
+                <div 
+                  key={driver.racerId}
+                  className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold font-display text-sm ${
+                      index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                      index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                      index === 2 ? 'bg-orange-600/20 text-orange-400' :
+                      'bg-white/10 text-muted-foreground'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <span className="font-medium">{driver.driverName || driver.fullName || 'Unknown'}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Medal className="w-3 h-3 text-yellow-500" />
+                      {driver.podiums}
+                    </div>
+                    <span className="font-display font-bold text-primary min-w-[50px] text-right">
+                      {driver.points} pts
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[200px] text-center text-muted-foreground">
+              <Trophy className="w-12 h-12 mb-4 opacity-20" />
+              <p>No standings yet.</p>
+              <p className="text-sm">Complete races to see the leaderboard!</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
