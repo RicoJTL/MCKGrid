@@ -85,14 +85,19 @@ export function useCreateDriver() {
   return useMutation({
     mutationFn: async (data: { driverName: string; fullName: string; role?: string }) => {
       const res = await apiRequest("POST", "/api/profiles/create-driver", data);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
       toast({ title: "Driver Created", description: "New driver has been added" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create driver", variant: "destructive" });
+    onError: (error: Error) => {
+      console.error("Create driver error:", error);
+      toast({ title: "Error", description: error.message || "Failed to create driver", variant: "destructive" });
     }
   });
 }

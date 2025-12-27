@@ -125,20 +125,25 @@ export async function registerRoutes(
 
   // Admin: Create a new driver profile (role is account type, admin access is separate)
   app.post("/api/profiles/create-driver", requireAdmin, async (req: any, res) => {
-    const { driverName, fullName, role } = req.body;
-    if (!driverName || !fullName) {
-      return res.status(400).json({ error: "Driver name and full name are required" });
+    try {
+      const { driverName, fullName, role } = req.body;
+      if (!driverName || !fullName) {
+        return res.status(400).json({ error: "Driver name and full name are required" });
+      }
+      // Only allow racer or spectator as account types - admin access is controlled via adminLevel
+      const validRole = role && ['racer', 'spectator'].includes(role) ? role : 'racer';
+      const newProfile = await storage.createProfile({
+        userId: `manual-${Date.now()}`,
+        driverName,
+        fullName,
+        role: validRole,
+        adminLevel: 'none',
+      });
+      res.status(201).json(newProfile);
+    } catch (error) {
+      console.error("Error creating driver:", error);
+      res.status(500).json({ error: "Failed to create driver" });
     }
-    // Only allow racer or spectator as account types - admin access is controlled via adminLevel
-    const validRole = role && ['racer', 'spectator'].includes(role) ? role : 'racer';
-    const newProfile = await storage.createProfile({
-      userId: `manual-${Date.now()}`,
-      driverName,
-      fullName,
-      role: validRole,
-      adminLevel: 'none',
-    });
-    res.status(201).json(newProfile);
   });
 
   // Admin: Update any profile (role is account type only, admin access controlled via separate endpoint)
