@@ -125,7 +125,7 @@ export function useUpdateAdminLevel() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, adminLevel }: { id: number; adminLevel: "none" | "admin" | "super_admin" }) => {
+    mutationFn: async ({ id, adminLevel }: { id: number; adminLevel: "none" | "admin" }) => {
       const res = await apiRequest("PATCH", `/api/profiles/${id}/admin-level`, { adminLevel });
       return res.json();
     },

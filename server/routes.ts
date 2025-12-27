@@ -166,10 +166,11 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
-  // Super Admin: Grant or revoke admin access
+  // Super Admin: Grant or revoke admin access (cannot promote to super_admin)
   app.patch("/api/profiles/:id/admin-level", requireSuperAdmin, async (req: any, res) => {
     const { adminLevel } = req.body;
-    if (!adminLevel || !['none', 'admin', 'super_admin'].includes(adminLevel)) {
+    // Only allow setting to 'none' or 'admin' - super_admin cannot be granted via API
+    if (!adminLevel || !['none', 'admin'].includes(adminLevel)) {
       return res.status(400).json({ error: "Invalid admin level" });
     }
     const updated = await storage.updateProfile(Number(req.params.id), { adminLevel });

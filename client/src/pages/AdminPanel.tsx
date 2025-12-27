@@ -225,10 +225,10 @@ export default function AdminPanel() {
                       >
                         {getRoleDisplay(profile.role)}
                       </Badge>
-                      {isSuperAdmin && profile.id !== currentProfile?.id && (
+                      {isSuperAdmin && profile.id !== currentProfile?.id && profile.adminLevel !== 'super_admin' && (
                         <Select 
                           value={profile.adminLevel}
-                          onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" | "super_admin" })}
+                          onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" })}
                         >
                           <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
                             <SelectValue />
@@ -236,7 +236,6 @@ export default function AdminPanel() {
                           <SelectContent>
                             <SelectItem value="none">No Admin</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="super_admin">Super Admin</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
