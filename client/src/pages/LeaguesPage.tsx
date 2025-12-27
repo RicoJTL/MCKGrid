@@ -45,7 +45,7 @@ export default function LeaguesPage() {
   const [editingLeague, setEditingLeague] = useState<any>(null);
   const [deletingLeague, setDeletingLeague] = useState<any>(null);
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   const form = useForm({
     resolver: zodResolver(insertLeagueSchema),

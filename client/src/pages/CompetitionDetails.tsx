@@ -63,7 +63,7 @@ export default function CompetitionDetails() {
   const [editingRace, setEditingRace] = useState<any>(null);
   const [deletingRace, setDeletingRace] = useState<any>(null);
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   const raceFormSchema = insertRaceSchema.extend({
     date: z.coerce.date({ message: "Select a valid date & time" }),

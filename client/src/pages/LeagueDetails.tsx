@@ -55,7 +55,7 @@ export default function LeagueDetails() {
   const [editingComp, setEditingComp] = useState<any>(null);
   const [deletingComp, setDeletingComp] = useState<any>(null);
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   const compForm = useForm({
     resolver: zodResolver(insertCompetitionSchema),

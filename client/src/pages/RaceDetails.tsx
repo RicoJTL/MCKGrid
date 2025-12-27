@@ -61,7 +61,7 @@ export default function RaceDetails() {
   const [openEditRace, setOpenEditRace] = useState(false);
   const [deleteRaceOpen, setDeleteRaceOpen] = useState(false);
   
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   const editRaceForm = useForm({
     defaultValues: {

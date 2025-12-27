@@ -56,7 +56,7 @@ export default function TeamsPage() {
   const createTeam = useCreateTeam();
   const { data: profile } = useProfile();
   const [open, setOpen] = useState(false);
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   const form = useForm({
     resolver: zodResolver(insertTeamSchema),
