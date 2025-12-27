@@ -130,10 +130,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async replaceRaceResults(raceId: number, resultsData: Omit<InsertResult, 'raceId'>[]): Promise<Result[]> {
-    if (resultsData.length === 0) return [];
-    
     return await db.transaction(async (tx) => {
+      // Always delete existing results first
       await tx.delete(results).where(eq(results.raceId, raceId));
+      
+      // If no new results, just return empty array
+      if (resultsData.length === 0) return [];
       
       const fullResults: InsertResult[] = resultsData.map(r => ({
         ...r,
