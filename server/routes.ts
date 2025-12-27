@@ -46,15 +46,25 @@ export async function registerRoutes(
     const { userId: _ignore, ...updateData } = req.body;
     
     if (!profile) {
-      // Create new profile with only the fields used by profile page
+      // Auto-promote first user to admin if no admins exist
+      const hasAdmin = await storage.hasAnyAdmin();
+      const role = hasAdmin ? (updateData.role || "spectator") : "admin";
+      
       const newProfile = await storage.createProfile({
         userId,
-        role: updateData.role || "spectator",
+        role,
         fullName: updateData.fullName || null,
         driverName: updateData.driverName || null,
         profileImage: updateData.profileImage || null,
       });
       return res.json(newProfile);
+    }
+    
+    // Auto-promote existing user to admin if no admins exist in the system
+    const hasAdmin = await storage.hasAnyAdmin();
+    if (!hasAdmin && profile.role !== 'admin') {
+      const promoted = await storage.updateProfile(profile.id, { role: 'admin' });
+      return res.json(promoted);
     }
     
     // Only allow updating fields that are used by the profile page

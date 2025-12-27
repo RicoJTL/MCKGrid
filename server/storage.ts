@@ -42,6 +42,7 @@ export interface IStorage {
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
   getProfileRaceHistory(profileId: number): Promise<any[]>;
+  hasAnyAdmin(): Promise<boolean>;
   
   // Standings
   getCompetitionStandings(competitionId: number): Promise<any[]>;
@@ -160,6 +161,10 @@ export class DatabaseStorage implements IStorage {
   async createProfile(profile: InsertProfile): Promise<Profile> {
     const [newProfile] = await db.insert(profiles).values(profile).returning();
     return newProfile;
+  }
+  async hasAnyAdmin(): Promise<boolean> {
+    const admins = await db.select().from(profiles).where(eq(profiles.role, 'admin')).limit(1);
+    return admins.length > 0;
   }
   async updateProfile(id: number, profileData: Partial<InsertProfile>): Promise<Profile> {
     const [updated] = await db.update(profiles).set(profileData).where(eq(profiles.id, id)).returning();
