@@ -87,7 +87,7 @@ export default function Dashboard() {
             <div className="p-2 rounded-lg bg-white/5 text-yellow-500">
               <Trophy className="w-5 h-5" />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Active Championship</span>
+            <span className="text-sm font-medium text-muted-foreground">Active Competitions</span>
           </div>
           <div className="text-xl font-bold font-display italic truncate">
             {competition?.name || 'No active competition'}
