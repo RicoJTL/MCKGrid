@@ -156,7 +156,8 @@ export default function RaceDetails() {
 
         {isEditing ? (
           <ResultsEditor 
-            raceId={raceId} 
+            raceId={raceId}
+            competitionId={race.competitionId}
             existingResults={results || []} 
             profiles={profiles || []}
             onCancel={() => setIsEditing(false)} 
@@ -309,13 +310,15 @@ interface ResultEntry {
 }
 
 function ResultsEditor({ 
-  raceId, 
+  raceId,
+  competitionId,
   existingResults, 
   profiles,
   onCancel, 
   onSave 
 }: { 
-  raceId: number; 
+  raceId: number;
+  competitionId: number;
   existingResults: any[]; 
   profiles: Profile[];
   onCancel: () => void; 
@@ -367,7 +370,7 @@ function ResultsEditor({
       return;
     }
 
-    submitResults.mutate({ raceId, results: resultsData }, {
+    submitResults.mutate({ raceId, competitionId, results: resultsData }, {
       onSuccess: () => {
         toast({ title: "Results saved!" });
         onSave();

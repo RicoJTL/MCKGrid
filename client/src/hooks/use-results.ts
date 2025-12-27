@@ -21,7 +21,7 @@ export function useSubmitResults() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ raceId, results }: { raceId: number; results: any[] }) => {
+    mutationFn: async ({ raceId, competitionId, results }: { raceId: number; competitionId: number; results: any[] }) => {
       const validated = api.results.submit.input.parse(results);
       const url = buildUrl(api.results.submit.path, { id: raceId });
       const res = await fetch(url, {
@@ -34,10 +34,12 @@ export function useSubmitResults() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || "Failed to submit results");
       }
-      return { data: await res.json(), raceId };
+      return { data: await res.json(), raceId, competitionId };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: [api.results.list.path, result.raceId] });
+      queryClient.invalidateQueries({ queryKey: ['standings', result.competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
       toast({ title: "Results Submitted", description: "Podium decided!" });
     },
     onError: (err: Error) => {
