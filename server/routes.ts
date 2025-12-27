@@ -107,7 +107,13 @@ export async function registerRoutes(
   });
   
   app.post(api.leagues.create.path, requireAdmin, async (req, res) => {
-    const input = api.leagues.create.input.parse(req.body);
+    // Convert date strings to Date objects before validation
+    const body = {
+      ...req.body,
+      seasonStart: req.body.seasonStart ? new Date(req.body.seasonStart) : undefined,
+      seasonEnd: req.body.seasonEnd ? new Date(req.body.seasonEnd) : undefined,
+    };
+    const input = api.leagues.create.input.parse(body);
     const league = await storage.createLeague(input);
     res.status(201).json(league);
   });
@@ -186,7 +192,12 @@ export async function registerRoutes(
   });
   
   app.post(api.races.create.path, requireAdmin, async (req, res) => {
-    const input = api.races.create.input.parse(req.body);
+    // Convert date string to Date object before validation
+    const body = {
+      ...req.body,
+      date: req.body.date ? new Date(req.body.date) : undefined,
+    };
+    const input = api.races.create.input.parse(body);
     const race = await storage.createRace(input);
     res.status(201).json(race);
   });
