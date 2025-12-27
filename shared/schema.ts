@@ -5,7 +5,7 @@ import { z } from "zod";
 export * from "./models/auth";
 import { users } from "./models/auth";
 
-export const roleEnum = pgEnum("role", ["admin", "racer", "team_manager", "spectator"]);
+export const roleEnum = pgEnum("role", ["admin", "racer", "spectator"]);
 export const competitionTypeEnum = pgEnum("competition_type", ["series", "single_event", "head_to_head", "time_attack"]);
 export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "cancelled"]);
 
@@ -21,8 +21,9 @@ export const profiles = pgTable("profiles", {
   userId: varchar("user_id").notNull().references(() => users.id),
   role: roleEnum("role").default("spectator").notNull(),
   teamId: integer("team_id").references(() => teams.id),
-  bio: text("bio"),
-  kartNumber: text("kart_number"),
+  fullName: text("full_name"),
+  driverName: text("driver_name"),
+  profileImage: text("profile_image"),
 });
 
 export const leagues = pgTable("leagues", {
@@ -56,9 +57,7 @@ export const results = pgTable("results", {
   racerId: integer("racer_id").references(() => profiles.id).notNull(),
   position: integer("position").notNull(),
   points: integer("points").notNull(),
-  bestLapTime: text("best_lap_time"),
-  totalTime: text("total_time"),
-  isFastestLap: boolean("is_fastest_lap").default(false),
+  raceTime: text("race_time"),
 });
 
 // Relations
@@ -98,6 +97,13 @@ export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true })
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({ id: true });
 export const insertRaceSchema = createInsertSchema(races).omit({ id: true });
 export const insertResultSchema = createInsertSchema(results).omit({ id: true });
+
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type InsertLeague = z.infer<typeof insertLeagueSchema>;
+export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
+export type InsertRace = z.infer<typeof insertRaceSchema>;
+export type InsertResult = z.infer<typeof insertResultSchema>;
 
 export type Team = typeof teams.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;

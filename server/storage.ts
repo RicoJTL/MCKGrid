@@ -14,6 +14,7 @@ export interface IStorage {
 
   // Competitions
   getCompetitions(leagueId: number): Promise<Competition[]>;
+  getCompetition(id: number): Promise<Competition | undefined>;
   createCompetition(competition: InsertCompetition): Promise<Competition>;
 
   // Races
@@ -23,7 +24,7 @@ export interface IStorage {
 
   // Results
   getResults(raceId: number): Promise<Result[]>;
-  submitResults(results: InsertResult[]): Promise<Result[]>;
+  replaceRaceResults(raceId: number, resultsData: Omit<InsertResult, 'raceId'>[]): Promise<Result[]>;
 
   // Teams
   getTeams(): Promise<Team[]>;
@@ -31,8 +32,10 @@ export interface IStorage {
 
   // Profiles
   getProfile(userId: string): Promise<Profile | undefined>;
+  getAllProfiles(): Promise<Profile[]>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
+  getProfileRaceHistory(profileId: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -50,6 +53,10 @@ export class DatabaseStorage implements IStorage {
 
   async getCompetitions(leagueId: number): Promise<Competition[]> {
     return await db.select().from(competitions).where(eq(competitions.leagueId, leagueId));
+  }
+  async getCompetition(id: number): Promise<Competition | undefined> {
+    const [competition] = await db.select().from(competitions).where(eq(competitions.id, id));
+    return competition;
   }
   async createCompetition(competition: InsertCompetition): Promise<Competition> {
     const [newComp] = await db.insert(competitions).values(competition).returning();
@@ -71,8 +78,23 @@ export class DatabaseStorage implements IStorage {
   async getResults(raceId: number): Promise<Result[]> {
     return await db.select().from(results).where(eq(results.raceId, raceId)).orderBy(results.position);
   }
-  async submitResults(resultsData: InsertResult[]): Promise<Result[]> {
-    return await db.insert(results).values(resultsData).returning();
+
+  async replaceRaceResults(raceId: number, resultsData: Omit<InsertResult, 'raceId'>[]): Promise<Result[]> {
+    if (resultsData.length === 0) return [];
+    
+    // Use transaction to atomically clear and insert new results
+    return await db.transaction(async (tx) => {
+      // Clear existing results for this race
+      await tx.delete(results).where(eq(results.raceId, raceId));
+      
+      // Insert new results with raceId
+      const fullResults: InsertResult[] = resultsData.map(r => ({
+        ...r,
+        raceId,
+      }));
+      
+      return await tx.insert(results).values(fullResults).returning();
+    });
   }
 
   async getTeams(): Promise<Team[]> {
@@ -87,6 +109,9 @@ export class DatabaseStorage implements IStorage {
     const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     return profile;
   }
+  async getAllProfiles(): Promise<Profile[]> {
+    return await db.select().from(profiles);
+  }
   async createProfile(profile: InsertProfile): Promise<Profile> {
     const [newProfile] = await db.insert(profiles).values(profile).returning();
     return newProfile;
@@ -94,6 +119,22 @@ export class DatabaseStorage implements IStorage {
   async updateProfile(id: number, profileData: Partial<InsertProfile>): Promise<Profile> {
     const [updated] = await db.update(profiles).set(profileData).where(eq(profiles.id, id)).returning();
     return updated;
+  }
+  async getProfileRaceHistory(profileId: number): Promise<any[]> {
+    const profileResults = await db
+      .select({
+        position: results.position,
+        points: results.points,
+        raceTime: results.raceTime,
+        raceName: races.name,
+        raceDate: races.date,
+        location: races.location,
+      })
+      .from(results)
+      .innerJoin(races, eq(results.raceId, races.id))
+      .where(eq(results.racerId, profileId))
+      .orderBy(desc(races.date));
+    return profileResults;
   }
 }
 

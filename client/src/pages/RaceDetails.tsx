@@ -1,13 +1,14 @@
 import { useRace } from "@/hooks/use-leagues";
 import { useResults, useSubmitResults } from "@/hooks/use-results";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { Flag, Trophy, Clock, Save } from "lucide-react";
+import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,24 +18,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import type { Profile } from "@shared/schema";
 
 export default function RaceDetails() {
   const [match, params] = useRoute("/races/:id");
   const raceId = parseInt(params?.id || "0");
   const { data: race, isLoading: loadingRace } = useRace(raceId);
   const { data: results, isLoading: loadingResults } = useResults(raceId);
+  const { data: profiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
   const { data: profile } = useProfile();
-  const submitResults = useSubmitResults();
   
-  // State for admin editing
   const [isEditing, setIsEditing] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
   if (loadingRace || loadingResults) return <Skeleton className="h-96 w-full" />;
   if (!race) return <div>Race not found</div>;
 
+  const getDriverName = (racerId: number) => {
+    const driver = profiles?.find(p => p.id === racerId);
+    return driver?.driverName || driver?.fullName || `Driver #${racerId}`;
+  };
+
   return (
     <div className="space-y-8">
+      <Link href="#" onClick={() => history.back()}>
+        <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back
+        </div>
+      </Link>
+
       <div className="flex items-center justify-between p-8 rounded-2xl bg-secondary border border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
         <div className="relative z-10">
@@ -42,7 +55,7 @@ export default function RaceDetails() {
             <Flag className="w-4 h-4" /> {race.status}
           </div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">{race.name}</h1>
-          <p className="text-muted-foreground">{format(new Date(race.date), "PPP")} • {race.location}</p>
+          <p className="text-muted-foreground">{format(new Date(race.date), "PPP 'at' p")} - {race.location}</p>
         </div>
       </div>
 
@@ -56,6 +69,7 @@ export default function RaceDetails() {
               onClick={() => setIsEditing(!isEditing)} 
               variant={isEditing ? "destructive" : "secondary"}
               className="font-bold"
+              data-testid="button-toggle-edit"
             >
               {isEditing ? "Cancel Edit" : "Enter Results"}
             </Button>
@@ -63,16 +77,21 @@ export default function RaceDetails() {
         </div>
 
         {isEditing ? (
-          <ResultsEditor raceId={raceId} existingResults={results || []} onCancel={() => setIsEditing(false)} />
+          <ResultsEditor 
+            raceId={raceId} 
+            existingResults={results || []} 
+            profiles={profiles || []}
+            onCancel={() => setIsEditing(false)} 
+            onSave={() => setIsEditing(false)}
+          />
         ) : (
           <div className="bg-secondary/30 rounded-xl border border-white/5 overflow-hidden">
             <Table>
               <TableHeader className="bg-white/5">
                 <TableRow className="hover:bg-transparent border-white/5">
-                  <TableHead className="w-[100px] text-white font-bold">Pos</TableHead>
+                  <TableHead className="w-[80px] text-white font-bold">Pos</TableHead>
                   <TableHead className="text-white font-bold">Driver</TableHead>
-                  <TableHead className="text-white font-bold">Team</TableHead>
-                  <TableHead className="text-right text-white font-bold">Best Lap</TableHead>
+                  <TableHead className="text-white font-bold">Race Time</TableHead>
                   <TableHead className="text-right text-white font-bold">Points</TableHead>
                 </TableRow>
               </TableHeader>
@@ -85,16 +104,15 @@ export default function RaceDetails() {
                        result.position === 3 ? <span className="text-amber-700">3rd</span> :
                        `${result.position}th`}
                     </TableCell>
-                    <TableCell>Driver Name (ID: {result.racerId})</TableCell>
-                    <TableCell>Team Name</TableCell>
-                    <TableCell className="text-right font-mono text-primary">{result.bestLapTime || "--:--"}</TableCell>
-                    <TableCell className="text-right font-bold text-lg">{result.points}</TableCell>
+                    <TableCell className="font-bold">{getDriverName(result.racerId)}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{result.raceTime || "--:--"}</TableCell>
+                    <TableCell className="text-right font-bold text-lg text-primary">{result.points}</TableCell>
                   </TableRow>
                 ))}
                 {(!results || results.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      Race has not started yet.
+                    <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                      No results entered yet.
                     </TableCell>
                   </TableRow>
                 )}
@@ -107,18 +125,149 @@ export default function RaceDetails() {
   );
 }
 
-function ResultsEditor({ raceId, existingResults, onCancel }: { raceId: number, existingResults: any[], onCancel: () => void }) {
-  // Simplified editor - normally needs a way to select drivers. 
-  // For demo, we assume we just input raw data or use existing mock profiles.
-  // In a real app, this would be a dynamic form field array.
+interface ResultEntry {
+  racerId: string;
+  position: string;
+  raceTime: string;
+  points: string;
+}
+
+function ResultsEditor({ 
+  raceId, 
+  existingResults, 
+  profiles,
+  onCancel, 
+  onSave 
+}: { 
+  raceId: number; 
+  existingResults: any[]; 
+  profiles: Profile[];
+  onCancel: () => void; 
+  onSave: () => void;
+}) {
+  const submitResults = useSubmitResults();
+  const { toast } = useToast();
   
-  // NOTE: This assumes there are users/profiles in the system to pick from.
-  // We'll just show a "Not Implemented for Demo" placeholder or basic input fields if no profiles exist.
-  
+  const [entries, setEntries] = useState<ResultEntry[]>(() => {
+    if (existingResults.length > 0) {
+      return existingResults.map(r => ({
+        racerId: String(r.racerId),
+        position: String(r.position),
+        raceTime: r.raceTime || "",
+        points: String(r.points)
+      }));
+    }
+    return [{ racerId: "", position: "1", raceTime: "", points: "25" }];
+  });
+
+  const addEntry = () => {
+    const nextPos = entries.length + 1;
+    const defaultPoints = nextPos === 1 ? 25 : nextPos === 2 ? 18 : nextPos === 3 ? 15 : 10;
+    setEntries([...entries, { racerId: "", position: String(nextPos), raceTime: "", points: String(defaultPoints) }]);
+  };
+
+  const removeEntry = (index: number) => {
+    setEntries(entries.filter((_, i) => i !== index));
+  };
+
+  const updateEntry = (index: number, field: keyof ResultEntry, value: string) => {
+    const updated = [...entries];
+    updated[index][field] = value;
+    setEntries(updated);
+  };
+
+  const handleSave = () => {
+    const resultsData = entries
+      .filter(e => e.racerId)
+      .map(e => ({
+        racerId: parseInt(e.racerId),
+        position: parseInt(e.position),
+        raceTime: e.raceTime || null,
+        points: parseInt(e.points)
+      }));
+
+    if (resultsData.length === 0) {
+      toast({ title: "Error", description: "Add at least one result", variant: "destructive" });
+      return;
+    }
+
+    submitResults.mutate({ raceId, results: resultsData }, {
+      onSuccess: () => {
+        toast({ title: "Results saved!" });
+        onSave();
+      },
+      onError: () => {
+        toast({ title: "Error saving results", variant: "destructive" });
+      }
+    });
+  };
+
+  const racers = profiles.filter(p => p.role === 'racer' || p.role === 'admin');
+
   return (
-    <div className="p-8 bg-secondary/50 rounded-xl text-center border border-dashed border-white/20">
-      <p className="mb-4">Result entry requires racer selection logic.</p>
-      <Button variant="outline" onClick={onCancel}>Cancel</Button>
+    <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">
+      <div className="space-y-3">
+        {entries.map((entry, i) => (
+          <div key={i} className="flex items-center gap-3 p-4 bg-white/5 rounded-lg">
+            <div className="w-12 text-center font-bold text-lg">P{entry.position}</div>
+            <Select value={entry.racerId} onValueChange={(v) => updateEntry(i, 'racerId', v)}>
+              <SelectTrigger className="flex-1 bg-secondary/30" data-testid={`select-driver-${i}`}>
+                <SelectValue placeholder="Select Driver" />
+              </SelectTrigger>
+              <SelectContent>
+                {racers.map(p => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.driverName || p.fullName || `Driver ${p.id}`}
+                  </SelectItem>
+                ))}
+                {racers.length === 0 && (
+                  <SelectItem value="" disabled>No drivers available</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <Input 
+              placeholder="Race Time" 
+              value={entry.raceTime} 
+              onChange={(e) => updateEntry(i, 'raceTime', e.target.value)}
+              className="w-32 bg-secondary/30"
+              data-testid={`input-racetime-${i}`}
+            />
+            <Input 
+              placeholder="Points" 
+              type="number"
+              value={entry.points} 
+              onChange={(e) => updateEntry(i, 'points', e.target.value)}
+              className="w-20 bg-secondary/30"
+              data-testid={`input-points-${i}`}
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => removeEntry(i)}
+              className="text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+        <Button variant="outline" onClick={addEntry} data-testid="button-add-result">
+          <Plus className="w-4 h-4 mr-2" /> Add Position
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button 
+            onClick={handleSave} 
+            className="bg-primary font-bold"
+            disabled={submitResults.isPending}
+            data-testid="button-save-results"
+          >
+            <Save className="w-4 h-4 mr-2" /> Save Results
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

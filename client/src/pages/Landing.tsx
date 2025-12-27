@@ -30,23 +30,23 @@ export default function Landing() {
         >
           <div className="flex justify-center mb-6">
             <div className="p-4 rounded-full bg-primary/10 ring-1 ring-primary/50">
-              <Flag className="w-12 h-12 text-primary animate-pulse" />
+              <Flag className="w-12 h-12 text-primary" />
             </div>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-display font-bold italic uppercase tracking-tighter mb-6">
-            Manage Your <br />
-            <span className="text-gradient">Karting League</span>
+            GRID<span className="text-gradient">LINE</span>
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-light">
-            Professional league management for go-karting centers. Track lap times, manage championships, and crown the ultimate champion.
+            Professional karting league management. Track race results, manage championships, and follow your favorite drivers.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
               href="/api/login" 
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-xl bg-primary text-white hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/25 group"
+              data-testid="button-login"
             >
               Start Your Engine
               <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -57,9 +57,9 @@ export default function Landing() {
         {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-8 mt-24">
           {[
-            { icon: Trophy, title: "Championships", desc: "Create series with custom point systems and rules." },
-            { icon: Timer, title: "Live Results", desc: "Track fastest laps and race positions in real-time." },
-            { icon: Flag, title: "Race Management", desc: "Schedule races, manage grids, and handle logistics." }
+            { icon: Trophy, title: "Championships", desc: "Track standings and compete for the title." },
+            { icon: Timer, title: "Race Results", desc: "Record times, positions, and points." },
+            { icon: Flag, title: "Race Days", desc: "Manage events and driver entries." }
           ].map((feature, i) => (
             <motion.div
               key={i}

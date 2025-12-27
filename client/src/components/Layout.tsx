@@ -17,10 +17,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative racing-stripe">
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-white/5 z-20">
-          <div className="font-display font-bold italic text-lg text-primary">TURBOKART</div>
+          <div className="font-display font-bold italic text-lg text-primary">GRIDLINE</div>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <button className="p-2 text-white hover:bg-white/10 rounded-lg">
+              <button className="p-2 text-white hover:bg-white/10 rounded-lg" data-testid="button-mobile-menu">
                 <Menu className="w-6 h-6" />
               </button>
             </SheetTrigger>

@@ -121,7 +121,7 @@ export const api = {
     submit: {
       method: 'POST' as const,
       path: '/api/races/:id/results',
-      input: z.array(insertResultSchema),
+      input: z.array(insertResultSchema.omit({ raceId: true })),
       responses: {
         201: z.array(z.custom<typeof results.$inferSelect>()),
       },

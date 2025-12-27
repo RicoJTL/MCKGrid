@@ -1,32 +1,44 @@
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProfileSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCircle, Shield, Briefcase } from "lucide-react";
+import { UserCircle, Shield, Trophy, Calendar, MapPin, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
+import { useUpload } from "@/hooks/use-upload";
+import { format } from "date-fns";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { uploadFile, isUploading: isUploadingImage } = useUpload();
+
+  const { data: raceHistory } = useQuery<any[]>({
+    queryKey: ['/api/profiles', profile?.id, 'history'],
+    enabled: !!profile?.id,
+  });
 
   const form = useForm({
     resolver: zodResolver(insertProfileSchema.partial()),
     defaultValues: {
-      bio: profile?.bio || "",
-      kartNumber: profile?.kartNumber || "",
+      fullName: profile?.fullName || "",
+      driverName: profile?.driverName || "",
       role: profile?.role || "spectator",
+      profileImage: profile?.profileImage || "",
     },
-    values: { // Use 'values' to react to data loading
-      bio: profile?.bio || "",
-      kartNumber: profile?.kartNumber || "",
+    values: {
+      fullName: profile?.fullName || "",
+      driverName: profile?.driverName || "",
       role: profile?.role || "spectator",
+      profileImage: profile?.profileImage || "",
     }
   });
 
@@ -34,7 +46,25 @@ export default function ProfilePage() {
     updateProfile.mutate(data);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+    
+    // Upload file
+    const result = await uploadFile(file);
+    if (result) {
+      form.setValue("profileImage", result.objectPath);
+    }
+  };
+
   if (isLoading) return <div className="max-w-2xl mx-auto space-y-6"><Skeleton className="h-40 w-full" /></div>;
+
+  const displayImage = imagePreview || (profile?.profileImage ? profile.profileImage : null);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -44,23 +74,33 @@ export default function ProfilePage() {
       </div>
 
       <div className="p-8 rounded-2xl bg-secondary/50 border border-white/5 flex items-center gap-6">
-        <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-          <UserCircle className="w-12 h-12" />
+        <div className="relative">
+          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+            {displayImage ? (
+              <img src={displayImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <UserCircle className="w-12 h-12" />
+            )}
+          </div>
+          <label className="absolute bottom-0 right-0 p-2 bg-primary rounded-full cursor-pointer hover:bg-primary/80 transition-colors">
+            <Upload className="w-4 h-4 text-white" />
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleImageUpload}
+              disabled={isUploadingImage}
+            />
+          </label>
         </div>
         <div>
-          <h2 className="text-2xl font-bold font-display italic text-white">{user?.firstName} {user?.lastName}</h2>
+          <h2 className="text-2xl font-bold font-display italic text-white">{profile?.driverName || "Set your driver name"}</h2>
           <p className="text-muted-foreground">{user?.email}</p>
           <div className="flex items-center gap-4 mt-4">
              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-xs font-medium border border-white/10">
                <Shield className="w-3 h-3 text-primary" /> 
                {profile?.role || "Spectator"}
              </span>
-             {profile?.teamId && (
-               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-xs font-medium border border-white/10">
-                 <Briefcase className="w-3 h-3 text-primary" /> 
-                 Team ID: {profile.teamId}
-               </span>
-             )}
           </div>
         </div>
       </div>
@@ -75,14 +115,13 @@ export default function ProfilePage() {
                 <FormLabel>Account Role</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
-                    <SelectTrigger className="bg-secondary/30">
+                    <SelectTrigger className="bg-secondary/30" data-testid="select-role">
                       <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="racer">Racer</SelectItem>
-                    <SelectItem value="team_manager">Team Manager</SelectItem>
                     <SelectItem value="spectator">Spectator</SelectItem>
                   </SelectContent>
                 </Select>
@@ -93,12 +132,12 @@ export default function ProfilePage() {
 
           <FormField
             control={form.control}
-            name="kartNumber"
+            name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Kart / Racing Number</FormLabel>
+                <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. 33" {...field} className="bg-secondary/30 font-display font-bold italic text-xl w-32" />
+                  <Input placeholder="Your full name" {...field} className="bg-secondary/30" data-testid="input-fullname" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -107,27 +146,58 @@ export default function ProfilePage() {
 
           <FormField
             control={form.control}
-            name="bio"
+            name="driverName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Bio</FormLabel>
+                <FormLabel>Driver Name</FormLabel>
                 <FormControl>
-                  <Textarea 
-                    placeholder="Tell us about your racing experience..." 
-                    {...field} 
-                    className="bg-secondary/30 h-32" 
-                  />
+                  <Input placeholder="Your racing name" {...field} className="bg-secondary/30" data-testid="input-drivername" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending} data-testid="button-save-profile">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending || isUploadingImage} data-testid="button-save-profile">
             {updateProfile.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </form>
       </Form>
+
+      {/* Race History */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>
+        {raceHistory && raceHistory.length > 0 ? (
+          <div className="space-y-3">
+            {raceHistory.map((result, i) => (
+              <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold font-display italic text-xl">
+                    P{result.position}
+                  </div>
+                  <div>
+                    <h4 className="font-bold">{result.raceName}</h4>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
+                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                  {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
+            <Trophy className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p>No race history yet.</p>
+            <p className="text-sm">Complete your first race to see results here!</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
