@@ -11,16 +11,22 @@ export interface IStorage {
   getLeagues(): Promise<League[]>;
   getLeague(id: number): Promise<League | undefined>;
   createLeague(league: InsertLeague): Promise<League>;
+  updateLeague(id: number, data: Partial<InsertLeague>): Promise<League>;
+  deleteLeague(id: number): Promise<void>;
 
   // Competitions
   getCompetitions(leagueId: number): Promise<Competition[]>;
   getCompetition(id: number): Promise<Competition | undefined>;
   createCompetition(competition: InsertCompetition): Promise<Competition>;
+  updateCompetition(id: number, data: Partial<InsertCompetition>): Promise<Competition>;
+  deleteCompetition(id: number): Promise<void>;
 
   // Races
   getRaces(competitionId: number): Promise<Race[]>;
   getRace(id: number): Promise<Race | undefined>;
   createRace(race: InsertRace): Promise<Race>;
+  updateRace(id: number, data: Partial<InsertRace>): Promise<Race>;
+  deleteRace(id: number): Promise<void>;
 
   // Results
   getResults(raceId: number): Promise<Result[]>;
@@ -54,6 +60,23 @@ export class DatabaseStorage implements IStorage {
     const [newLeague] = await db.insert(leagues).values(league).returning();
     return newLeague;
   }
+  async updateLeague(id: number, data: Partial<InsertLeague>): Promise<League> {
+    const [updated] = await db.update(leagues).set(data).where(eq(leagues.id, id)).returning();
+    return updated;
+  }
+  async deleteLeague(id: number): Promise<void> {
+    // Cascade delete: get all competitions, then their races and results
+    const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
+    for (const comp of comps) {
+      const compRaces = await db.select().from(races).where(eq(races.competitionId, comp.id));
+      for (const race of compRaces) {
+        await db.delete(results).where(eq(results.raceId, race.id));
+      }
+      await db.delete(races).where(eq(races.competitionId, comp.id));
+    }
+    await db.delete(competitions).where(eq(competitions.leagueId, id));
+    await db.delete(leagues).where(eq(leagues.id, id));
+  }
 
   async getCompetitions(leagueId: number): Promise<Competition[]> {
     return await db.select().from(competitions).where(eq(competitions.leagueId, leagueId));
@@ -66,6 +89,19 @@ export class DatabaseStorage implements IStorage {
     const [newComp] = await db.insert(competitions).values(competition).returning();
     return newComp;
   }
+  async updateCompetition(id: number, data: Partial<InsertCompetition>): Promise<Competition> {
+    const [updated] = await db.update(competitions).set(data).where(eq(competitions.id, id)).returning();
+    return updated;
+  }
+  async deleteCompetition(id: number): Promise<void> {
+    // Cascade delete: delete all races and their results first
+    const compRaces = await db.select().from(races).where(eq(races.competitionId, id));
+    for (const race of compRaces) {
+      await db.delete(results).where(eq(results.raceId, race.id));
+    }
+    await db.delete(races).where(eq(races.competitionId, id));
+    await db.delete(competitions).where(eq(competitions.id, id));
+  }
 
   async getRaces(competitionId: number): Promise<Race[]> {
     return await db.select().from(races).where(eq(races.competitionId, competitionId)).orderBy(races.date);
@@ -77,6 +113,14 @@ export class DatabaseStorage implements IStorage {
   async createRace(race: InsertRace): Promise<Race> {
     const [newRace] = await db.insert(races).values(race).returning();
     return newRace;
+  }
+  async updateRace(id: number, data: Partial<InsertRace>): Promise<Race> {
+    const [updated] = await db.update(races).set(data).where(eq(races.id, id)).returning();
+    return updated;
+  }
+  async deleteRace(id: number): Promise<void> {
+    await db.delete(results).where(eq(results.raceId, id));
+    await db.delete(races).where(eq(races.id, id));
   }
 
   async getResults(raceId: number): Promise<Result[]> {

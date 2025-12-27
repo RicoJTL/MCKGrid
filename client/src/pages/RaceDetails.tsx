@@ -1,9 +1,9 @@
-import { useRace } from "@/hooks/use-leagues";
+import { useRace, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
 import { useResults, useSubmitResults } from "@/hooks/use-results";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import type { Profile } from "@shared/schema";
@@ -28,9 +52,37 @@ export default function RaceDetails() {
   const { data: results, isLoading: loadingResults } = useResults(raceId);
   const { data: profiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
   const { data: profile } = useProfile();
+  const updateRace = useUpdateRace();
+  const deleteRace = useDeleteRace();
+  const [, setLocation] = useLocation();
   
   const [isEditing, setIsEditing] = useState(false);
+  const [openEditRace, setOpenEditRace] = useState(false);
+  const [deleteRaceOpen, setDeleteRaceOpen] = useState(false);
+  
   const isAdmin = profile?.role === 'admin';
+
+  const editRaceForm = useForm({
+    defaultValues: {
+      name: "",
+      location: "",
+      date: "",
+      status: "scheduled",
+    },
+  });
+
+  const onUpdateRace = (data: any) => {
+    updateRace.mutate({ id: raceId, data: { ...data, date: new Date(data.date) } }, {
+      onSuccess: () => setOpenEditRace(false)
+    });
+  };
+
+  const onDeleteRace = () => {
+    if (!race) return;
+    deleteRace.mutate({ id: raceId, competitionId: race.competitionId }, {
+      onSuccess: () => setLocation(`/competitions/${race.competitionId}`)
+    });
+  };
 
   if (loadingRace || loadingResults) return <Skeleton className="h-96 w-full" />;
   if (!race) return <div>Race not found</div>;
@@ -42,7 +94,7 @@ export default function RaceDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href="#" onClick={() => history.back()}>
+      <Link href={`/competitions/${race.competitionId}`}>
         <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </div>
@@ -50,17 +102,42 @@ export default function RaceDetails() {
 
       <div className="flex items-center justify-between p-8 rounded-2xl bg-secondary border border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1">
           <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs mb-2">
             <Flag className="w-4 h-4" /> {race.status}
           </div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">{race.name}</h1>
           <p className="text-muted-foreground">{format(new Date(race.date), "PPP 'at' p")} - {race.location}</p>
         </div>
+        {isAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative z-10" data-testid="button-race-menu">
+                <MoreVertical className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                editRaceForm.reset({ 
+                  name: race.name, 
+                  location: race.location, 
+                  date: new Date(race.date).toISOString().slice(0, 16),
+                  status: race.status 
+                });
+                setOpenEditRace(true);
+              }}>
+                <Pencil className="w-4 h-4 mr-2" /> Edit Race
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDeleteRaceOpen(true)} className="text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" /> Delete Race
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <h2 className="text-2xl font-display font-bold italic flex items-center gap-2">
             <Trophy className="w-6 h-6 text-yellow-500" /> Race Results
           </h2>
@@ -121,6 +198,101 @@ export default function RaceDetails() {
           </div>
         )}
       </div>
+
+      {/* Edit Race Dialog */}
+      <Dialog open={openEditRace} onOpenChange={setOpenEditRace}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Edit Race</DialogTitle>
+          </DialogHeader>
+          <Form {...editRaceForm}>
+            <form onSubmit={editRaceForm.handleSubmit(onUpdateRace)} className="space-y-4">
+              <FormField
+                control={editRaceForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Race Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date & Time</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} className="block w-full" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full bg-primary font-bold" disabled={updateRace.isPending}>
+                Save Changes
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Race Alert */}
+      <AlertDialog open={deleteRaceOpen} onOpenChange={setDeleteRaceOpen}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Race?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{race.name}" and all its results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDeleteRace} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import { useRaces, useCreateRace, useCompetitionStandings, useCompetition } from "@/hooks/use-leagues";
-import { Link, useRoute } from "wouter";
+import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
+import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -12,12 +12,29 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertRaceSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CompetitionDetails() {
@@ -28,7 +45,17 @@ export default function CompetitionDetails() {
   const { data: standings, isLoading: standingsLoading } = useCompetitionStandings(compId);
   const { data: profile } = useProfile();
   const createRace = useCreateRace();
+  const updateCompetition = useUpdateCompetition();
+  const deleteCompetition = useDeleteCompetition();
+  const updateRace = useUpdateRace();
+  const deleteRace = useDeleteRace();
+  const [, setLocation] = useLocation();
+  
   const [open, setOpen] = useState(false);
+  const [openEditComp, setOpenEditComp] = useState(false);
+  const [deleteCompOpen, setDeleteCompOpen] = useState(false);
+  const [editingRace, setEditingRace] = useState<any>(null);
+  const [deletingRace, setDeletingRace] = useState<any>(null);
 
   const isAdmin = profile?.role === 'admin';
 
@@ -40,6 +67,22 @@ export default function CompetitionDetails() {
       location: "",
       date: new Date().toISOString(),
       status: "scheduled"
+    },
+  });
+
+  const compForm = useForm({
+    defaultValues: {
+      name: competition?.name || "",
+      type: competition?.type || "series",
+    },
+  });
+
+  const editRaceForm = useForm({
+    defaultValues: {
+      name: "",
+      location: "",
+      date: "",
+      status: "scheduled",
     },
   });
 
@@ -56,6 +99,33 @@ export default function CompetitionDetails() {
     });
   };
 
+  const onUpdateComp = (data: any) => {
+    updateCompetition.mutate({ id: compId, data }, {
+      onSuccess: () => setOpenEditComp(false)
+    });
+  };
+
+  const onDeleteComp = () => {
+    if (!competition) return;
+    deleteCompetition.mutate({ id: compId, leagueId: competition.leagueId }, {
+      onSuccess: () => setLocation(`/leagues/${competition.leagueId}`)
+    });
+  };
+
+  const onUpdateRace = (data: any) => {
+    if (!editingRace) return;
+    updateRace.mutate({ id: editingRace.id, data: { ...data, date: new Date(data.date) } }, {
+      onSuccess: () => setEditingRace(null)
+    });
+  };
+
+  const onDeleteRace = () => {
+    if (!deletingRace) return;
+    deleteRace.mutate({ id: deletingRace.id, competitionId: compId }, {
+      onSuccess: () => setDeletingRace(null)
+    });
+  };
+
   const upcomingRaces = races?.filter(r => r.status === 'scheduled') || [];
   const completedRaces = races?.filter(r => r.status === 'completed') || [];
 
@@ -63,7 +133,7 @@ export default function CompetitionDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href="#" onClick={() => history.back()}>
+      <Link href={competition ? `/leagues/${competition.leagueId}` : "/leagues"}>
         <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </div>
@@ -76,66 +146,88 @@ export default function CompetitionDetails() {
           </h1>
           <p className="text-muted-foreground mt-1">Season standings and race calendar</p>
         </div>
-        {isAdmin && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 font-bold">
-                <Plus className="w-4 h-4 mr-2" /> Schedule Race
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-white/10">
-              <DialogHeader>
-                <DialogTitle>Schedule New Race</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Race Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. Round 1" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Track/Circuit Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date & Time</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} className="block w-full" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full bg-primary font-bold" disabled={createRace.isPending}>
-                    Schedule Race
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" data-testid="button-comp-menu">
+                    <MoreVertical className="w-5 h-5" />
                   </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    compForm.reset({ name: competition?.name || "", type: competition?.type || "series" });
+                    setOpenEditComp(true);
+                  }}>
+                    <Pencil className="w-4 h-4 mr-2" /> Edit Competition
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDeleteCompOpen(true)} className="text-destructive">
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete Competition
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary hover:bg-primary/90 font-bold">
+                    <Plus className="w-4 h-4 mr-2" /> Schedule Race
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-white/10">
+                  <DialogHeader>
+                    <DialogTitle>Schedule New Race</DialogTitle>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Race Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Round 1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Track/Circuit Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date & Time</FormLabel>
+                            <FormControl>
+                              <Input type="datetime-local" {...field} className="block w-full" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="w-full bg-primary font-bold" disabled={createRace.isPending}>
+                        Schedule Race
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="standings" className="w-full">
@@ -213,9 +305,9 @@ export default function CompetitionDetails() {
               <h3 className="text-lg font-display font-bold italic mb-4 text-primary">Upcoming Races</h3>
               <div className="space-y-3">
                 {upcomingRaces.map((race) => (
-                  <Link key={race.id} href={`/races/${race.id}`}>
-                    <div className="group flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-all cursor-pointer">
-                      <div className="flex items-center gap-5">
+                  <div key={race.id} className="group flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-all">
+                    <Link href={`/races/${race.id}`}>
+                      <div className="flex items-center gap-5 cursor-pointer">
                         <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 group-hover:bg-primary group-hover:text-white transition-colors">
                           <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
                           <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
@@ -227,13 +319,38 @@ export default function CompetitionDetails() {
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 md:mt-0">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20">
-                          Scheduled
-                        </span>
-                      </div>
+                    </Link>
+                    <div className="mt-3 md:mt-0 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20">
+                        Scheduled
+                      </span>
+                      {isAdmin && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" data-testid={`button-race-menu-${race.id}`}>
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              editRaceForm.reset({ 
+                                name: race.name, 
+                                location: race.location, 
+                                date: new Date(race.date).toISOString().slice(0, 16),
+                                status: race.status 
+                              });
+                              setEditingRace(race);
+                            }}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeletingRace(race)} className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>
@@ -244,9 +361,9 @@ export default function CompetitionDetails() {
               <h3 className="text-lg font-display font-bold italic mb-4 text-muted-foreground">Completed Races</h3>
               <div className="space-y-3">
                 {completedRaces.map((race) => (
-                  <Link key={race.id} href={`/races/${race.id}`}>
-                    <div className="group flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-secondary/20 border border-white/5 hover:border-white/10 transition-all cursor-pointer opacity-75 hover:opacity-100">
-                      <div className="flex items-center gap-5">
+                  <div key={race.id} className="group flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-secondary/20 border border-white/5 hover:border-white/10 transition-all opacity-75 hover:opacity-100">
+                    <Link href={`/races/${race.id}`}>
+                      <div className="flex items-center gap-5 cursor-pointer">
                         <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-white/5">
                           <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
                           <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
@@ -258,13 +375,38 @@ export default function CompetitionDetails() {
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 md:mt-0">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-muted-foreground border border-white/10">
-                          Completed
-                        </span>
-                      </div>
+                    </Link>
+                    <div className="mt-3 md:mt-0 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-muted-foreground border border-white/10">
+                        Completed
+                      </span>
+                      {isAdmin && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" data-testid={`button-race-menu-${race.id}`}>
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              editRaceForm.reset({ 
+                                name: race.name, 
+                                location: race.location, 
+                                date: new Date(race.date).toISOString().slice(0, 16),
+                                status: race.status 
+                              });
+                              setEditingRace(race);
+                            }}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeletingRace(race)} className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>
@@ -279,6 +421,170 @@ export default function CompetitionDetails() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Edit Competition Dialog */}
+      <Dialog open={openEditComp} onOpenChange={setOpenEditComp}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Edit Competition</DialogTitle>
+          </DialogHeader>
+          <Form {...compForm}>
+            <form onSubmit={compForm.handleSubmit(onUpdateComp)} className="space-y-4">
+              <FormField
+                control={compForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Competition Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={compForm.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Format</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="series">Series</SelectItem>
+                        <SelectItem value="single_event">Single Event</SelectItem>
+                        <SelectItem value="time_attack">Time Attack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full bg-primary font-bold" disabled={updateCompetition.isPending}>
+                Save Changes
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Competition Alert */}
+      <AlertDialog open={deleteCompOpen} onOpenChange={setDeleteCompOpen}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Competition?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{competition?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDeleteComp} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Race Dialog */}
+      <Dialog open={!!editingRace} onOpenChange={(open) => !open && setEditingRace(null)}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Edit Race</DialogTitle>
+          </DialogHeader>
+          <Form {...editRaceForm}>
+            <form onSubmit={editRaceForm.handleSubmit(onUpdateRace)} className="space-y-4">
+              <FormField
+                control={editRaceForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Race Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date & Time</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} className="block w-full" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editRaceForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full bg-primary font-bold" disabled={updateRace.isPending}>
+                Save Changes
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Race Alert */}
+      <AlertDialog open={!!deletingRace} onOpenChange={(open) => !open && setDeletingRace(null)}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Race?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deletingRace?.name}" and all its results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDeleteRace} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

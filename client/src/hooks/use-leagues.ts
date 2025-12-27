@@ -140,6 +140,146 @@ export function useCreateRace() {
   });
 }
 
+// Update League
+export function useUpdateLeague() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/leagues/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update league");
+      return await res.json();
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.leagues.get.path, id] });
+      toast({ title: "League Updated" });
+    },
+  });
+}
+
+// Delete League
+export function useDeleteLeague() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/leagues/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete league");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
+      toast({ title: "League Deleted" });
+    },
+  });
+}
+
+// Update Competition
+export function useUpdateCompetition() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/competitions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update competition");
+      return await res.json();
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['competitions', result.leagueId] });
+      queryClient.invalidateQueries({ queryKey: ['competition', result.id] });
+      toast({ title: "Competition Updated" });
+    },
+  });
+}
+
+// Delete Competition
+export function useDeleteCompetition() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, leagueId }: { id: number; leagueId: number }) => {
+      const res = await fetch(`/api/competitions/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete competition");
+      return { leagueId, id };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['competitions', result.leagueId] });
+      queryClient.invalidateQueries({ queryKey: ['competition', result.id] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
+      toast({ title: "Competition Deleted" });
+    },
+  });
+}
+
+// Update Race
+export function useUpdateRace() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/races/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update race");
+      return await res.json();
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['races', result.competitionId] });
+      queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
+      toast({ title: "Race Updated" });
+    },
+  });
+}
+
+// Delete Race
+export function useDeleteRace() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, competitionId }: { id: number; competitionId: number }) => {
+      const res = await fetch(`/api/races/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete race");
+      return { competitionId, id };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['races', result.competitionId] });
+      queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
+      queryClient.invalidateQueries({ queryKey: ['results'] });
+      toast({ title: "Race Deleted" });
+    },
+  });
+}
+
 // Competition standings (league table)
 export function useCompetitionStandings(competitionId: number) {
   return useQuery({

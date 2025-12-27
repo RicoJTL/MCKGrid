@@ -1,7 +1,8 @@
 import { Sidebar } from "./Sidebar";
-import { Menu } from "lucide-react";
+import { Menu, Flag } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Link } from "wouter";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +18,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative racing-stripe">
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-white/5 z-20">
-          <div className="font-display font-bold italic text-lg text-primary">GRIDLINE</div>
+          <Link href="/">
+            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+              <Flag className="w-5 h-5 text-primary" />
+              <span className="font-display font-bold italic text-lg text-white">
+                GRID<span className="text-primary">LINE</span>
+              </span>
+            </div>
+          </Link>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <button className="p-2 text-white hover:bg-white/10 rounded-lg" data-testid="button-mobile-menu">
@@ -25,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 border-r border-white/10 w-64 bg-sidebar">
-              <Sidebar />
+              <Sidebar onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
         </header>

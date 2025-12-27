@@ -15,14 +15,21 @@ const navItems = [
   { icon: UserCircle, label: "Profile", href: "/profile" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
   const { logout } = useAuth();
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">
-      <Link href="/">
-        <div className="p-6 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors">
+      <Link href="/" onClick={() => onNavigate?.()}>
+        <a 
+          className="block p-6 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+          data-testid="link-logo"
+        >
           <div className="flex items-center gap-3">
             <Flag className="w-8 h-8 text-primary" />
             <div>
@@ -32,7 +39,7 @@ export function Sidebar() {
               <p className="text-xs text-muted-foreground tracking-widest uppercase">Racing</p>
             </div>
           </div>
-        </div>
+        </a>
       </Link>
 
       <nav className="flex-1 p-4 space-y-2">
@@ -41,8 +48,8 @@ export function Sidebar() {
           const isActive = location === item.href;
           
           return (
-            <Link key={item.href} href={item.href}>
-              <div
+            <Link key={item.href} href={item.href} onClick={() => onNavigate?.()}>
+              <a
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer group",
                   isActive 
@@ -53,7 +60,7 @@ export function Sidebar() {
               >
                 <Icon className={cn("w-5 h-5", isActive ? "" : "group-hover:scale-110 transition-transform")} />
                 <span className="font-medium tracking-wide">{item.label}</span>
-              </div>
+              </a>
             </Link>
           );
         })}

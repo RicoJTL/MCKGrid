@@ -100,6 +100,22 @@ export async function registerRoutes(
     res.json(league);
   });
 
+  app.patch("/api/leagues/:id", requireAdmin, async (req, res) => {
+    const { name, description, seasonStart, seasonEnd } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (description !== undefined) data.description = description;
+    if (seasonStart !== undefined) data.seasonStart = new Date(seasonStart);
+    if (seasonEnd !== undefined) data.seasonEnd = seasonEnd ? new Date(seasonEnd) : null;
+    const updated = await storage.updateLeague(Number(req.params.id), data);
+    res.json(updated);
+  });
+
+  app.delete("/api/leagues/:id", requireAdmin, async (req, res) => {
+    await storage.deleteLeague(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
   // === Competitions ===
   app.get(api.competitions.list.path, async (req, res) => {
     const competitions = await storage.getCompetitions(Number(req.params.id));
@@ -130,6 +146,21 @@ export async function registerRoutes(
     res.status(201).json(competition);
   });
 
+  app.patch("/api/competitions/:id", requireAdmin, async (req, res) => {
+    const { name, type, rules } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (type !== undefined) data.type = type;
+    if (rules !== undefined) data.rules = rules;
+    const updated = await storage.updateCompetition(Number(req.params.id), data);
+    res.json(updated);
+  });
+
+  app.delete("/api/competitions/:id", requireAdmin, async (req, res) => {
+    await storage.deleteCompetition(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
   // === Races ===
   app.get(api.races.list.path, async (req, res) => {
     const races = await storage.getRaces(Number(req.params.id));
@@ -146,6 +177,22 @@ export async function registerRoutes(
     const race = await storage.getRace(Number(req.params.id));
     if (!race) return res.sendStatus(404);
     res.json(race);
+  });
+
+  app.patch("/api/races/:id", requireAdmin, async (req, res) => {
+    const { name, location, date, status } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (location !== undefined) data.location = location;
+    if (date !== undefined) data.date = new Date(date);
+    if (status !== undefined) data.status = status;
+    const updated = await storage.updateRace(Number(req.params.id), data);
+    res.json(updated);
+  });
+
+  app.delete("/api/races/:id", requireAdmin, async (req, res) => {
+    await storage.deleteRace(Number(req.params.id));
+    res.sendStatus(204);
   });
 
   // === Results ===
