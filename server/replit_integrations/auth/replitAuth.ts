@@ -61,12 +61,25 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
+  // Check if required environment variables are present
+  if (!process.env.REPL_ID) {
+    console.warn("REPL_ID not set - authentication will be disabled");
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
+  let config;
+  try {
+    config = await getOidcConfig();
+  } catch (error) {
+    console.error("Failed to initialize OIDC configuration:", error);
+    console.warn("Authentication will be disabled due to OIDC setup failure");
+    return;
+  }
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,

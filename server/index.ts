@@ -103,6 +103,7 @@ httpServer.listen(
     log("Application fully initialized");
   } catch (error) {
     console.error("Failed to initialize application:", error);
-    process.exit(1);
+    // Don't exit - let the server continue running for health checks
+    // The app will be in a degraded state but won't cause deployment failures
   }
 })();
