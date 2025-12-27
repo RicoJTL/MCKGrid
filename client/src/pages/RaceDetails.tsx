@@ -90,7 +90,7 @@ export default function RaceDetails() {
 
   const getDriverName = (racerId: number) => {
     const driver = profiles?.find(p => p.id === racerId);
-    return driver?.driverName || driver?.fullName || `Driver #${racerId}`;
+    return driver?.driverName || `Driver #${racerId}`;
   };
 
   return (
@@ -393,7 +393,7 @@ function ResultsEditor({
               <SelectContent>
                 {racers.map(p => (
                   <SelectItem key={p.id} value={String(p.id)}>
-                    {p.driverName || p.fullName || `Driver ${p.id}`}
+                    {p.driverName || `Driver ${p.id}`}
                   </SelectItem>
                 ))}
                 {racers.length === 0 && (

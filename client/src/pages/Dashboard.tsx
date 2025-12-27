@@ -38,7 +38,7 @@ export default function Dashboard() {
     );
   }
 
-  const roleDisplay = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Racer';
+  const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
   
   const standings = dashboardData?.standings || [];
   const competition = dashboardData?.competition;
@@ -55,7 +55,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">
-            Welcome back, <span className="text-primary">{profile?.driverName || user?.firstName || 'Racer'}</span>
+            Welcome back, <span className="text-primary">{profile?.driverName || user?.firstName || 'Driver'}</span>
           </h1>
           <p className="text-muted-foreground flex items-center gap-2">
             <User className="w-4 h-4" />
@@ -171,7 +171,7 @@ export default function Dashboard() {
               <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
             </div>
             <div className="text-xl font-bold font-display italic truncate">
-              {leader?.driverName || leader?.fullName || 'TBD'}
+              {leader?.driverName || 'TBD'}
             </div>
             {leader && (
               <div className="text-sm text-muted-foreground mt-1">
@@ -255,7 +255,7 @@ export default function Dashboard() {
                     }`}>
                       {index + 1}
                     </div>
-                    <span className="font-medium">{driver.driverName || driver.fullName || 'Unknown'}</span>
+                    <span className="font-medium">{driver.driverName || 'Unknown'}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">

@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { useAllProfiles, useAdminUpdateProfile, useCreateDriver } from "@/hooks/use-profile";
+import { useAllProfiles, useAdminUpdateProfile, useCreateDriver, useDeleteProfile } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +20,32 @@ const driverSchema = z.object({
   role: z.enum(["admin", "racer", "spectator"]),
 });
 
+const getRoleDisplay = (role: string) => {
+  if (role === 'racer') return 'Driver';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+const getRoleBadgeStyles = (role: string) => {
+  switch (role) {
+    case 'admin':
+      return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    case 'racer':
+      return 'bg-green-500/20 text-green-400 border-green-500/30';
+    case 'spectator':
+      return 'bg-red-500/20 text-red-400 border-red-500/30';
+    default:
+      return '';
+  }
+};
+
 export default function AdminPanel() {
   const { data: profiles, isLoading } = useAllProfiles();
   const updateProfile = useAdminUpdateProfile();
   const createDriver = useCreateDriver();
+  const deleteProfile = useDeleteProfile();
   const [editingProfile, setEditingProfile] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<any>(null);
 
   const editForm = useForm<z.infer<typeof driverSchema>>({
     resolver: zodResolver(driverSchema),
@@ -64,8 +84,18 @@ export default function AdminPanel() {
     });
   };
 
+  const onDeleteProfile = () => {
+    if (!deleteConfirmProfile) return;
+    deleteProfile.mutate(deleteConfirmProfile.id, {
+      onSuccess: () => {
+        setDeleteConfirmProfile(null);
+      }
+    });
+  };
+
   const admins = profiles?.filter(p => p.role === 'admin') || [];
-  const drivers = profiles?.filter(p => p.driverName && p.fullName) || [];
+  const drivers = profiles?.filter(p => p.role === 'racer') || [];
+  const spectators = profiles?.filter(p => p.role === 'spectator') || [];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -73,7 +103,7 @@ export default function AdminPanel() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-display font-bold italic">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage drivers and user roles</p>
+            <p className="text-muted-foreground">Manage Drivers and user roles</p>
           </div>
           <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-driver">
             <Plus className="w-4 h-4 mr-2" /> Create Driver
@@ -148,17 +178,17 @@ export default function AdminPanel() {
                       </Avatar>
                       <div>
                         <p className="font-bold">{profile.driverName || profile.fullName || "No name set"}</p>
-                        {profile.fullName && profile.driverName && (
+                        {profile.fullName && (
                           <p className="text-sm text-muted-foreground">{profile.fullName}</p>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge 
-                        variant={profile.role === 'admin' ? 'default' : 'secondary'}
-                        className={profile.role === 'admin' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : ''}
+                        variant="secondary"
+                        className={getRoleBadgeStyles(profile.role)}
                       >
-                        {profile.role}
+                        {getRoleDisplay(profile.role)}
                       </Badge>
                       <Button 
                         variant="ghost" 
@@ -174,6 +204,15 @@ export default function AdminPanel() {
                         data-testid={`button-edit-${profile.id}`}
                       >
                         <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-red-400 hover:text-red-300"
+                        onClick={() => setDeleteConfirmProfile(profile)}
+                        data-testid={`button-delete-${profile.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -192,7 +231,7 @@ export default function AdminPanel() {
         <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
           <DialogContent className="bg-card border-white/10">
             <DialogHeader>
-              <DialogTitle>Edit Driver</DialogTitle>
+              <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>
             <Form {...editForm}>
               <form onSubmit={editForm.handleSubmit(onEditDriver)} className="space-y-4">
@@ -235,7 +274,7 @@ export default function AdminPanel() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="racer">Racer</SelectItem>
+                          <SelectItem value="racer">Driver</SelectItem>
                           <SelectItem value="spectator">Spectator</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
@@ -298,7 +337,7 @@ export default function AdminPanel() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="racer">Racer</SelectItem>
+                          <SelectItem value="racer">Driver</SelectItem>
                           <SelectItem value="spectator">Spectator</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
@@ -312,6 +351,30 @@ export default function AdminPanel() {
                 </Button>
               </form>
             </Form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteConfirmProfile} onOpenChange={(open) => !open && setDeleteConfirmProfile(null)}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle>Delete User</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {deleteConfirmProfile?.driverName || deleteConfirmProfile?.fullName || "this user"}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setDeleteConfirmProfile(null)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={onDeleteProfile}
+                disabled={deleteProfile.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteProfile.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

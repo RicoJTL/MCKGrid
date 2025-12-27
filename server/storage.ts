@@ -41,6 +41,7 @@ export interface IStorage {
   getAllProfiles(): Promise<Profile[]>;
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(id: number, profile: Partial<InsertProfile>): Promise<Profile>;
+  deleteProfile(id: number): Promise<void>;
   getProfileRaceHistory(profileId: number): Promise<any[]>;
   hasAnyAdmin(): Promise<boolean>;
   
@@ -169,6 +170,9 @@ export class DatabaseStorage implements IStorage {
   async updateProfile(id: number, profileData: Partial<InsertProfile>): Promise<Profile> {
     const [updated] = await db.update(profiles).set(profileData).where(eq(profiles.id, id)).returning();
     return updated;
+  }
+  async deleteProfile(id: number): Promise<void> {
+    await db.delete(profiles).where(eq(profiles.id, id));
   }
   async getProfileRaceHistory(profileId: number): Promise<any[]> {
     const profileResults = await db

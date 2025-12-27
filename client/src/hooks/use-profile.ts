@@ -97,3 +97,21 @@ export function useCreateDriver() {
   });
 }
 
+export function useDeleteProfile() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/profiles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({ title: "Profile Deleted", description: "User has been removed" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete profile", variant: "destructive" });
+    }
+  });
+}
+

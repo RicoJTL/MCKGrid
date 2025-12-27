@@ -291,7 +291,7 @@ export default function CompetitionDetails() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-bold">{driver.driverName || driver.fullName || 'Unknown Driver'}</span>
+                        <span className="font-bold">{driver.driverName || 'Unknown Driver'}</span>
                       </td>
                       <td className="p-4 text-center">
                         <span className="font-display font-bold text-xl text-primary">{driver.points}</span>
@@ -442,7 +442,7 @@ export default function CompetitionDetails() {
           {profilesLoading ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (() => {
-            const registeredDrivers = allProfiles?.filter(p => p.driverName && p.fullName) || [];
+            const registeredDrivers = allProfiles?.filter(p => p.role === 'racer') || [];
             return registeredDrivers.length > 0 ? (
               <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
                 <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -460,9 +460,6 @@ export default function CompetitionDetails() {
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold truncate">{driver.driverName}</p>
-                        {driver.fullName && (
-                          <p className="text-sm text-muted-foreground truncate">{driver.fullName}</p>
-                        )}
                       </div>
                       <Badge variant="secondary" className="shrink-0">Driver</Badge>
                     </div>

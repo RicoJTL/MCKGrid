@@ -71,8 +71,9 @@ export async function registerRoutes(
     const allowedFields = ['role', 'fullName', 'driverName', 'profileImage'];
     const filteredUpdate: Record<string, any> = {};
     for (const key of allowedFields) {
-      if (key in updateData) {
-        filteredUpdate[key] = updateData[key];
+      if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+        // Explicitly handle null values for clearing fields
+        filteredUpdate[key] = updateData[key] === null ? null : updateData[key];
       }
     }
     
@@ -114,6 +115,12 @@ export async function registerRoutes(
     }
     const updated = await storage.updateProfile(Number(req.params.id), safeData);
     res.json(updated);
+  });
+
+  // Admin: Delete a profile
+  app.delete("/api/profiles/:id", requireAdmin, async (req: any, res) => {
+    await storage.deleteProfile(Number(req.params.id));
+    res.sendStatus(204);
   });
 
   // Get profile race history
