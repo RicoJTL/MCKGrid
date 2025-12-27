@@ -133,7 +133,7 @@ export async function registerRoutes(
       // Only allow racer or spectator as account types - admin access is controlled via adminLevel
       const validRole = role && ['racer', 'spectator'].includes(role) ? role : 'racer';
       const newProfile = await storage.createProfile({
-        userId: `manual-${Date.now()}`,
+        userId: null, // Manual drivers don't have a linked user account
         driverName,
         fullName,
         role: validRole,

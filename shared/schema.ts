@@ -19,7 +19,7 @@ export const teams = pgTable("teams", {
 
 export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id),
   role: roleEnum("role").default("spectator").notNull(),
   adminLevel: adminLevelEnum("admin_level").default("none").notNull(),
   teamId: integer("team_id").references(() => teams.id),
