@@ -115,3 +115,23 @@ export function useDeleteProfile() {
   });
 }
 
+export function useUpdateAdminLevel() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, adminLevel }: { id: number; adminLevel: "none" | "admin" | "super_admin" }) => {
+      const res = await apiRequest("PATCH", `/api/profiles/${id}/admin-level`, { adminLevel });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+      toast({ title: "Admin Level Updated", description: "User access has been updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update admin level. Super Admin access required.", variant: "destructive" });
+    }
+  });
+}
+

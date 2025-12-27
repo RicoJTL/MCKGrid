@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAllProfiles, useAdminUpdateProfile, useCreateDriver, useDeleteProfile } from "@/hooks/use-profile";
+import { useProfile, useAllProfiles, useAdminUpdateProfile, useCreateDriver, useDeleteProfile, useUpdateAdminLevel } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2 } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,18 +17,18 @@ import { Badge } from "@/components/ui/badge";
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
   fullName: z.string().min(1, "Full name is required"),
-  role: z.enum(["admin", "racer", "spectator"]),
+  role: z.enum(["racer", "spectator"]),
 });
 
 const getRoleDisplay = (role: string) => {
   if (role === 'racer') return 'Driver';
+  if (role === 'admin') return 'Driver';
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
 const getRoleBadgeStyles = (role: string) => {
   switch (role) {
     case 'admin':
-      return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
     case 'racer':
       return 'bg-green-500/20 text-green-400 border-green-500/30';
     case 'spectator':
@@ -38,14 +38,40 @@ const getRoleBadgeStyles = (role: string) => {
   }
 };
 
+const getAdminBadgeStyles = (adminLevel: string) => {
+  switch (adminLevel) {
+    case 'super_admin':
+      return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+    case 'admin':
+      return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    default:
+      return '';
+  }
+};
+
+const getAdminLevelDisplay = (adminLevel: string) => {
+  switch (adminLevel) {
+    case 'super_admin':
+      return 'Super Admin';
+    case 'admin':
+      return 'Admin';
+    default:
+      return null;
+  }
+};
+
 export default function AdminPanel() {
+  const { data: currentProfile } = useProfile();
   const { data: profiles, isLoading } = useAllProfiles();
   const updateProfile = useAdminUpdateProfile();
   const createDriver = useCreateDriver();
   const deleteProfile = useDeleteProfile();
+  const updateAdminLevel = useUpdateAdminLevel();
   const [editingProfile, setEditingProfile] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<any>(null);
+  
+  const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
 
   const editForm = useForm<z.infer<typeof driverSchema>>({
     resolver: zodResolver(driverSchema),
@@ -93,7 +119,7 @@ export default function AdminPanel() {
     });
   };
 
-  const admins = profiles?.filter(p => p.role === 'admin') || [];
+  const admins = profiles?.filter(p => p.adminLevel === 'admin' || p.adminLevel === 'super_admin') || [];
   const drivers = profiles?.filter(p => p.role === 'racer') || [];
   const spectators = profiles?.filter(p => p.role === 'spectator') || [];
 
@@ -183,21 +209,46 @@ export default function AdminPanel() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {getAdminLevelDisplay(profile.adminLevel) && (
+                        <Badge 
+                          variant="secondary"
+                          className={getAdminBadgeStyles(profile.adminLevel)}
+                        >
+                          {profile.adminLevel === 'super_admin' ? <Crown className="w-3 h-3 mr-1" /> : <ShieldCheck className="w-3 h-3 mr-1" />}
+                          {getAdminLevelDisplay(profile.adminLevel)}
+                        </Badge>
+                      )}
                       <Badge 
                         variant="secondary"
                         className={getRoleBadgeStyles(profile.role)}
                       >
                         {getRoleDisplay(profile.role)}
                       </Badge>
+                      {isSuperAdmin && profile.id !== currentProfile?.id && (
+                        <Select 
+                          value={profile.adminLevel}
+                          onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" | "super_admin" })}
+                        >
+                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Admin</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon"
                         onClick={() => {
+                          const roleValue = profile.role === 'admin' ? 'racer' : profile.role;
                           editForm.reset({
                             driverName: profile.driverName || "",
                             fullName: profile.fullName || "",
-                            role: profile.role as "admin" | "racer" | "spectator",
+                            role: roleValue as "racer" | "spectator",
                           });
                           setEditingProfile(profile);
                         }}
@@ -266,7 +317,7 @@ export default function AdminPanel() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>Account Type</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-edit-role">
@@ -276,7 +327,6 @@ export default function AdminPanel() {
                         <SelectContent>
                           <SelectItem value="racer">Driver</SelectItem>
                           <SelectItem value="spectator">Spectator</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -329,7 +379,7 @@ export default function AdminPanel() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>Account Type</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-create-role">
@@ -339,7 +389,6 @@ export default function AdminPanel() {
                         <SelectContent>
                           <SelectItem value="racer">Driver</SelectItem>
                           <SelectItem value="spectator">Spectator</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

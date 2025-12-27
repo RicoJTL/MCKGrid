@@ -25,7 +25,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
   const { logout } = useAuth();
   const { data: profile } = useProfile();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">

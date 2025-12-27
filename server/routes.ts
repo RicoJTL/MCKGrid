@@ -109,29 +109,32 @@ export async function registerRoutes(
     res.json(profiles);
   });
 
-  // Admin: Create a new driver profile
+  // Admin: Create a new driver profile (role is account type, admin access is separate)
   app.post("/api/profiles/create-driver", requireAdmin, async (req: any, res) => {
     const { driverName, fullName, role } = req.body;
     if (!driverName || !fullName) {
       return res.status(400).json({ error: "Driver name and full name are required" });
     }
-    const validRole = role && ['admin', 'racer', 'spectator'].includes(role) ? role : 'racer';
+    // Only allow racer or spectator as account types - admin access is controlled via adminLevel
+    const validRole = role && ['racer', 'spectator'].includes(role) ? role : 'racer';
     const newProfile = await storage.createProfile({
       userId: `manual-${Date.now()}`,
       driverName,
       fullName,
       role: validRole,
+      adminLevel: 'none',
     });
     res.status(201).json(newProfile);
   });
 
-  // Admin: Update any profile (whitelist allowed fields)
+  // Admin: Update any profile (role is account type only, admin access controlled via separate endpoint)
   app.patch("/api/profiles/:id", requireAdmin, async (req: any, res) => {
     const { driverName, fullName, role } = req.body;
     const safeData: Record<string, string | undefined> = {};
     if (driverName !== undefined) safeData.driverName = driverName;
     if (fullName !== undefined) safeData.fullName = fullName;
-    if (role !== undefined && ['admin', 'racer', 'spectator'].includes(role)) {
+    // Only allow racer or spectator as role - admin access is controlled via adminLevel
+    if (role !== undefined && ['racer', 'spectator'].includes(role)) {
       safeData.role = role;
     }
     const updated = await storage.updateProfile(Number(req.params.id), safeData);

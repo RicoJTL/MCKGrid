@@ -56,10 +56,20 @@ Authentication is handled entirely through Replit Auth:
 - User data synced to local `users` table on login
 
 ### Role-Based Access
-Three user roles: admin, racer, spectator
-- Admins can create/manage leagues, competitions, races, and results
-- Racers can view their race history and profile
-- Spectators have read-only access to public data
+The system uses a two-tier permission model:
+
+**Admin Levels** (permanent permissions, controlled by super admins):
+- **super_admin**: Can grant/revoke admin access to others, full edit access
+- **admin**: Full edit access (create/manage leagues, competitions, races, results)
+- **none**: Standard user (no admin privileges)
+
+**Account Types** (user-selectable via profile):
+- **racer** (Driver): Can participate in races, view race history
+- **spectator**: View-only access to public data
+
+Admin level badges (purple for Super Admin, yellow for Admin) are permanently displayed on profiles. Users with admin privileges can still choose their account type (Driver or Spectator).
+
+Special user: `ibzmebude@gmail.com` is auto-promoted to super_admin on login.
 
 ## External Dependencies
 

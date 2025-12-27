@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye } from "lucide-react";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useUpload } from "@/hooks/use-upload";
@@ -128,11 +128,23 @@ export default function ProfilePage() {
         <div>
           <h2 className="text-2xl font-bold font-display italic text-white">{profile?.driverName || user?.firstName || "Set up your profile"}</h2>
           <p className="text-muted-foreground">{user?.email}</p>
-          <div className="flex items-center gap-4 mt-4">
-             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-xs font-medium border border-white/10">
-               <Shield className="w-3 h-3 text-primary" /> 
-               {roleDisplay}
-             </span>
+          <div className="flex items-center gap-4 mt-4 flex-wrap">
+            {profile?.adminLevel === 'super_admin' && (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 text-xs font-medium border border-purple-500/30 text-purple-400">
+                <Crown className="w-3 h-3" /> 
+                Super Admin
+              </span>
+            )}
+            {profile?.adminLevel === 'admin' && (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/20 text-xs font-medium border border-yellow-500/30 text-yellow-400">
+                <ShieldCheck className="w-3 h-3" /> 
+                Admin
+              </span>
+            )}
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-xs font-medium border border-white/10">
+              <Shield className="w-3 h-3 text-primary" /> 
+              {roleDisplay}
+            </span>
           </div>
         </div>
       </div>
