@@ -442,7 +442,7 @@ export default function CompetitionDetails() {
           {profilesLoading ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (() => {
-            const registeredDrivers = allProfiles?.filter(p => p.driverName && p.role === 'racer') || [];
+            const registeredDrivers = allProfiles?.filter(p => p.driverName && p.fullName) || [];
             return registeredDrivers.length > 0 ? (
               <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
                 <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -464,7 +464,7 @@ export default function CompetitionDetails() {
                           <p className="text-sm text-muted-foreground truncate">{driver.fullName}</p>
                         )}
                       </div>
-                      <Badge variant="secondary" className="shrink-0">Racer</Badge>
+                      <Badge variant="secondary" className="shrink-0">Driver</Badge>
                     </div>
                   ))}
                 </div>

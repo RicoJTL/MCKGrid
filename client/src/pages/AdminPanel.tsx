@@ -45,7 +45,7 @@ export default function AdminPanel() {
   };
 
   const admins = profiles?.filter(p => p.role === 'admin') || [];
-  const racers = profiles?.filter(p => p.role === 'racer') || [];
+  const drivers = profiles?.filter(p => p.driverName && p.fullName) || [];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -78,8 +78,8 @@ export default function AdminPanel() {
                   <Users className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{racers.length}</p>
-                  <p className="text-sm text-muted-foreground">Racers</p>
+                  <p className="text-2xl font-bold">{drivers.length}</p>
+                  <p className="text-sm text-muted-foreground">Drivers</p>
                 </div>
               </div>
             </CardContent>

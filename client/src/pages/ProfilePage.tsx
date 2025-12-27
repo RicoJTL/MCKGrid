@@ -2,17 +2,22 @@ import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertProfileSchema } from "@shared/schema";
+import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCircle, Shield, Trophy, Calendar, MapPin, Upload } from "lucide-react";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
+
+const profileFormSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  driverName: z.string().min(1, "Driver name is required"),
+  profileImage: z.string().optional(),
+});
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -26,18 +31,16 @@ export default function ProfilePage() {
     enabled: !!profile?.id,
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertProfileSchema.partial()),
+  const form = useForm<z.infer<typeof profileFormSchema>>({
+    resolver: zodResolver(profileFormSchema),
     defaultValues: {
       fullName: profile?.fullName || "",
       driverName: profile?.driverName || "",
-      role: profile?.role || "spectator",
       profileImage: profile?.profileImage || "",
     },
     values: {
       fullName: profile?.fullName || "",
       driverName: profile?.driverName || "",
-      role: profile?.role || "spectator",
       profileImage: profile?.profileImage || "",
     }
   });
@@ -107,29 +110,6 @@ export default function ProfilePage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Account Role</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger className="bg-secondary/30" data-testid="select-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="racer">Racer</SelectItem>
-                    <SelectItem value="spectator">Spectator</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="fullName"
