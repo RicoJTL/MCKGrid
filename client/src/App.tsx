@@ -14,6 +14,7 @@ import LeagueDetails from "@/pages/LeagueDetails";
 import CompetitionDetails from "@/pages/CompetitionDetails";
 import RaceDetails from "@/pages/RaceDetails";
 import ProfilePage from "@/pages/ProfilePage";
+import AdminPanel from "@/pages/AdminPanel";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/competitions/:id" component={() => <ProtectedRoute component={CompetitionDetails} />} />
       <Route path="/races/:id" component={() => <ProtectedRoute component={RaceDetails} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminPanel} />} />
       
       <Route component={NotFound} />
     </Switch>

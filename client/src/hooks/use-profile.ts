@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { type Profile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export function useProfile() {
   return useQuery({
@@ -41,3 +42,39 @@ export function useUpdateProfile() {
     }
   });
 }
+
+export function useAllProfiles() {
+  return useQuery<Profile[]>({
+    queryKey: ["/api/profiles"],
+    queryFn: async () => {
+      const res = await fetch("/api/profiles", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch profiles");
+      return res.json();
+    },
+  });
+}
+
+export function useAdminUpdateProfile() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: { driverName?: string; fullName?: string; role?: string } }) => {
+      const safeData = {
+        ...(data.driverName !== undefined && { driverName: data.driverName }),
+        ...(data.fullName !== undefined && { fullName: data.fullName }),
+        ...(data.role !== undefined && { role: data.role }),
+      };
+      const res = await apiRequest("PATCH", `/api/profiles/${id}`, safeData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({ title: "Profile Updated", description: "Driver profile has been updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update profile", variant: "destructive" });
+    }
+  });
+}
+

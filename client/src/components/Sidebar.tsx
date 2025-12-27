@@ -5,9 +5,11 @@ import {
   LayoutDashboard, 
   UserCircle,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -22,6 +24,8 @@ interface SidebarProps {
 export function Sidebar({ onNavigate }: SidebarProps) {
   const [location] = useLocation();
   const { logout } = useAuth();
+  const { data: profile } = useProfile();
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">
@@ -67,7 +71,23 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/5">
+      <div className="p-4 border-t border-white/5 space-y-2">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => onNavigate?.()}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer group",
+              location === "/admin"
+                ? "bg-yellow-500/20 text-yellow-400 shadow-lg shadow-yellow-500/10"
+                : "text-muted-foreground hover:bg-white/5 hover:text-white"
+            )}
+            data-testid="nav-admin"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="font-medium tracking-wide">Admin Panel</span>
+          </Link>
+        )}
         <button 
           onClick={() => logout()}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"

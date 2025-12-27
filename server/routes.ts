@@ -87,10 +87,16 @@ export async function registerRoutes(
     res.json(profiles);
   });
 
-  // Admin: Update any profile
+  // Admin: Update any profile (whitelist allowed fields)
   app.patch("/api/profiles/:id", requireAdmin, async (req: any, res) => {
-    const { userId: _ignore, ...updateData } = req.body;
-    const updated = await storage.updateProfile(Number(req.params.id), updateData);
+    const { driverName, fullName, role } = req.body;
+    const safeData: Record<string, string | undefined> = {};
+    if (driverName !== undefined) safeData.driverName = driverName;
+    if (fullName !== undefined) safeData.fullName = fullName;
+    if (role !== undefined && ['admin', 'racer', 'spectator'].includes(role)) {
+      safeData.role = role;
+    }
+    const updated = await storage.updateProfile(Number(req.params.id), safeData);
     res.json(updated);
   });
 

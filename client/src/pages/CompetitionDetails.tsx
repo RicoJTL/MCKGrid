@@ -1,7 +1,7 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -38,6 +38,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { z } from "zod";
+import { useAllProfiles } from "@/hooks/use-profile";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export default function CompetitionDetails() {
   const [match, params] = useRoute("/competitions/:id");
@@ -46,6 +49,7 @@ export default function CompetitionDetails() {
   const { data: races, isLoading: racesLoading } = useRaces(compId);
   const { data: standings, isLoading: standingsLoading } = useCompetitionStandings(compId);
   const { data: profile } = useProfile();
+  const { data: allProfiles, isLoading: profilesLoading } = useAllProfiles();
   const createRace = useCreateRace();
   const updateCompetition = useUpdateCompetition();
   const deleteCompetition = useDeleteCompetition();
@@ -249,6 +253,10 @@ export default function CompetitionDetails() {
             <Calendar className="w-4 h-4 mr-2" />
             Races
           </TabsTrigger>
+          <TabsTrigger value="drivers" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+            <Users className="w-4 h-4 mr-2" />
+            Drivers
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="standings" className="mt-6">
@@ -428,6 +436,47 @@ export default function CompetitionDetails() {
               <p className="text-sm">Schedule races to build your championship calendar!</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="drivers" className="mt-6">
+          {profilesLoading ? (
+            <Skeleton className="h-64 w-full rounded-xl" />
+          ) : (() => {
+            const registeredDrivers = allProfiles?.filter(p => p.driverName && p.role === 'racer') || [];
+            return registeredDrivers.length > 0 ? (
+              <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
+                <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {registeredDrivers.map((driver) => (
+                    <div 
+                      key={driver.id}
+                      className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                      data-testid={`driver-card-${driver.id}`}
+                    >
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={driver.profileImage || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                          {driver.driverName?.[0]?.toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate">{driver.driverName}</p>
+                        {driver.fullName && (
+                          <p className="text-sm text-muted-foreground truncate">{driver.fullName}</p>
+                        )}
+                      </div>
+                      <Badge variant="secondary" className="shrink-0">Racer</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <Users className="w-16 h-16 mb-4 opacity-20" />
+                <p className="text-lg font-medium">No registered drivers</p>
+                <p className="text-sm">Drivers will appear here once they complete their profile</p>
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
