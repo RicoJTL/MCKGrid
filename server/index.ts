@@ -6,6 +6,11 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
+// Health check endpoint - must respond immediately for deployments
+app.get("/health", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
