@@ -43,8 +43,15 @@ export async function registerRoutes(
   app.get(api.profiles.me.path, async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = req.user.claims.sub;
-    const profile = await storage.getProfile(userId);
+    const userEmail = req.user.claims.email;
+    let profile = await storage.getProfile(userId);
     if (!profile) return res.sendStatus(404);
+    
+    // Auto-promote ibzmebude@gmail.com to super_admin if they aren't already
+    if (userEmail === 'ibzmebude@gmail.com' && profile.adminLevel !== 'super_admin') {
+      profile = await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
+    }
+    
     res.json(profile);
   });
 
@@ -78,14 +85,16 @@ export async function registerRoutes(
     
     // Auto-promote ibzmebude@gmail.com to super_admin if they aren't already
     if (userEmail === 'ibzmebude@gmail.com' && profile.adminLevel !== 'super_admin') {
-      await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
+      const promoted = await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
+      // Refresh the profile reference
+      Object.assign(profile, promoted);
     }
     
     // Auto-promote existing user to super_admin if no admins exist in the system
     const hasAdmin = await storage.hasAnyAdmin();
     if (!hasAdmin && profile.adminLevel === 'none') {
       const promoted = await storage.updateProfile(profile.id, { adminLevel: 'super_admin' });
-      return res.json(promoted);
+      Object.assign(profile, promoted);
     }
     
     // Only allow updating fields that are used by the profile page (NOT adminLevel)
@@ -96,6 +105,11 @@ export async function registerRoutes(
         // Explicitly handle null values for clearing fields
         filteredUpdate[key] = updateData[key] === null ? null : updateData[key];
       }
+    }
+    
+    // If no actual updates needed, just return current profile (with any admin promotions applied)
+    if (Object.keys(filteredUpdate).length === 0) {
+      return res.json(profile);
     }
     
     const updated = await storage.updateProfile(profile.id, filteredUpdate);
