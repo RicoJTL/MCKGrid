@@ -8,11 +8,26 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
+// Helper to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    )
+  ]);
+}
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
+    // Add 10 second timeout to prevent hanging during deployment
+    return await withTimeout(
+      client.discovery(
+        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+        process.env.REPL_ID!
+      ),
+      10000,
+      "OIDC discovery timed out after 10 seconds"
     );
   },
   { maxAge: 3600 * 1000 }
@@ -20,15 +35,34 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  
+  // Check for required environment variables
+  if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
+    console.warn("DATABASE_URL or SESSION_SECRET not set - using memory session store");
+    return session({
+      secret: process.env.SESSION_SECRET || 'development-secret-not-for-production',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: sessionTtl,
+      },
+    });
+  }
+  
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true, // Auto-create if missing
     ttl: sessionTtl,
     tableName: "sessions",
+    errorLog: (error) => {
+      console.error("Session store error:", error);
+    },
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,

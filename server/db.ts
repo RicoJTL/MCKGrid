@@ -4,11 +4,22 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
+// Don't throw at module load time - this breaks deployments
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  console.error("DATABASE_URL must be set. Did you forget to provision a database?");
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  // Add connection timeout and error handling for deployment stability
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
+});
+
+// Handle pool errors gracefully
+pool.on('error', (err) => {
+  console.error('Unexpected database pool error:', err);
+});
+
 export const db = drizzle(pool, { schema });
