@@ -74,100 +74,112 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0 }}
-          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Trophy className="w-16 h-16" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-white/5 text-yellow-500">
-              <Trophy className="w-5 h-5" />
+        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0 }}
+            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-colors relative overflow-hidden group cursor-pointer"
+            data-testid="card-active-competition"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Trophy className="w-16 h-16" />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Active Competitions</span>
-          </div>
-          <div className="text-xl font-bold font-display italic truncate">
-            {competition?.name || 'No active competition'}
-          </div>
-        </motion.div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-white/5 text-yellow-500">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Active Competitions</span>
+            </div>
+            <div className="text-xl font-bold font-display italic truncate">
+              {competition?.name || 'No active competition'}
+            </div>
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Calendar className="w-16 h-16" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-white/5 text-blue-500">
-              <Calendar className="w-5 h-5" />
+        <Link href={nextRace ? `/races/${nextRace.id}` : '/leagues'}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-colors relative overflow-hidden group cursor-pointer"
+            data-testid="card-next-race"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Calendar className="w-16 h-16" />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Next Race</span>
-          </div>
-          <div className="text-xl font-bold font-display italic truncate">
-            {nextRace?.name || 'No scheduled races'}
-          </div>
-          {nextRace && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {format(new Date(nextRace.date), 'MMM dd, yyyy')}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-white/5 text-blue-500">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Next Race</span>
             </div>
-          )}
-        </motion.div>
+            <div className="text-xl font-bold font-display italic truncate">
+              {nextRace?.name || 'No scheduled races'}
+            </div>
+            {nextRace && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {format(new Date(nextRace.date), 'MMM dd, yyyy')}
+              </div>
+            )}
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Crown className="w-16 h-16" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-white/5 text-primary">
-              <Crown className="w-5 h-5" />
+        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-colors relative overflow-hidden group cursor-pointer"
+            data-testid="card-your-position"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Crown className="w-16 h-16" />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Your Position</span>
-          </div>
-          <div className="text-2xl font-bold font-display italic">
-            {userPosition ? `P${userPosition}` : '--'}
-          </div>
-          {userStanding && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {userStanding.points} points
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-white/5 text-primary">
+                <Crown className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Your Position</span>
             </div>
-          )}
-        </motion.div>
+            <div className="text-2xl font-bold font-display italic">
+              {userPosition ? `P${userPosition}` : '--'}
+            </div>
+            {userStanding && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {userStanding.points} points
+              </div>
+            )}
+          </motion.div>
+        </Link>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-white/10 transition-colors relative overflow-hidden group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Medal className="w-16 h-16" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-white/5 text-green-500">
-              <Medal className="w-5 h-5" />
+        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-colors relative overflow-hidden group cursor-pointer"
+            data-testid="card-championship-leader"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Medal className="w-16 h-16" />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
-          </div>
-          <div className="text-xl font-bold font-display italic truncate">
-            {leader?.driverName || leader?.fullName || 'TBD'}
-          </div>
-          {leader && (
-            <div className="text-sm text-muted-foreground mt-1">
-              {leader.points} points
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-white/5 text-green-500">
+                <Medal className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
             </div>
-          )}
-        </motion.div>
+            <div className="text-xl font-bold font-display italic truncate">
+              {leader?.driverName || leader?.fullName || 'TBD'}
+            </div>
+            {leader && (
+              <div className="text-sm text-muted-foreground mt-1">
+                {leader.points} points
+              </div>
+            )}
+          </motion.div>
+        </Link>
       </div>
 
       {/* Upcoming Races & Standings */}
