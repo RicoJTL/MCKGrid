@@ -46,19 +46,27 @@ export async function registerRoutes(
     const { userId: _ignore, ...updateData } = req.body;
     
     if (!profile) {
-      // Create new profile
+      // Create new profile with only the fields used by profile page
       const newProfile = await storage.createProfile({
         userId,
         role: updateData.role || "spectator",
         fullName: updateData.fullName || null,
         driverName: updateData.driverName || null,
         profileImage: updateData.profileImage || null,
-        teamId: updateData.teamId || null,
       });
       return res.json(newProfile);
     }
     
-    const updated = await storage.updateProfile(profile.id, updateData);
+    // Only allow updating fields that are used by the profile page
+    const allowedFields = ['role', 'fullName', 'driverName', 'profileImage'];
+    const filteredUpdate: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (key in updateData) {
+        filteredUpdate[key] = updateData[key];
+      }
+    }
+    
+    const updated = await storage.updateProfile(profile.id, filteredUpdate);
     res.json(updated);
   });
 
