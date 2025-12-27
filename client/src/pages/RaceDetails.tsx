@@ -365,11 +365,6 @@ function ResultsEditor({
         points: parseInt(e.points)
       }));
 
-    if (resultsData.length === 0) {
-      toast({ title: "Error", description: "Add at least one result", variant: "destructive" });
-      return;
-    }
-
     submitResults.mutate({ raceId, competitionId, results: resultsData }, {
       onSuccess: () => {
         toast({ title: "Results saved!" });
