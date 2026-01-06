@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { 
-  leagues, competitions, races, results, profiles, teams, competitionEnrollments,
-  type League, type Competition, type Race, type Result, type Profile, type Team, type CompetitionEnrollment,
+  leagues, competitions, races, results, profiles, teams,
+  type League, type Competition, type Race, type Result, type Profile, type Team,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam
 } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
@@ -48,12 +48,6 @@ export interface IStorage {
   // Standings
   getCompetitionStandings(competitionId: number): Promise<any[]>;
   getUpcomingRaces(competitionId?: number): Promise<Race[]>;
-
-  // Enrollments
-  getCompetitionEnrollments(competitionId: number): Promise<Profile[]>;
-  enrollDriver(competitionId: number, profileId: number): Promise<CompetitionEnrollment>;
-  unenrollDriver(competitionId: number, profileId: number): Promise<void>;
-  isDriverEnrolled(competitionId: number, profileId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -102,8 +96,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteCompetition(id: number): Promise<void> {
-    // Cascade delete: delete enrollments, races, and their results first
-    await db.delete(competitionEnrollments).where(eq(competitionEnrollments.competitionId, id));
+    // Cascade delete: delete all races and their results first
     const compRaces = await db.select().from(races).where(eq(races.competitionId, id));
     for (const race of compRaces) {
       await db.delete(results).where(eq(results.raceId, race.id));
@@ -184,9 +177,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteProfile(id: number): Promise<void> {
-    // First delete all enrollments for this driver
-    await db.delete(competitionEnrollments).where(eq(competitionEnrollments.profileId, id));
-    // Then delete all race results for this driver to avoid foreign key constraint
+    // First delete all race results for this driver to avoid foreign key constraint
     await db.delete(results).where(eq(results.racerId, id));
     // Then delete the profile
     await db.delete(profiles).where(eq(profiles.id, id));
@@ -264,43 +255,6 @@ export class DatabaseStorage implements IStorage {
     
     // All scheduled races
     return await db.select().from(races).where(eq(races.status, 'scheduled')).orderBy(races.date);
-  }
-
-  async getCompetitionEnrollments(competitionId: number): Promise<Profile[]> {
-    const enrollments = await db
-      .select({ profile: profiles })
-      .from(competitionEnrollments)
-      .innerJoin(profiles, eq(competitionEnrollments.profileId, profiles.id))
-      .where(eq(competitionEnrollments.competitionId, competitionId));
-    return enrollments.map(e => e.profile);
-  }
-
-  async enrollDriver(competitionId: number, profileId: number): Promise<CompetitionEnrollment> {
-    const [enrollment] = await db
-      .insert(competitionEnrollments)
-      .values({ competitionId, profileId })
-      .returning();
-    return enrollment;
-  }
-
-  async unenrollDriver(competitionId: number, profileId: number): Promise<void> {
-    await db
-      .delete(competitionEnrollments)
-      .where(and(
-        eq(competitionEnrollments.competitionId, competitionId),
-        eq(competitionEnrollments.profileId, profileId)
-      ));
-  }
-
-  async isDriverEnrolled(competitionId: number, profileId: number): Promise<boolean> {
-    const [existing] = await db
-      .select()
-      .from(competitionEnrollments)
-      .where(and(
-        eq(competitionEnrollments.competitionId, competitionId),
-        eq(competitionEnrollments.profileId, profileId)
-      ));
-    return !!existing;
   }
 }
 

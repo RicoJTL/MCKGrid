@@ -148,11 +148,10 @@ export async function registerRoutes(
 
   // Admin: Update any profile (role is account type only, admin access controlled via separate endpoint)
   app.patch("/api/profiles/:id", requireAdmin, async (req: any, res) => {
-    const { driverName, fullName, role, profileImage } = req.body;
-    const safeData: Record<string, string | null | undefined> = {};
+    const { driverName, fullName, role } = req.body;
+    const safeData: Record<string, string | undefined> = {};
     if (driverName !== undefined) safeData.driverName = driverName;
     if (fullName !== undefined) safeData.fullName = fullName;
-    if (profileImage !== undefined) safeData.profileImage = profileImage;
     // Only allow racer or spectator as role - admin access is controlled via adminLevel
     if (role !== undefined && ['racer', 'spectator'].includes(role)) {
       safeData.role = role;
@@ -269,36 +268,6 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
-  // === Enrollments ===
-  app.get("/api/competitions/:id/enrollments", async (req, res) => {
-    const enrolledDrivers = await storage.getCompetitionEnrollments(Number(req.params.id));
-    res.json(enrolledDrivers);
-  });
-
-  app.post("/api/competitions/:id/enrollments", requireAdmin, async (req, res) => {
-    try {
-      const competitionId = Number(req.params.id);
-      const { profileId } = req.body;
-      if (!profileId) return res.status(400).json({ error: "profileId is required" });
-      
-      const isEnrolled = await storage.isDriverEnrolled(competitionId, profileId);
-      if (isEnrolled) return res.status(400).json({ error: "Driver is already enrolled" });
-      
-      const enrollment = await storage.enrollDriver(competitionId, profileId);
-      res.status(201).json(enrollment);
-    } catch (error) {
-      console.error("Error enrolling driver:", error);
-      res.status(500).json({ error: "Failed to enroll driver" });
-    }
-  });
-
-  app.delete("/api/competitions/:id/enrollments/:profileId", requireAdmin, async (req, res) => {
-    const competitionId = Number(req.params.id);
-    const profileId = Number(req.params.profileId);
-    await storage.unenrollDriver(competitionId, profileId);
-    res.sendStatus(204);
-  });
-
   // === Races ===
   app.get(api.races.list.path, async (req, res) => {
     const races = await storage.getRaces(Number(req.params.id));
@@ -347,24 +316,6 @@ export async function registerRoutes(
   app.post(api.results.submit.path, requireAdmin, async (req: any, res) => {
     const raceId = Number(req.params.id);
     const input = api.results.submit.input.parse(req.body);
-    
-    // Get the race to find its competition
-    const race = await storage.getRace(raceId);
-    if (!race) return res.status(404).json({ error: "Race not found" });
-    
-    // Validate all racers are enrolled in the competition
-    if (input.length > 0) {
-      const enrolledDrivers = await storage.getCompetitionEnrollments(race.competitionId);
-      const enrolledIds = new Set(enrolledDrivers.map(d => d.id));
-      
-      const unenrolledRacers = input.filter(r => !enrolledIds.has(r.racerId));
-      if (unenrolledRacers.length > 0) {
-        return res.status(400).json({ 
-          error: "Some drivers are not enrolled in this competition",
-          unenrolledRacerIds: unenrolledRacers.map(r => r.racerId)
-        });
-      }
-    }
     
     // Atomically replace all results for this race in a transaction
     const results = await storage.replaceRaceResults(raceId, input);

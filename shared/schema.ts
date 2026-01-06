@@ -62,12 +62,6 @@ export const results = pgTable("results", {
   raceTime: text("race_time"),
 });
 
-export const competitionEnrollments = pgTable("competition_enrollments", {
-  id: serial("id").primaryKey(),
-  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
-  profileId: integer("profile_id").references(() => profiles.id).notNull(),
-});
-
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
@@ -98,11 +92,6 @@ export const resultsRelations = relations(results, ({ one }) => ({
   racer: one(profiles, { fields: [results.racerId], references: [profiles.id] }),
 }));
 
-export const competitionEnrollmentsRelations = relations(competitionEnrollments, ({ one }) => ({
-  competition: one(competitions, { fields: [competitionEnrollments.competitionId], references: [competitions.id] }),
-  profile: one(profiles, { fields: [competitionEnrollments.profileId], references: [profiles.id] }),
-}));
-
 // Schemas
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true });
@@ -110,7 +99,6 @@ export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true })
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({ id: true });
 export const insertRaceSchema = createInsertSchema(races).omit({ id: true });
 export const insertResultSchema = createInsertSchema(results).omit({ id: true });
-export const insertCompetitionEnrollmentSchema = createInsertSchema(competitionEnrollments).omit({ id: true });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -118,7 +106,6 @@ export type InsertLeague = z.infer<typeof insertLeagueSchema>;
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 export type InsertRace = z.infer<typeof insertRaceSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
-export type InsertCompetitionEnrollment = z.infer<typeof insertCompetitionEnrollmentSchema>;
 
 export type Team = typeof teams.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
@@ -126,4 +113,3 @@ export type League = typeof leagues.$inferSelect;
 export type Competition = typeof competitions.$inferSelect;
 export type Race = typeof races.$inferSelect;
 export type Result = typeof results.$inferSelect;
-export type CompetitionEnrollment = typeof competitionEnrollments.$inferSelect;
