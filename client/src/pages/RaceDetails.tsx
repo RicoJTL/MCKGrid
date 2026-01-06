@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { useEnrolledDrivers } from "@/hooks/use-enrollments";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ export default function RaceDetails() {
   const { data: results, isLoading: loadingResults } = useResults(raceId);
   const { data: profiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
   const { data: profile } = useProfile();
+  const { data: enrolledDrivers } = useEnrolledDrivers(race?.competitionId || 0);
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
   const [, setLocation] = useLocation();
@@ -159,7 +161,8 @@ export default function RaceDetails() {
             raceId={raceId}
             competitionId={race.competitionId}
             existingResults={results || []} 
-            profiles={profiles || []}
+            profiles={enrolledDrivers || []}
+            allProfiles={profiles || []}
             onCancel={() => setIsEditing(false)} 
             onSave={() => setIsEditing(false)}
           />
@@ -314,6 +317,7 @@ function ResultsEditor({
   competitionId,
   existingResults, 
   profiles,
+  allProfiles,
   onCancel, 
   onSave 
 }: { 
@@ -321,6 +325,7 @@ function ResultsEditor({
   competitionId: number;
   existingResults: any[]; 
   profiles: Profile[];
+  allProfiles: Profile[];
   onCancel: () => void; 
   onSave: () => void;
 }) {
@@ -376,7 +381,20 @@ function ResultsEditor({
     });
   };
 
-  const racers = profiles.filter(p => p.role === 'racer' || p.role === 'admin');
+  // Merge enrolled drivers with any drivers from existing results (in case they were unenrolled)
+  const existingRacerIds = new Set(existingResults.map(r => r.racerId));
+  const enrolledIds = new Set(profiles.map(p => p.id));
+  const unenrolledWithResults = allProfiles.filter(p => existingRacerIds.has(p.id) && !enrolledIds.has(p.id));
+  const racers = [...profiles, ...unenrolledWithResults];
+  
+  // Helper to get driver name from allProfiles
+  const getDriverName = (id: number) => {
+    const driver = allProfiles.find(p => p.id === id);
+    return driver?.driverName || driver?.fullName || `Driver ${id}`;
+  };
+  
+  // Check if a driver is not enrolled (for visual indication)
+  const isUnenrolled = (id: number) => !enrolledIds.has(id);
 
   return (
     <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">
@@ -392,10 +410,11 @@ function ResultsEditor({
                 {racers.map(p => (
                   <SelectItem key={p.id} value={String(p.id)}>
                     {p.driverName || `Driver ${p.id}`}
+                    {isUnenrolled(p.id) && " (not enrolled)"}
                   </SelectItem>
                 ))}
                 {racers.length === 0 && (
-                  <SelectItem value="" disabled>No drivers available</SelectItem>
+                  <SelectItem value="" disabled>No enrolled drivers</SelectItem>
                 )}
               </SelectContent>
             </Select>

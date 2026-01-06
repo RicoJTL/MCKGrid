@@ -334,5 +334,27 @@ export async function registerRoutes(
     res.status(201).json(team);
   });
 
+  // === Enrollments ===
+  app.get("/api/competitions/:id/enrollments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const enrolledDrivers = await storage.getEnrolledDrivers(Number(req.params.id));
+    res.json(enrolledDrivers);
+  });
+
+  app.post("/api/competitions/:id/enrollments", requireAdmin, async (req: any, res) => {
+    const competitionId = Number(req.params.id);
+    const { profileId } = req.body;
+    if (!profileId) return res.status(400).json({ error: "profileId required" });
+    const enrollment = await storage.enrollDriver(competitionId, profileId);
+    res.status(201).json(enrollment);
+  });
+
+  app.delete("/api/competitions/:id/enrollments/:profileId", requireAdmin, async (req: any, res) => {
+    const competitionId = Number(req.params.id);
+    const profileId = Number(req.params.profileId);
+    await storage.unenrollDriver(competitionId, profileId);
+    res.sendStatus(204);
+  });
+
   return httpServer;
 }

@@ -1,9 +1,10 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
+import { useEnrolledDrivers, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-enrollments";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -55,6 +56,9 @@ export default function CompetitionDetails() {
   const deleteCompetition = useDeleteCompetition();
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
+  const { data: enrolledDrivers, isLoading: enrolledLoading } = useEnrolledDrivers(compId);
+  const enrollDriver = useEnrollDriver();
+  const unenrollDriver = useUnenrollDriver();
   const [, setLocation] = useLocation();
   
   const [open, setOpen] = useState(false);
@@ -439,38 +443,100 @@ export default function CompetitionDetails() {
         </TabsContent>
 
         <TabsContent value="drivers" className="mt-6">
-          {profilesLoading ? (
+          {(profilesLoading || enrolledLoading) ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (() => {
-            const registeredDrivers = allProfiles?.filter(p => p.role === 'racer') || [];
-            return registeredDrivers.length > 0 ? (
-              <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
-                <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {registeredDrivers.map((driver) => (
-                    <div 
-                      key={driver.id}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-                      data-testid={`driver-card-${driver.id}`}
-                    >
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={driver.profileImage || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                          {driver.driverName?.[0]?.toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate">{driver.driverName}</p>
-                      </div>
-                      <Badge variant="secondary" className="shrink-0">Driver</Badge>
+            const allDrivers = allProfiles?.filter(p => p.role === 'racer' || p.role === 'admin') || [];
+            const enrolledIds = new Set(enrolledDrivers?.map(d => d.id) || []);
+            const enrolled = allDrivers.filter(d => enrolledIds.has(d.id));
+            const notEnrolled = allDrivers.filter(d => !enrolledIds.has(d.id));
+
+            return (
+              <div className="space-y-6">
+                <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
+                  <div className="p-4 border-b border-white/5">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Enrolled Drivers ({enrolled.length})
+                    </h3>
+                  </div>
+                  {enrolled.length > 0 ? (
+                    <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {enrolled.map((driver) => (
+                        <div 
+                          key={driver.id}
+                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5"
+                          data-testid={`enrolled-driver-${driver.id}`}
+                        >
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={driver.profileImage || undefined} />
+                            <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                              {driver.driverName?.[0]?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold truncate">{driver.driverName || driver.fullName}</p>
+                          </div>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => unenrollDriver.mutate({ competitionId: compId, profileId: driver.id })}
+                              disabled={unenrollDriver.isPending}
+                              data-testid={`button-unenroll-${driver.id}`}
+                            >
+                              <UserMinus className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p>No drivers enrolled in this competition yet.</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                <Users className="w-16 h-16 mb-4 opacity-20" />
-                <p className="text-lg font-medium">No registered drivers</p>
-                <p className="text-sm">Drivers will appear here once they complete their profile</p>
+
+                {isAdmin && notEnrolled.length > 0 && (
+                  <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
+                    <div className="p-4 border-b border-white/5">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <UserPlus className="w-5 h-5" />
+                        Available Drivers ({notEnrolled.length})
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">Click to enroll drivers in this competition</p>
+                    </div>
+                    <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {notEnrolled.map((driver) => (
+                        <div 
+                          key={driver.id}
+                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5"
+                          data-testid={`available-driver-${driver.id}`}
+                        >
+                          <Avatar className="w-12 h-12">
+                            <AvatarImage src={driver.profileImage || undefined} />
+                            <AvatarFallback className="bg-muted text-muted-foreground font-bold">
+                              {driver.driverName?.[0]?.toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold truncate">{driver.driverName || driver.fullName}</p>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => enrollDriver.mutate({ competitionId: compId, profileId: driver.id })}
+                            disabled={enrollDriver.isPending}
+                            data-testid={`button-enroll-${driver.id}`}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" /> Enroll
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
