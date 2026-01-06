@@ -276,15 +276,20 @@ export async function registerRoutes(
   });
 
   app.post("/api/competitions/:id/enrollments", requireAdmin, async (req, res) => {
-    const competitionId = Number(req.params.id);
-    const { profileId } = req.body;
-    if (!profileId) return res.status(400).json({ error: "profileId is required" });
-    
-    const isEnrolled = await storage.isDriverEnrolled(competitionId, profileId);
-    if (isEnrolled) return res.status(400).json({ error: "Driver is already enrolled" });
-    
-    const enrollment = await storage.enrollDriver(competitionId, profileId);
-    res.status(201).json(enrollment);
+    try {
+      const competitionId = Number(req.params.id);
+      const { profileId } = req.body;
+      if (!profileId) return res.status(400).json({ error: "profileId is required" });
+      
+      const isEnrolled = await storage.isDriverEnrolled(competitionId, profileId);
+      if (isEnrolled) return res.status(400).json({ error: "Driver is already enrolled" });
+      
+      const enrollment = await storage.enrollDriver(competitionId, profileId);
+      res.status(201).json(enrollment);
+    } catch (error) {
+      console.error("Error enrolling driver:", error);
+      res.status(500).json({ error: "Failed to enroll driver" });
+    }
   });
 
   app.delete("/api/competitions/:id/enrollments/:profileId", requireAdmin, async (req, res) => {

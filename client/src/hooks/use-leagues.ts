@@ -397,8 +397,14 @@ export function useEnrollDriver() {
         credentials: "include",
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to enroll driver");
+        let errorMessage = "Failed to enroll driver";
+        try {
+          const error = await res.json();
+          errorMessage = error.error || errorMessage;
+        } catch {
+          errorMessage = res.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
       return res.json();
     },
