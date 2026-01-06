@@ -9,15 +9,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useUpload } from "@/hooks/use-upload";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
   fullName: z.string().min(1, "Full name is required"),
   role: z.enum(["racer", "spectator"]),
+  profileImage: z.string().optional(),
 });
 
 const getRoleDisplay = (role: string) => {
@@ -72,6 +74,8 @@ export default function AdminPanel() {
   const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<any>(null);
   
   const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { uploadFile, isUploading: isUploadingImage } = useUpload();
 
   const editForm = useForm<z.infer<typeof driverSchema>>({
     resolver: zodResolver(driverSchema),
@@ -79,6 +83,7 @@ export default function AdminPanel() {
       driverName: "",
       fullName: "",
       role: "racer",
+      profileImage: "",
     },
   });
 
@@ -96,9 +101,24 @@ export default function AdminPanel() {
     updateProfile.mutate({ id: editingProfile.id, data }, {
       onSuccess: () => {
         setEditingProfile(null);
+        setImagePreview(null);
         editForm.reset();
       }
     });
+  };
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+    
+    const result = await uploadFile(file);
+    if (result) {
+      editForm.setValue("profileImage", result.objectPath);
+    }
   };
 
   const onCreateDriver = (data: z.infer<typeof driverSchema>) => {
@@ -248,7 +268,9 @@ export default function AdminPanel() {
                             driverName: profile.driverName || "",
                             fullName: profile.fullName || "",
                             role: roleValue as "racer" | "spectator",
+                            profileImage: profile.profileImage || "",
                           });
+                          setImagePreview(profile.profileImage || null);
                           setEditingProfile(profile);
                         }}
                         data-testid={`button-edit-${profile.id}`}
@@ -278,13 +300,36 @@ export default function AdminPanel() {
           </CardContent>
         </Card>
 
-        <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
+        <Dialog open={!!editingProfile} onOpenChange={(open) => { if (!open) { setEditingProfile(null); setImagePreview(null); } }}>
           <DialogContent className="bg-card border-white/10">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>
             <Form {...editForm}>
               <form onSubmit={editForm.handleSubmit(onEditDriver)} className="space-y-4">
+                <div className="flex flex-col items-center gap-4">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage src={imagePreview || editingProfile?.profileImage || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-2xl">
+                      {(editingProfile?.driverName || editingProfile?.fullName || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      data-testid="input-edit-profile-image"
+                    />
+                    <Button type="button" variant="outline" size="sm" asChild disabled={isUploadingImage}>
+                      <span>
+                        <Upload className="w-4 h-4 mr-2" />
+                        {isUploadingImage ? "Uploading..." : "Change Photo"}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
                 <FormField
                   control={editForm.control}
                   name="driverName"

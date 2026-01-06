@@ -59,11 +59,12 @@ export function useAdminUpdateProfile() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { driverName?: string; fullName?: string; role?: string } }) => {
+    mutationFn: async ({ id, data }: { id: number; data: { driverName?: string; fullName?: string; role?: string; profileImage?: string | null } }) => {
       const safeData = {
         ...(data.driverName !== undefined && { driverName: data.driverName }),
         ...(data.fullName !== undefined && { fullName: data.fullName }),
         ...(data.role !== undefined && { role: data.role }),
+        ...(data.profileImage !== undefined && { profileImage: data.profileImage }),
       };
       const res = await apiRequest("PATCH", `/api/profiles/${id}`, safeData);
       return res.json();

@@ -148,10 +148,11 @@ export async function registerRoutes(
 
   // Admin: Update any profile (role is account type only, admin access controlled via separate endpoint)
   app.patch("/api/profiles/:id", requireAdmin, async (req: any, res) => {
-    const { driverName, fullName, role } = req.body;
-    const safeData: Record<string, string | undefined> = {};
+    const { driverName, fullName, role, profileImage } = req.body;
+    const safeData: Record<string, string | null | undefined> = {};
     if (driverName !== undefined) safeData.driverName = driverName;
     if (fullName !== undefined) safeData.fullName = fullName;
+    if (profileImage !== undefined) safeData.profileImage = profileImage;
     // Only allow racer or spectator as role - admin access is controlled via adminLevel
     if (role !== undefined && ['racer', 'spectator'].includes(role)) {
       safeData.role = role;
