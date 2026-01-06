@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { 
-  leagues, competitions, races, results, profiles, teams,
-  type League, type Competition, type Race, type Result, type Profile, type Team,
+  leagues, competitions, races, results, profiles, teams, competitionEnrollments,
+  type League, type Competition, type Race, type Result, type Profile, type Team, type CompetitionEnrollment,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam
 } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
@@ -48,6 +48,12 @@ export interface IStorage {
   // Standings
   getCompetitionStandings(competitionId: number): Promise<any[]>;
   getUpcomingRaces(competitionId?: number): Promise<Race[]>;
+
+  // Enrollments
+  getCompetitionEnrollments(competitionId: number): Promise<Profile[]>;
+  enrollDriver(competitionId: number, profileId: number): Promise<CompetitionEnrollment>;
+  unenrollDriver(competitionId: number, profileId: number): Promise<void>;
+  isDriverEnrolled(competitionId: number, profileId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -255,6 +261,43 @@ export class DatabaseStorage implements IStorage {
     
     // All scheduled races
     return await db.select().from(races).where(eq(races.status, 'scheduled')).orderBy(races.date);
+  }
+
+  async getCompetitionEnrollments(competitionId: number): Promise<Profile[]> {
+    const enrollments = await db
+      .select({ profile: profiles })
+      .from(competitionEnrollments)
+      .innerJoin(profiles, eq(competitionEnrollments.profileId, profiles.id))
+      .where(eq(competitionEnrollments.competitionId, competitionId));
+    return enrollments.map(e => e.profile);
+  }
+
+  async enrollDriver(competitionId: number, profileId: number): Promise<CompetitionEnrollment> {
+    const [enrollment] = await db
+      .insert(competitionEnrollments)
+      .values({ competitionId, profileId })
+      .returning();
+    return enrollment;
+  }
+
+  async unenrollDriver(competitionId: number, profileId: number): Promise<void> {
+    await db
+      .delete(competitionEnrollments)
+      .where(and(
+        eq(competitionEnrollments.competitionId, competitionId),
+        eq(competitionEnrollments.profileId, profileId)
+      ));
+  }
+
+  async isDriverEnrolled(competitionId: number, profileId: number): Promise<boolean> {
+    const [existing] = await db
+      .select()
+      .from(competitionEnrollments)
+      .where(and(
+        eq(competitionEnrollments.competitionId, competitionId),
+        eq(competitionEnrollments.profileId, profileId)
+      ));
+    return !!existing;
   }
 }
 
