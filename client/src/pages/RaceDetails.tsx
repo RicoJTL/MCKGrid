@@ -1,4 +1,4 @@
-import { useRace, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
+import { useRace, useUpdateRace, useDeleteRace, useCompetitionEnrollments } from "@/hooks/use-leagues";
 import { useResults, useSubmitResults } from "@/hooks/use-results";
 import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,10 +51,11 @@ export default function RaceDetails() {
   const raceId = parseInt(params?.id || "0");
   const { data: race, isLoading: loadingRace } = useRace(raceId);
   const { data: results, isLoading: loadingResults } = useResults(raceId);
-  const { data: profiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
+  const { data: allProfiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
   const { data: profile } = useProfile();
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
+  const { data: enrolledDrivers, isLoading: loadingEnrollments } = useCompetitionEnrollments(race?.competitionId || 0);
   const [, setLocation] = useLocation();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -89,7 +90,7 @@ export default function RaceDetails() {
   if (!race) return <div>Race not found</div>;
 
   const getDriverName = (racerId: number) => {
-    const driver = profiles?.find(p => p.id === racerId);
+    const driver = allProfiles?.find(p => p.id === racerId);
     return driver?.driverName || `Driver #${racerId}`;
   };
 
@@ -155,14 +156,23 @@ export default function RaceDetails() {
         </div>
 
         {isEditing ? (
-          <ResultsEditor 
-            raceId={raceId}
-            competitionId={race.competitionId}
-            existingResults={results || []} 
-            profiles={profiles || []}
-            onCancel={() => setIsEditing(false)} 
-            onSave={() => setIsEditing(false)}
-          />
+          loadingEnrollments ? (
+            <Skeleton className="h-48 w-full" />
+          ) : enrolledDrivers && enrolledDrivers.length > 0 ? (
+            <ResultsEditor 
+              raceId={raceId}
+              competitionId={race.competitionId}
+              existingResults={results || []} 
+              profiles={enrolledDrivers}
+              onCancel={() => setIsEditing(false)} 
+              onSave={() => setIsEditing(false)}
+            />
+          ) : (
+            <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 text-center text-muted-foreground">
+              <p className="font-medium">No drivers enrolled in this competition</p>
+              <p className="text-sm mt-2">Enroll drivers in the competition before entering results</p>
+            </div>
+          )
         ) : (
           <div className="bg-secondary/30 rounded-xl border border-white/5 overflow-hidden">
             <Table>
@@ -376,7 +386,7 @@ function ResultsEditor({
     });
   };
 
-  const racers = profiles.filter(p => p.role === 'racer' || p.role === 'admin');
+  const racers = profiles;
 
   return (
     <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">

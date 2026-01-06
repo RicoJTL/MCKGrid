@@ -1,7 +1,7 @@
-import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
+import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitionEnrollments, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -55,6 +55,9 @@ export default function CompetitionDetails() {
   const deleteCompetition = useDeleteCompetition();
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
+  const { data: enrolledDrivers, isLoading: enrollmentsLoading } = useCompetitionEnrollments(compId);
+  const enrollDriver = useEnrollDriver();
+  const unenrollDriver = useUnenrollDriver();
   const [, setLocation] = useLocation();
   
   const [open, setOpen] = useState(false);
@@ -62,8 +65,13 @@ export default function CompetitionDetails() {
   const [deleteCompOpen, setDeleteCompOpen] = useState(false);
   const [editingRace, setEditingRace] = useState<any>(null);
   const [deletingRace, setDeletingRace] = useState<any>(null);
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+  
+  const allDrivers = allProfiles?.filter(p => p.role === 'racer') || [];
+  const enrolledIds = new Set(enrolledDrivers?.map(d => d.id) || []);
+  const availableDrivers = allDrivers.filter(d => !enrolledIds.has(d.id));
 
   const raceFormSchema = insertRaceSchema.extend({
     date: z.coerce.date({ message: "Select a valid date & time" }),
@@ -439,14 +447,58 @@ export default function CompetitionDetails() {
         </TabsContent>
 
         <TabsContent value="drivers" className="mt-6">
-          {profilesLoading ? (
-            <Skeleton className="h-64 w-full rounded-xl" />
-          ) : (() => {
-            const registeredDrivers = allProfiles?.filter(p => p.role === 'racer') || [];
-            return registeredDrivers.length > 0 ? (
+          <div className="space-y-4">
+            {isAdmin && (
+              <div className="flex justify-end">
+                <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-enroll-driver">
+                      <UserPlus className="w-4 h-4 mr-2" /> Add Driver
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-white/10">
+                    <DialogHeader>
+                      <DialogTitle>Enroll Driver in Competition</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {availableDrivers.length > 0 ? (
+                        availableDrivers.map((driver) => (
+                          <div 
+                            key={driver.id}
+                            className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover-elevate cursor-pointer"
+                            onClick={() => {
+                              enrollDriver.mutate({ competitionId: compId, profileId: driver.id });
+                              setEnrollDialogOpen(false);
+                            }}
+                            data-testid={`enroll-driver-${driver.id}`}
+                          >
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={driver.profileImage || undefined} />
+                              <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                                {driver.driverName?.[0]?.toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{driver.driverName || driver.fullName}</p>
+                            </div>
+                            <UserPlus className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-muted-foreground py-4">All drivers are already enrolled</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+            
+            {enrollmentsLoading || profilesLoading ? (
+              <Skeleton className="h-64 w-full rounded-xl" />
+            ) : enrolledDrivers && enrolledDrivers.length > 0 ? (
               <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
                 <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {registeredDrivers.map((driver) => (
+                  {enrolledDrivers.map((driver) => (
                     <div 
                       key={driver.id}
                       className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
@@ -459,9 +511,20 @@ export default function CompetitionDetails() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate">{driver.driverName}</p>
+                        <p className="font-bold truncate">{driver.driverName || driver.fullName}</p>
                       </div>
-                      <Badge variant="secondary" className="shrink-0">Driver</Badge>
+                      {isAdmin && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-red-400 hover:text-red-300"
+                          onClick={() => unenrollDriver.mutate({ competitionId: compId, profileId: driver.id })}
+                          data-testid={`unenroll-driver-${driver.id}`}
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {!isAdmin && <Badge variant="secondary" className="shrink-0">Driver</Badge>}
                     </div>
                   ))}
                 </div>
@@ -469,11 +532,11 @@ export default function CompetitionDetails() {
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
                 <Users className="w-16 h-16 mb-4 opacity-20" />
-                <p className="text-lg font-medium">No registered drivers</p>
-                <p className="text-sm">Drivers will appear here once they complete their profile</p>
+                <p className="text-lg font-medium">No enrolled drivers</p>
+                <p className="text-sm">{isAdmin ? "Click 'Add Driver' to enroll drivers in this competition" : "Drivers will appear here once an admin enrolls them"}</p>
               </div>
-            );
-          })()}
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 

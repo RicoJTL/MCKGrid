@@ -368,3 +368,68 @@ export function useDashboardData() {
     staleTime: 30000, // Cache for 30 seconds
   });
 }
+
+// Enrollments
+import type { Profile } from "@shared/schema";
+
+export function useCompetitionEnrollments(competitionId: number) {
+  return useQuery<Profile[]>({
+    queryKey: ['/api/competitions', competitionId, 'enrollments'],
+    queryFn: async () => {
+      const res = await fetch(`/api/competitions/${competitionId}/enrollments`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch enrollments");
+      return res.json();
+    },
+    enabled: !!competitionId,
+  });
+}
+
+export function useEnrollDriver() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ competitionId, profileId }: { competitionId: number; profileId: number }) => {
+      const res = await fetch(`/api/competitions/${competitionId}/enrollments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to enroll driver");
+      }
+      return res.json();
+    },
+    onSuccess: (_, { competitionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'enrollments'] });
+      toast({ title: "Driver Enrolled", description: "Driver added to competition" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useUnenrollDriver() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ competitionId, profileId }: { competitionId: number; profileId: number }) => {
+      const res = await fetch(`/api/competitions/${competitionId}/enrollments/${profileId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to unenroll driver");
+    },
+    onSuccess: (_, { competitionId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'enrollments'] });
+      toast({ title: "Driver Removed", description: "Driver removed from competition" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+}

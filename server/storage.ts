@@ -102,7 +102,8 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteCompetition(id: number): Promise<void> {
-    // Cascade delete: delete all races and their results first
+    // Cascade delete: delete enrollments, races, and their results first
+    await db.delete(competitionEnrollments).where(eq(competitionEnrollments.competitionId, id));
     const compRaces = await db.select().from(races).where(eq(races.competitionId, id));
     for (const race of compRaces) {
       await db.delete(results).where(eq(results.raceId, race.id));
@@ -183,7 +184,9 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteProfile(id: number): Promise<void> {
-    // First delete all race results for this driver to avoid foreign key constraint
+    // First delete all enrollments for this driver
+    await db.delete(competitionEnrollments).where(eq(competitionEnrollments.profileId, id));
+    // Then delete all race results for this driver to avoid foreign key constraint
     await db.delete(results).where(eq(results.racerId, id));
     // Then delete the profile
     await db.delete(profiles).where(eq(profiles.id, id));

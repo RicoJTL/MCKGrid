@@ -343,6 +343,24 @@ export async function registerRoutes(
     const raceId = Number(req.params.id);
     const input = api.results.submit.input.parse(req.body);
     
+    // Get the race to find its competition
+    const race = await storage.getRace(raceId);
+    if (!race) return res.status(404).json({ error: "Race not found" });
+    
+    // Validate all racers are enrolled in the competition
+    if (input.length > 0) {
+      const enrolledDrivers = await storage.getCompetitionEnrollments(race.competitionId);
+      const enrolledIds = new Set(enrolledDrivers.map(d => d.id));
+      
+      const unenrolledRacers = input.filter(r => !enrolledIds.has(r.racerId));
+      if (unenrolledRacers.length > 0) {
+        return res.status(400).json({ 
+          error: "Some drivers are not enrolled in this competition",
+          unenrolledRacerIds: unenrolledRacers.map(r => r.racerId)
+        });
+      }
+    }
+    
     // Atomically replace all results for this race in a transaction
     const results = await storage.replaceRaceResults(raceId, input);
     res.status(201).json(results);
