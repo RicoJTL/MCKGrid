@@ -269,6 +269,31 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // === Enrollments ===
+  app.get("/api/competitions/:id/enrollments", async (req, res) => {
+    const enrolledDrivers = await storage.getCompetitionEnrollments(Number(req.params.id));
+    res.json(enrolledDrivers);
+  });
+
+  app.post("/api/competitions/:id/enrollments", requireAdmin, async (req, res) => {
+    const competitionId = Number(req.params.id);
+    const { profileId } = req.body;
+    if (!profileId) return res.status(400).json({ error: "profileId is required" });
+    
+    const isEnrolled = await storage.isDriverEnrolled(competitionId, profileId);
+    if (isEnrolled) return res.status(400).json({ error: "Driver is already enrolled" });
+    
+    const enrollment = await storage.enrollDriver(competitionId, profileId);
+    res.status(201).json(enrollment);
+  });
+
+  app.delete("/api/competitions/:id/enrollments/:profileId", requireAdmin, async (req, res) => {
+    const competitionId = Number(req.params.id);
+    const profileId = Number(req.params.profileId);
+    await storage.unenrollDriver(competitionId, profileId);
+    res.sendStatus(204);
+  });
+
   // === Races ===
   app.get(api.races.list.path, async (req, res) => {
     const races = await storage.getRaces(Number(req.params.id));
