@@ -212,6 +212,12 @@ export class DatabaseStorage implements IStorage {
 
     const raceIds = competitionRaces.map(r => r.id);
     
+    // Get enrolled driver IDs for this competition
+    const enrolledDrivers = await db.select({ profileId: enrollments.profileId })
+      .from(enrollments)
+      .where(eq(enrollments.competitionId, competitionId));
+    const enrolledIds = new Set(enrolledDrivers.map(e => e.profileId));
+    
     // Get all results for all races in this competition using inArray
     const allRaceResults = await db
       .select({
@@ -225,10 +231,13 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(profiles, eq(results.racerId, profiles.id))
       .where(inArray(results.raceId, raceIds));
 
-    // Aggregate by racer
+    // Aggregate by racer - only include enrolled drivers
     const standingsMap = new Map<number, { racerId: number; driverName: string | null; fullName: string | null; points: number; podiums: number }>();
     
     for (const result of allRaceResults) {
+      // Skip drivers who are not enrolled in this competition
+      if (!enrolledIds.has(result.racerId)) continue;
+      
       const existing = standingsMap.get(result.racerId);
       if (existing) {
         existing.points += result.points;
