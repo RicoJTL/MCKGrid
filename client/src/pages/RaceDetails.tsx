@@ -1,4 +1,4 @@
-import { useRace, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
+import { useRace, useUpdateRace, useDeleteRace, useRaceCompetitions } from "@/hooks/use-leagues";
 import { useResults, useSubmitResults } from "@/hooks/use-results";
 import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,10 +51,12 @@ export default function RaceDetails() {
   const [match, params] = useRoute("/races/:id");
   const raceId = parseInt(params?.id || "0");
   const { data: race, isLoading: loadingRace } = useRace(raceId);
+  const { data: raceCompetitions } = useRaceCompetitions(raceId);
   const { data: results, isLoading: loadingResults } = useResults(raceId);
   const { data: profiles } = useQuery<Profile[]>({ queryKey: ['/api/profiles'] });
   const { data: profile } = useProfile();
-  const { data: enrolledDrivers } = useEnrolledDrivers(race?.competitionId || 0);
+  const firstCompetitionId = raceCompetitions?.[0]?.id || 0;
+  const { data: enrolledDrivers } = useEnrolledDrivers(firstCompetitionId);
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
   const [, setLocation] = useLocation();
@@ -82,8 +84,8 @@ export default function RaceDetails() {
 
   const onDeleteRace = () => {
     if (!race) return;
-    deleteRace.mutate({ id: raceId, competitionId: race.competitionId }, {
-      onSuccess: () => setLocation(`/competitions/${race.competitionId}`)
+    deleteRace.mutate({ id: raceId, leagueId: race.leagueId }, {
+      onSuccess: () => setLocation(firstCompetitionId ? `/competitions/${firstCompetitionId}` : '/leagues')
     });
   };
 
@@ -97,7 +99,7 @@ export default function RaceDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href={`/competitions/${race.competitionId}`}>
+      <Link href={firstCompetitionId ? `/competitions/${firstCompetitionId}` : '/leagues'}>
         <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </div>
@@ -159,7 +161,7 @@ export default function RaceDetails() {
         {isEditing ? (
           <ResultsEditor 
             raceId={raceId}
-            competitionId={race.competitionId}
+            competitionId={firstCompetitionId}
             existingResults={results || []} 
             profiles={enrolledDrivers || []}
             allProfiles={profiles || []}

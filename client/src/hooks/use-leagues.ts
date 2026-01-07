@@ -250,6 +250,20 @@ export function useDeleteCompetition() {
   });
 }
 
+// Get competitions for a race
+export function useRaceCompetitions(raceId: number) {
+  return useQuery({
+    queryKey: ['/api/races', raceId, 'competitions'],
+    queryFn: async () => {
+      const url = buildUrl(api.races.getCompetitions.path, { id: raceId });
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch race competitions");
+      return api.races.getCompetitions.responses[200].parse(await res.json());
+    },
+    enabled: !!raceId,
+  });
+}
+
 // Update Race
 export function useUpdateRace() {
   const queryClient = useQueryClient();
@@ -267,7 +281,8 @@ export function useUpdateRace() {
       return await res.json();
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['races', result.competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
       toast({ title: "Race Updated" });
     },
@@ -280,16 +295,17 @@ export function useDeleteRace() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, competitionId }: { id: number; competitionId: number }) => {
+    mutationFn: async ({ id, leagueId }: { id: number; leagueId: number }) => {
       const res = await fetch(`/api/races/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete race");
-      return { competitionId, id };
+      return { leagueId, id };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['races', result.competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
       queryClient.invalidateQueries({ queryKey: ['results'] });
       toast({ title: "Race Deleted" });
