@@ -365,8 +365,31 @@ export async function registerRoutes(
       date: req.body.date ? new Date(req.body.date) : undefined,
     };
     const input = api.races.create.input.parse(body);
-    const race = await storage.createRace(input);
+    const { competitionIds, ...raceData } = input;
+    const race = await storage.createRace(raceData, competitionIds);
     res.status(201).json(race);
+  });
+  
+  // Get races by league
+  app.get(api.races.listByLeague.path, async (req, res) => {
+    const races = await storage.getRacesByLeague(Number(req.params.id));
+    res.json(races);
+  });
+  
+  // Get competitions for a race
+  app.get(api.races.getCompetitions.path, async (req, res) => {
+    const competitions = await storage.getRaceCompetitions(Number(req.params.id));
+    res.json(competitions);
+  });
+  
+  // Update race competitions
+  app.patch("/api/races/:id/competitions", requireAdmin, async (req, res) => {
+    const { competitionIds } = req.body;
+    if (!Array.isArray(competitionIds)) {
+      return res.status(400).json({ error: "competitionIds must be an array" });
+    }
+    await storage.updateRaceCompetitions(Number(req.params.id), competitionIds);
+    res.sendStatus(204);
   });
   
   app.get(api.races.get.path, async (req, res) => {

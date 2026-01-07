@@ -52,11 +52,17 @@ export const competitions = pgTable("competitions", {
 
 export const races = pgTable("races", {
   id: serial("id").primaryKey(),
-  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
+  leagueId: integer("league_id").references(() => leagues.id).notNull(),
   name: text("name").notNull(),
   date: timestamp("date").notNull(),
   location: text("location").notNull(),
   status: raceStatusEnum("status").default("scheduled").notNull(),
+});
+
+export const raceCompetitions = pgTable("race_competitions", {
+  id: serial("id").primaryKey(),
+  raceId: integer("race_id").references(() => races.id).notNull(),
+  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
 });
 
 export const results = pgTable("results", {
@@ -91,12 +97,18 @@ export const leaguesRelations = relations(leagues, ({ many }) => ({
 
 export const competitionsRelations = relations(competitions, ({ one, many }) => ({
   league: one(leagues, { fields: [competitions.leagueId], references: [leagues.id] }),
-  races: many(races),
+  raceCompetitions: many(raceCompetitions),
 }));
 
 export const racesRelations = relations(races, ({ one, many }) => ({
-  competition: one(competitions, { fields: [races.competitionId], references: [competitions.id] }),
+  league: one(leagues, { fields: [races.leagueId], references: [leagues.id] }),
+  raceCompetitions: many(raceCompetitions),
   results: many(results),
+}));
+
+export const raceCompetitionsRelations = relations(raceCompetitions, ({ one }) => ({
+  race: one(races, { fields: [raceCompetitions.raceId], references: [races.id] }),
+  competition: one(competitions, { fields: [raceCompetitions.competitionId], references: [competitions.id] }),
 }));
 
 export const resultsRelations = relations(results, ({ one }) => ({
@@ -115,6 +127,7 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true 
 export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true });
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({ id: true });
 export const insertRaceSchema = createInsertSchema(races).omit({ id: true });
+export const insertRaceCompetitionSchema = createInsertSchema(raceCompetitions).omit({ id: true });
 export const insertResultSchema = createInsertSchema(results).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true });
 
@@ -123,6 +136,7 @@ export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type InsertLeague = z.infer<typeof insertLeagueSchema>;
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 export type InsertRace = z.infer<typeof insertRaceSchema>;
+export type InsertRaceCompetition = z.infer<typeof insertRaceCompetitionSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
 export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 
@@ -131,5 +145,6 @@ export type Profile = typeof profiles.$inferSelect;
 export type League = typeof leagues.$inferSelect;
 export type Competition = typeof competitions.$inferSelect;
 export type Race = typeof races.$inferSelect;
+export type RaceCompetition = typeof raceCompetitions.$inferSelect;
 export type Result = typeof results.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;

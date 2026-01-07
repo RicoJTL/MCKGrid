@@ -1,4 +1,4 @@
-import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
+import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star } from "lucide-react";
@@ -88,18 +88,22 @@ export default function CompetitionDetails() {
 
   const raceFormSchema = insertRaceSchema.extend({
     date: z.coerce.date({ message: "Select a valid date & time" }),
+    competitionIds: z.array(z.number()).min(1, "Select at least one competition"),
   });
 
   const form = useForm({
     resolver: zodResolver(raceFormSchema),
     defaultValues: {
-      competitionId: compId,
+      leagueId: competition?.leagueId || 0,
       name: "",
       location: "",
       date: new Date(),
-      status: "scheduled"
+      status: "scheduled" as const,
+      competitionIds: [compId],
     },
   });
+  
+  const { data: leagueCompetitions } = useCompetitions(competition?.leagueId || 0);
 
   const compForm = useForm({
     defaultValues: {
@@ -120,12 +124,19 @@ export default function CompetitionDetails() {
   const onSubmit = (data: any) => {
     createRace.mutate({ 
       ...data, 
-      competitionId: compId,
+      leagueId: competition?.leagueId,
       date: new Date(data.date) 
     }, {
       onSuccess: () => {
         setOpen(false);
-        form.reset();
+        form.reset({
+          leagueId: competition?.leagueId || 0,
+          name: "",
+          location: "",
+          date: new Date(),
+          status: "scheduled" as const,
+          competitionIds: [compId],
+        });
       }
     });
   };
@@ -260,6 +271,42 @@ export default function CompetitionDetails() {
                                 value={field.value instanceof Date ? field.value : new Date(field.value)}
                                 onChange={(date) => field.onChange(date)}
                               />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="competitionIds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Competitions</FormLabel>
+                            <FormControl>
+                              <div className="space-y-2">
+                                {leagueCompetitions?.map((comp: any) => (
+                                  <label 
+                                    key={comp.id} 
+                                    className="flex items-center gap-2 p-2 rounded-md hover-elevate cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={field.value?.includes(comp.id)}
+                                      onChange={(e) => {
+                                        const newValue = e.target.checked
+                                          ? [...(field.value || []), comp.id]
+                                          : (field.value || []).filter((id: number) => id !== comp.id);
+                                        field.onChange(newValue);
+                                      }}
+                                      className="w-4 h-4 rounded border-border"
+                                    />
+                                    <span className="text-sm">{comp.name}</span>
+                                    {comp.id === compId && (
+                                      <Badge variant="secondary" className="text-xs">Current</Badge>
+                                    )}
+                                  </label>
+                                ))}
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

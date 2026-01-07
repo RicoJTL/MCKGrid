@@ -1,10 +1,10 @@
 import { db } from "./db";
 import { 
-  leagues, competitions, races, results, profiles, teams, enrollments,
-  type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment,
+  leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
+  type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment
 } from "@shared/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Leagues
@@ -23,9 +23,12 @@ export interface IStorage {
 
   // Races
   getRaces(competitionId: number): Promise<Race[]>;
+  getRacesByLeague(leagueId: number): Promise<Race[]>;
   getRace(id: number): Promise<Race | undefined>;
-  createRace(race: InsertRace): Promise<Race>;
+  createRace(race: InsertRace, competitionIds: number[]): Promise<Race>;
   updateRace(id: number, data: Partial<InsertRace>): Promise<Race>;
+  updateRaceCompetitions(raceId: number, competitionIds: number[]): Promise<void>;
+  getRaceCompetitions(raceId: number): Promise<Competition[]>;
   deleteRace(id: number): Promise<void>;
 
   // Results
@@ -81,26 +84,25 @@ export class DatabaseStorage implements IStorage {
     
     // If league is marked as completed, cascade to all races within the league
     if (data.status === 'completed') {
-      const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
-      const compIds = comps.map(c => c.id);
-      if (compIds.length > 0) {
-        await db.update(races)
-          .set({ status: 'completed' })
-          .where(inArray(races.competitionId, compIds));
-      }
+      await db.update(races)
+        .set({ status: 'completed' })
+        .where(eq(races.leagueId, id));
     }
     
     return updated;
   }
   async deleteLeague(id: number): Promise<void> {
-    // Cascade delete: get all competitions, then their races and results
+    // Cascade delete: delete race results, race_competitions links, races, competitions, enrollments
+    const leagueRaces = await db.select().from(races).where(eq(races.leagueId, id));
+    for (const race of leagueRaces) {
+      await db.delete(results).where(eq(results.raceId, race.id));
+      await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, race.id));
+    }
+    await db.delete(races).where(eq(races.leagueId, id));
+    
     const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
     for (const comp of comps) {
-      const compRaces = await db.select().from(races).where(eq(races.competitionId, comp.id));
-      for (const race of compRaces) {
-        await db.delete(results).where(eq(results.raceId, race.id));
-      }
-      await db.delete(races).where(eq(races.competitionId, comp.id));
+      await db.delete(enrollments).where(eq(enrollments.competitionId, comp.id));
     }
     await db.delete(competitions).where(eq(competitions.leagueId, id));
     await db.delete(leagues).where(eq(leagues.id, id));
@@ -122,32 +124,66 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteCompetition(id: number): Promise<void> {
-    // Cascade delete: delete all races and their results first
-    const compRaces = await db.select().from(races).where(eq(races.competitionId, id));
-    for (const race of compRaces) {
-      await db.delete(results).where(eq(results.raceId, race.id));
-    }
-    await db.delete(races).where(eq(races.competitionId, id));
+    // Delete race_competitions links for this competition
+    await db.delete(raceCompetitions).where(eq(raceCompetitions.competitionId, id));
+    // Delete enrollments for this competition
+    await db.delete(enrollments).where(eq(enrollments.competitionId, id));
+    // Delete the competition
     await db.delete(competitions).where(eq(competitions.id, id));
   }
 
   async getRaces(competitionId: number): Promise<Race[]> {
-    return await db.select().from(races).where(eq(races.competitionId, competitionId)).orderBy(races.date);
+    const raceLinks = await db
+      .select({ race: races })
+      .from(raceCompetitions)
+      .innerJoin(races, eq(raceCompetitions.raceId, races.id))
+      .where(eq(raceCompetitions.competitionId, competitionId))
+      .orderBy(races.date);
+    return raceLinks.map(r => r.race);
+  }
+  async getRacesByLeague(leagueId: number): Promise<Race[]> {
+    return await db.select().from(races).where(eq(races.leagueId, leagueId)).orderBy(races.date);
   }
   async getRace(id: number): Promise<Race | undefined> {
     const [race] = await db.select().from(races).where(eq(races.id, id));
     return race;
   }
-  async createRace(race: InsertRace): Promise<Race> {
-    const [newRace] = await db.insert(races).values(race).returning();
-    return newRace;
+  async createRace(race: InsertRace, competitionIds: number[]): Promise<Race> {
+    return await db.transaction(async (tx) => {
+      const [newRace] = await tx.insert(races).values(race).returning();
+      if (competitionIds.length > 0) {
+        await tx.insert(raceCompetitions).values(
+          competitionIds.map(competitionId => ({ raceId: newRace.id, competitionId }))
+        );
+      }
+      return newRace;
+    });
   }
   async updateRace(id: number, data: Partial<InsertRace>): Promise<Race> {
     const [updated] = await db.update(races).set(data).where(eq(races.id, id)).returning();
     return updated;
   }
+  async updateRaceCompetitions(raceId: number, competitionIds: number[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(raceCompetitions).where(eq(raceCompetitions.raceId, raceId));
+      if (competitionIds.length > 0) {
+        await tx.insert(raceCompetitions).values(
+          competitionIds.map(competitionId => ({ raceId, competitionId }))
+        );
+      }
+    });
+  }
+  async getRaceCompetitions(raceId: number): Promise<Competition[]> {
+    const links = await db
+      .select({ competition: competitions })
+      .from(raceCompetitions)
+      .innerJoin(competitions, eq(raceCompetitions.competitionId, competitions.id))
+      .where(eq(raceCompetitions.raceId, raceId));
+    return links.map(l => l.competition);
+  }
   async deleteRace(id: number): Promise<void> {
     await db.delete(results).where(eq(results.raceId, id));
+    await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, id));
     await db.delete(races).where(eq(races.id, id));
   }
 
@@ -226,11 +262,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCompetitionStandings(competitionId: number): Promise<any[]> {
-    // Get all races for this competition
-    const competitionRaces = await db.select().from(races).where(eq(races.competitionId, competitionId));
+    // Get all races for this competition via junction table
+    const competitionRaces = await db
+      .select({ race: races })
+      .from(raceCompetitions)
+      .innerJoin(races, eq(raceCompetitions.raceId, races.id))
+      .where(eq(raceCompetitions.competitionId, competitionId));
+    
     if (competitionRaces.length === 0) return [];
 
-    const raceIds = competitionRaces.map(r => r.id);
+    const raceIds = competitionRaces.map(r => r.race.id);
     
     // Get all results for all races in this competition using inArray
     const allRaceResults = await db
@@ -270,13 +311,17 @@ export class DatabaseStorage implements IStorage {
 
   async getUpcomingRaces(competitionId?: number): Promise<Race[]> {
     if (competitionId) {
-      // Filter by competition AND scheduled status
-      return await db.select().from(races)
+      // Filter by competition AND scheduled status via junction table
+      const raceLinks = await db
+        .select({ race: races })
+        .from(raceCompetitions)
+        .innerJoin(races, eq(raceCompetitions.raceId, races.id))
         .where(and(
-          eq(races.competitionId, competitionId),
+          eq(raceCompetitions.competitionId, competitionId),
           eq(races.status, 'scheduled')
         ))
         .orderBy(races.date);
+      return raceLinks.map(r => r.race);
     }
     
     // All scheduled races
@@ -323,6 +368,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]> {
+    // Get race history with competition info via junction table
     const profileResults = await db
       .select({
         position: results.position,
@@ -331,15 +377,39 @@ export class DatabaseStorage implements IStorage {
         raceName: races.name,
         raceDate: races.date,
         location: races.location,
-        competitionId: competitions.id,
-        competitionName: competitions.name,
+        raceId: races.id,
+        leagueId: races.leagueId,
       })
       .from(results)
       .innerJoin(races, eq(results.raceId, races.id))
-      .innerJoin(competitions, eq(races.competitionId, competitions.id))
       .where(eq(results.racerId, profileId))
       .orderBy(desc(races.date));
-    return profileResults;
+    
+    // For each result, get the competitions the race belongs to
+    const resultsWithCompetitions = [];
+    for (const result of profileResults) {
+      const raceComps = await db
+        .select({ competition: competitions })
+        .from(raceCompetitions)
+        .innerJoin(competitions, eq(raceCompetitions.competitionId, competitions.id))
+        .where(eq(raceCompetitions.raceId, result.raceId));
+      
+      // Add each competition as a separate entry (or first one if needed)
+      if (raceComps.length > 0) {
+        resultsWithCompetitions.push({
+          ...result,
+          competitionId: raceComps[0].competition.id,
+          competitionName: raceComps[0].competition.name,
+        });
+      } else {
+        resultsWithCompetitions.push({
+          ...result,
+          competitionId: null,
+          competitionName: null,
+        });
+      }
+    }
+    return resultsWithCompetitions;
   }
 
   async getAllActiveCompetitions(): Promise<any[]> {
@@ -361,6 +431,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUpcomingRaces(): Promise<any[]> {
+    // Get all upcoming races from active leagues (dedupe by race id)
     const upcomingRaces = await db
       .select({
         id: races.id,
@@ -368,15 +439,30 @@ export class DatabaseStorage implements IStorage {
         date: races.date,
         location: races.location,
         status: races.status,
-        competitionId: races.competitionId,
-        competitionName: competitions.name,
+        leagueId: races.leagueId,
       })
       .from(races)
-      .innerJoin(competitions, eq(races.competitionId, competitions.id))
-      .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
+      .innerJoin(leagues, eq(races.leagueId, leagues.id))
       .where(and(eq(races.status, 'scheduled'), eq(leagues.status, 'active')))
       .orderBy(races.date);
-    return upcomingRaces;
+    
+    // For each race, get the first competition it belongs to (for display purposes)
+    const racesWithCompetitions = [];
+    for (const race of upcomingRaces) {
+      const raceComps = await db
+        .select({ competition: competitions })
+        .from(raceCompetitions)
+        .innerJoin(competitions, eq(raceCompetitions.competitionId, competitions.id))
+        .where(eq(raceCompetitions.raceId, race.id))
+        .limit(1);
+      
+      racesWithCompetitions.push({
+        ...race,
+        competitionId: raceComps[0]?.competition.id || null,
+        competitionName: raceComps[0]?.competition.name || null,
+      });
+    }
+    return racesWithCompetitions;
   }
 
   async getMainCompetition(): Promise<Competition | null> {

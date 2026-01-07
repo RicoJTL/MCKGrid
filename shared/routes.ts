@@ -93,10 +93,19 @@ export const api = {
         200: z.array(z.custom<typeof races.$inferSelect>()),
       },
     },
+    listByLeague: {
+      method: 'GET' as const,
+      path: '/api/leagues/:id/races',
+      responses: {
+        200: z.array(z.custom<typeof races.$inferSelect>()),
+      },
+    },
     create: {
       method: 'POST' as const,
       path: '/api/races',
-      input: insertRaceSchema,
+      input: insertRaceSchema.extend({
+        competitionIds: z.array(z.number()).min(1, "At least one competition is required"),
+      }),
       responses: {
         201: z.custom<typeof races.$inferSelect>(),
       },
@@ -107,6 +116,13 @@ export const api = {
       responses: {
         200: z.custom<typeof races.$inferSelect>(),
         404: errorSchemas.notFound,
+      },
+    },
+    getCompetitions: {
+      method: 'GET' as const,
+      path: '/api/races/:id/competitions',
+      responses: {
+        200: z.array(z.custom<typeof competitions.$inferSelect>()),
       },
     }
   },

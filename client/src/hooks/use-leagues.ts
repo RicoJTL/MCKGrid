@@ -134,8 +134,15 @@ export function useCreateRace() {
       return api.races.create.responses[201].parse(await res.json());
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['races', variables.competitionId] });
+      // Invalidate races for all linked competitions
+      if (variables.competitionIds) {
+        for (const compId of variables.competitionIds) {
+          queryClient.invalidateQueries({ queryKey: ['races', compId] });
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['races'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues'], exact: false });
       toast({ title: "Race Scheduled", description: "Date set!" });
     },
   });
