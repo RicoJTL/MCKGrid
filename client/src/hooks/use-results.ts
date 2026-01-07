@@ -40,6 +40,12 @@ export function useSubmitResults() {
       queryClient.invalidateQueries({ queryKey: [api.results.list.path, result.raceId] });
       queryClient.invalidateQueries({ queryKey: ['standings', result.competitionId] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      // Invalidate all profile race histories so they update with new results
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey;
+        return Array.isArray(key) && key[0] === '/api/profiles' && 
+          (key[2] === 'history' || key[2] === 'history-by-competition');
+      }});
       toast({ title: "Results Submitted", description: "Podium decided!" });
     },
     onError: (err: Error) => {

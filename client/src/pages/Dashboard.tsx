@@ -82,26 +82,27 @@ export default function Dashboard() {
 
       {/* My Competitions - Scrollable Tabs */}
       {enrolledCompetitions && enrolledCompetitions.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
-            <Flag className="w-4 h-4 text-primary" /> My Competitions
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/30 border border-primary/20">
+          <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
+            <Flag className="w-5 h-5 text-primary" /> My Competitions
           </h3>
-          <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex gap-3 pb-3">
-              {enrolledCompetitions.map((comp) => (
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-2">
+              {enrolledCompetitions.map((comp, index) => (
                 <Link key={comp.id} href={`/competitions/${comp.id}`}>
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-secondary/50 border border-white/10 hover:border-primary/50 transition-colors cursor-pointer min-w-[180px]"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-primary/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
                     data-testid={`card-competition-${comp.id}`}
                   >
-                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
-                      <Trophy className="w-4 h-4" />
+                    <div className="p-3 rounded-lg bg-primary/20 text-primary">
+                      <Trophy className="w-5 h-5" />
                     </div>
                     <div className="overflow-hidden">
-                      <p className="font-bold truncate">{comp.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{comp.type?.replace('_', ' ')}</p>
+                      <p className="font-bold text-white truncate">{comp.name}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{comp.type?.replace('_', ' ') || 'Series'}</p>
                     </div>
                   </motion.div>
                 </Link>
