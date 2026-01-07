@@ -239,9 +239,11 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteProfile(id: number): Promise<void> {
-    // First delete all race results for this driver to avoid foreign key constraint
+    // First delete all competition enrollments for this driver to avoid foreign key constraint
+    await db.delete(enrollments).where(eq(enrollments.profileId, id));
+    // Then delete all race results for this driver
     await db.delete(results).where(eq(results.racerId, id));
-    // Then delete the profile
+    // Finally delete the profile
     await db.delete(profiles).where(eq(profiles.id, id));
   }
   async getProfileRaceHistory(profileId: number): Promise<any[]> {
