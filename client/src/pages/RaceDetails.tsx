@@ -407,14 +407,15 @@ function ResultsEditor({
                 <SelectValue placeholder="Select Driver" />
               </SelectTrigger>
               <SelectContent>
-                {racers.map(p => (
-                  <SelectItem key={p.id} value={String(p.id)}>
-                    {p.driverName || `Driver ${p.id}`}
-                    {isUnenrolled(p.id) && " (not enrolled)"}
-                  </SelectItem>
-                ))}
-                {racers.length === 0 && (
-                  <SelectItem value="" disabled>No enrolled drivers</SelectItem>
+                {racers.length === 0 ? (
+                  <SelectItem value="no-drivers" disabled>No enrolled drivers</SelectItem>
+                ) : (
+                  racers.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.driverName || `Driver ${p.id}`}
+                      {isUnenrolled(p.id) && " (not enrolled)"}
+                    </SelectItem>
+                  ))
                 )}
               </SelectContent>
             </Select>
