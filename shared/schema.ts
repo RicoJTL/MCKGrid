@@ -42,6 +42,7 @@ export const competitions = pgTable("competitions", {
   name: text("name").notNull(),
   type: competitionTypeEnum("type").default("series").notNull(),
   rules: jsonb("rules").$type<{ pointsSystem: Record<string, number> }>().default({ pointsSystem: {} }),
+  isMain: boolean("is_main").default(false).notNull(),
 });
 
 export const races = pgTable("races", {
