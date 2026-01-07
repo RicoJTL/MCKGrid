@@ -1,5 +1,5 @@
 import { useLeagues, useCreateLeague, useUpdateLeague, useDeleteLeague } from "@/hooks/use-leagues";
-import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2, Star } from "lucide-react";
+import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2, Star, CheckCircle2, Circle } from "lucide-react";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLeagueSchema } from "@shared/schema";
@@ -169,6 +170,18 @@ export default function LeaguesPage() {
                     }}>
                       <Pencil className="w-4 h-4 mr-2" /> Edit
                     </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateLeague.mutate({ id: league.id, data: { status: league.status === 'active' ? 'completed' : 'active' } });
+                      }}
+                    >
+                      {league.status === 'active' ? (
+                        <><CheckCircle2 className="w-4 h-4 mr-2" /> Mark Completed</>
+                      ) : (
+                        <><Circle className="w-4 h-4 mr-2" /> Mark Active</>
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation();
                       setDeletingLeague(league);
@@ -186,11 +199,14 @@ export default function LeaguesPage() {
                   <Trophy className="w-6 h-6 text-primary group-hover:text-white" />
                 </div>
                 
-                <h3 className="text-xl font-bold font-display italic mb-2 group-hover:text-primary transition-colors flex items-center gap-2">
+                <h3 className="text-xl font-bold font-display italic mb-2 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap">
                   {league.name}
                   {league.isMain && (
                     <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                   )}
+                  <Badge variant={league.status === 'completed' ? 'secondary' : 'default'} className="text-xs">
+                    {league.status === 'completed' ? 'Completed' : 'Active'}
+                  </Badge>
                 </h3>
                 
                 <p className="text-muted-foreground text-sm line-clamp-2 mb-6 h-10">

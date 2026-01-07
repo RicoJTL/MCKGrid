@@ -292,7 +292,12 @@ export async function registerRoutes(
     if (description !== undefined) data.description = description;
     if (seasonStart !== undefined) data.seasonStart = new Date(seasonStart);
     if (seasonEnd !== undefined) data.seasonEnd = seasonEnd ? new Date(seasonEnd) : null;
-    if (status !== undefined && (status === 'active' || status === 'completed')) data.status = status;
+    if (status !== undefined) {
+      if (status !== 'active' && status !== 'completed') {
+        return res.status(400).json({ error: "Invalid status. Must be 'active' or 'completed'" });
+      }
+      data.status = status;
+    }
     const updated = await storage.updateLeague(Number(req.params.id), data);
     res.json(updated);
   });

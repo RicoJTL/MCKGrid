@@ -1,7 +1,7 @@
 import { useLeague, useCompetitions, useCreateCompetition, useUpdateLeague, useDeleteLeague, useUpdateCompetition, useDeleteCompetition } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star } from "lucide-react";
+import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 export default function LeagueDetails() {
   const [match, params] = useRoute("/leagues/:id");
@@ -151,11 +152,14 @@ export default function LeagueDetails() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-5xl font-display font-bold italic text-white mb-4 flex items-center gap-3">
+            <h1 className="text-5xl font-display font-bold italic text-white mb-4 flex items-center gap-3 flex-wrap">
               {league.name}
               {league.isMain && (
                 <Star className="w-8 h-8 text-yellow-400 fill-yellow-400" />
               )}
+              <Badge variant={league.status === 'completed' ? 'secondary' : 'default'} className="text-sm">
+                {league.status === 'completed' ? 'Completed' : 'Active'}
+              </Badge>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl">{league.description}</p>
           </div>
@@ -178,6 +182,15 @@ export default function LeagueDetails() {
                   disabled={setMainLeague.isPending || league?.isMain}
                 >
                   <Star className="w-4 h-4 mr-2" /> {league?.isMain ? 'Main League' : 'Set as Main League'}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => updateLeague.mutate({ id: leagueId, data: { status: league.status === 'active' ? 'completed' : 'active' } })}
+                >
+                  {league.status === 'active' ? (
+                    <><CheckCircle2 className="w-4 h-4 mr-2" /> Mark Completed</>
+                  ) : (
+                    <><Circle className="w-4 h-4 mr-2" /> Mark Active</>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setDeleteLeagueOpen(true)} className="text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" /> Delete League

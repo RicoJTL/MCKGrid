@@ -159,6 +159,7 @@ export function useUpdateLeague() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.leagues.get.path, id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues/main'] });
       toast({ title: "League Updated" });
     },
   });
