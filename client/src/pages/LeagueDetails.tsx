@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +50,18 @@ export default function LeagueDetails() {
   const updateCompetition = useUpdateCompetition();
   const deleteCompetition = useDeleteCompetition();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  
+  const setMainLeague = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/leagues/${id}/set-main`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues', leagueId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues'] });
+    }
+  });
   
   const [openCreate, setOpenCreate] = useState(false);
   const [openEditLeague, setOpenEditLeague] = useState(false);
@@ -137,7 +151,12 @@ export default function LeagueDetails() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-5xl font-display font-bold italic text-white mb-4">{league.name}</h1>
+            <h1 className="text-5xl font-display font-bold italic text-white mb-4 flex items-center gap-3">
+              {league.name}
+              {league.isMain && (
+                <Star className="w-8 h-8 text-yellow-400 fill-yellow-400" />
+              )}
+            </h1>
             <p className="text-xl text-muted-foreground max-w-2xl">{league.description}</p>
           </div>
           {isAdmin && (
@@ -153,6 +172,12 @@ export default function LeagueDetails() {
                   setOpenEditLeague(true);
                 }}>
                   <Pencil className="w-4 h-4 mr-2" /> Edit League
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setMainLeague.mutate(leagueId)}
+                  disabled={setMainLeague.isPending || league?.isMain}
+                >
+                  <Star className="w-4 h-4 mr-2" /> {league?.isMain ? 'Main League' : 'Set as Main League'}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setDeleteLeagueOpen(true)} className="text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" /> Delete League

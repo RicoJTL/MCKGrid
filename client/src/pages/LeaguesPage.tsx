@@ -1,5 +1,5 @@
 import { useLeagues, useCreateLeague, useUpdateLeague, useDeleteLeague } from "@/hooks/use-leagues";
-import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2, Star } from "lucide-react";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -186,8 +186,11 @@ export default function LeaguesPage() {
                   <Trophy className="w-6 h-6 text-primary group-hover:text-white" />
                 </div>
                 
-                <h3 className="text-xl font-bold font-display italic mb-2 group-hover:text-primary transition-colors">
+                <h3 className="text-xl font-bold font-display italic mb-2 group-hover:text-primary transition-colors flex items-center gap-2">
                   {league.name}
+                  {league.isMain && (
+                    <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                  )}
                 </h3>
                 
                 <p className="text-muted-foreground text-sm line-clamp-2 mb-6 h-10">
