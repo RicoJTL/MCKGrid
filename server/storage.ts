@@ -335,6 +335,8 @@ export class DatabaseStorage implements IStorage {
         type: competitions.type,
         leagueId: competitions.leagueId,
         leagueName: leagues.name,
+        isMain: competitions.isMain,
+        createdAt: competitions.createdAt,
       })
       .from(competitions)
       .innerJoin(leagues, eq(competitions.leagueId, leagues.id))

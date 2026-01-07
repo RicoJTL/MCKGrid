@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { Competition } from "@shared/schema";
+import { useMemo } from "react";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -61,6 +62,22 @@ export default function Dashboard() {
 
   const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
   
+  // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
+  const sortCompetitions = <T extends { id: number; isMain?: boolean; createdAt?: Date | string | null }>(comps: T[] | undefined): T[] => {
+    if (!comps) return [];
+    return [...comps].sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return a.id - b.id;
+    });
+  };
+
+  const sortedEnrolledCompetitions = useMemo(() => sortCompetitions(enrolledCompetitions), [enrolledCompetitions]);
+  const sortedAllCompetitions = useMemo(() => sortCompetitions(allCompetitions), [allCompetitions]);
+  
   const standings = mainStandings || [];
   const upcomingRaces = upcomingRacesData || [];
   const nextRace = upcomingRaces[0];
@@ -93,14 +110,14 @@ export default function Dashboard() {
       </div>
 
       {/* My Competitions - Scrollable Tabs */}
-      {enrolledCompetitions && enrolledCompetitions.length > 0 && (
+      {sortedEnrolledCompetitions.length > 0 && (
         <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20">
           <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
             <Trophy className="w-5 h-5 text-yellow-500" /> My Competitions
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
-              {enrolledCompetitions.map((comp, index) => (
+              {sortedEnrolledCompetitions.map((comp, index) => (
                 <Link key={comp.id} href={`/competitions/${comp.id}`}>
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -126,14 +143,14 @@ export default function Dashboard() {
       )}
 
       {/* All Competitions - Scrollable */}
-      {allCompetitions && allCompetitions.length > 0 && (
+      {sortedAllCompetitions.length > 0 && (
         <div className="p-5 rounded-2xl bg-secondary/30 border border-white/10">
           <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
             <Flag className="w-5 h-5 text-primary" /> All Competitions
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
-              {allCompetitions.map((comp, index) => (
+              {sortedAllCompetitions.map((comp, index) => (
                 <Link key={comp.id} href={`/competitions/${comp.id}`}>
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
