@@ -9,6 +9,7 @@ export const roleEnum = pgEnum("role", ["admin", "racer", "spectator"]);
 export const adminLevelEnum = pgEnum("admin_level", ["none", "admin", "super_admin"]);
 export const competitionTypeEnum = pgEnum("competition_type", ["series", "single_event", "head_to_head", "time_attack"]);
 export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "cancelled"]);
+export const leagueStatusEnum = pgEnum("league_status", ["active", "completed"]);
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -35,6 +36,7 @@ export const leagues = pgTable("leagues", {
   seasonStart: timestamp("season_start"),
   seasonEnd: timestamp("season_end"),
   isMain: boolean("is_main").default(false).notNull(),
+  status: leagueStatusEnum("status").default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
