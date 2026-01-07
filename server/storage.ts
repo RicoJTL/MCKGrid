@@ -54,6 +54,8 @@ export interface IStorage {
   getEnrolledDrivers(competitionId: number): Promise<Profile[]>;
   enrollDriver(competitionId: number, profileId: number): Promise<Enrollment>;
   unenrollDriver(competitionId: number, profileId: number): Promise<void>;
+  getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]>;
+  getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -290,6 +292,35 @@ export class DatabaseStorage implements IStorage {
     await db.delete(enrollments).where(
       and(eq(enrollments.competitionId, competitionId), eq(enrollments.profileId, profileId))
     );
+  }
+
+  async getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]> {
+    const enrolled = await db
+      .select({ competition: competitions })
+      .from(enrollments)
+      .innerJoin(competitions, eq(enrollments.competitionId, competitions.id))
+      .where(eq(enrollments.profileId, profileId));
+    return enrolled.map(e => e.competition);
+  }
+
+  async getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]> {
+    const profileResults = await db
+      .select({
+        position: results.position,
+        points: results.points,
+        raceTime: results.raceTime,
+        raceName: races.name,
+        raceDate: races.date,
+        location: races.location,
+        competitionId: competitions.id,
+        competitionName: competitions.name,
+      })
+      .from(results)
+      .innerJoin(races, eq(results.raceId, races.id))
+      .innerJoin(competitions, eq(races.competitionId, competitions.id))
+      .where(eq(results.racerId, profileId))
+      .orderBy(desc(races.date));
+    return profileResults;
   }
 }
 

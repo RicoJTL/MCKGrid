@@ -36,10 +36,26 @@ export default function ProfilePage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { uploadFile, isUploading: isUploadingImage } = useUpload();
 
-  const { data: raceHistory } = useQuery<any[]>({
-    queryKey: ['/api/profiles', profile?.id, 'history'],
+  const { data: raceHistoryByCompetition } = useQuery<any[]>({
+    queryKey: ['/api/profiles', profile?.id, 'history-by-competition'],
     enabled: !!profile?.id,
   });
+
+  // Group race history by competition
+  const groupedHistory = raceHistoryByCompetition?.reduce((acc, result) => {
+    const compId = result.competitionId;
+    if (!acc[compId]) {
+      acc[compId] = {
+        competitionId: compId,
+        competitionName: result.competitionName,
+        results: []
+      };
+    }
+    acc[compId].results.push(result);
+    return acc;
+  }, {} as Record<number, { competitionId: number; competitionName: string; results: any[] }>);
+
+  const competitionGroups = groupedHistory ? Object.values(groupedHistory) : [];
 
   const isDriver = profile?.role === 'racer' || (profile?.driverName && profile?.fullName);
 
@@ -239,27 +255,45 @@ export default function ProfilePage() {
       </Form>
 
       {accountType === "driver" && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>
-          {raceHistory && raceHistory.length > 0 ? (
-            <div className="space-y-3">
-              {raceHistory.map((result, i) => (
-                <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold font-display italic text-xl">
-                      P{result.position}
-                    </div>
-                    <div>
-                      <h4 className="font-bold">{result.raceName}</h4>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
-                      </div>
-                    </div>
+          {competitionGroups.length > 0 ? (
+            <div className="space-y-6">
+              {competitionGroups.map((group: any) => (
+                <div key={group.competitionId} className="space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                    <Trophy className="w-4 h-4 text-primary" />
+                    <h3 className="font-bold text-lg">{group.competitionName}</h3>
+                    <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">
+                      {group.results.length} race{group.results.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-primary">{result.points} pts</div>
-                    {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
+                  <div className="space-y-2">
+                    {group.results.map((result: any, i: number) => (
+                      <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
+                            result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                            result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                            result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                            'bg-primary/10 text-primary'
+                          }`}>
+                            P{result.position}
+                          </div>
+                          <div>
+                            <h4 className="font-bold">{result.raceName}</h4>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                          {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

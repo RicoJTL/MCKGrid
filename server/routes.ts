@@ -183,6 +183,18 @@ export async function registerRoutes(
     res.json(history);
   });
 
+  // Get profile race history grouped by competition (retains history even if unenrolled)
+  app.get("/api/profiles/:id/history-by-competition", async (req: any, res) => {
+    const history = await storage.getProfileRaceHistoryByCompetition(Number(req.params.id));
+    res.json(history);
+  });
+
+  // Get competitions a driver is enrolled in
+  app.get("/api/profiles/:id/enrolled-competitions", async (req: any, res) => {
+    const competitions = await storage.getDriverEnrolledCompetitions(Number(req.params.id));
+    res.json(competitions);
+  });
+
   // === Leagues ===
   app.get(api.leagues.list.path, async (req, res) => {
     const leagues = await storage.getLeagues();

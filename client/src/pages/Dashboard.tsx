@@ -2,16 +2,24 @@ import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { useDashboardData } from "@/hooks/use-leagues";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import type { Competition } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboardData();
   const [, setLocation] = useLocation();
+
+  const { data: enrolledCompetitions } = useQuery<Competition[]>({
+    queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
+    enabled: !!profile?.id,
+  });
 
   if (!profileLoading && !profile) {
     setLocation("/profile");
@@ -71,6 +79,38 @@ export default function Dashboard() {
           </Link>
         )}
       </div>
+
+      {/* My Competitions - Scrollable Tabs */}
+      {enrolledCompetitions && enrolledCompetitions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
+            <Flag className="w-4 h-4 text-primary" /> My Competitions
+          </h3>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-3 pb-3">
+              {enrolledCompetitions.map((comp) => (
+                <Link key={comp.id} href={`/competitions/${comp.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-secondary/50 border border-white/10 hover:border-primary/50 transition-colors cursor-pointer min-w-[180px]"
+                    data-testid={`card-competition-${comp.id}`}
+                  >
+                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                      <Trophy className="w-4 h-4" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="font-bold truncate">{comp.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{comp.type?.replace('_', ' ')}</p>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
