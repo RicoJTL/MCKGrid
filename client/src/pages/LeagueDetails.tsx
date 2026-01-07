@@ -1,10 +1,11 @@
 import { useLeague, useCompetitions, useCreateCompetition, useUpdateLeague, useDeleteLeague, useUpdateCompetition, useDeleteCompetition } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle } from "lucide-react";
+import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle, UserCheck } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Competition } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
@@ -45,6 +46,15 @@ export default function LeagueDetails() {
   const { data: league, isLoading: loadingLeague } = useLeague(leagueId);
   const { data: competitions, isLoading: loadingCompetitions } = useCompetitions(leagueId);
   const { data: profile } = useProfile();
+  
+  // Fetch the current user's enrolled competitions to show enrollment status
+  const { data: enrolledCompetitions } = useQuery<Competition[]>({
+    queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
+    enabled: !!profile?.id,
+  });
+  
+  // Create a set of enrolled competition IDs for quick lookup
+  const enrolledCompetitionIds = new Set(enrolledCompetitions?.map(c => c.id) || []);
   const createCompetition = useCreateCompetition();
   const updateLeague = useUpdateLeague();
   const deleteLeague = useDeleteLeague();
@@ -274,6 +284,12 @@ export default function LeagueDetails() {
                     <h3 className="text-lg font-bold font-display italic">{comp.name}</h3>
                     {comp.isMain && (
                       <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    )}
+                    {enrolledCompetitionIds.has(comp.id) && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium border border-green-500/20" data-testid={`badge-enrolled-${comp.id}`}>
+                        <UserCheck className="w-3 h-3" />
+                        Enrolled
+                      </span>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground uppercase tracking-wider text-xs">{comp.type.replace('_', ' ')}</p>
