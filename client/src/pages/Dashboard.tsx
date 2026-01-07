@@ -37,6 +37,31 @@ export default function Dashboard() {
     enabled: !!mainCompetition?.id,
   });
 
+  // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
+  const sortedEnrolledCompetitions = useMemo(() => {
+    if (!enrolledCompetitions) return [];
+    return [...enrolledCompetitions].sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return a.id - b.id;
+    });
+  }, [enrolledCompetitions]);
+
+  const sortedAllCompetitions = useMemo(() => {
+    if (!allCompetitions) return [];
+    return [...allCompetitions].sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return a.id - b.id;
+    });
+  }, [allCompetitions]);
+
   if (!profileLoading && !profile) {
     setLocation("/profile");
     return null;
@@ -61,22 +86,6 @@ export default function Dashboard() {
   }
 
   const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
-  
-  // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
-  const sortCompetitions = <T extends { id: number; isMain?: boolean; createdAt?: Date | string | null }>(comps: T[] | undefined): T[] => {
-    if (!comps) return [];
-    return [...comps].sort((a, b) => {
-      if (a.isMain && !b.isMain) return -1;
-      if (!a.isMain && b.isMain) return 1;
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      if (dateA !== dateB) return dateA - dateB;
-      return a.id - b.id;
-    });
-  };
-
-  const sortedEnrolledCompetitions = useMemo(() => sortCompetitions(enrolledCompetitions), [enrolledCompetitions]);
-  const sortedAllCompetitions = useMemo(() => sortCompetitions(allCompetitions), [allCompetitions]);
   
   const standings = mainStandings || [];
   const upcomingRaces = upcomingRacesData || [];
