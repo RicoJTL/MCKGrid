@@ -177,6 +177,16 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // Update profile picture (super admin only - for changing other users' pictures)
+  app.patch("/api/profiles/:id/profile-image", requireSuperAdmin, async (req: any, res) => {
+    const { profileImage } = req.body;
+    if (typeof profileImage !== 'string') {
+      return res.status(400).json({ error: "profileImage must be a string" });
+    }
+    const updated = await storage.updateProfile(Number(req.params.id), { profileImage });
+    res.json(updated);
+  });
+
   // Get profile race history
   app.get("/api/profiles/:id/history", async (req: any, res) => {
     const history = await storage.getProfileRaceHistory(Number(req.params.id));
@@ -234,6 +244,27 @@ export async function registerRoutes(
   app.get(api.leagues.list.path, async (req, res) => {
     const leagues = await storage.getLeagues();
     res.json(leagues);
+  });
+
+  // Get main league
+  app.get("/api/leagues/main", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const league = await storage.getMainLeague();
+    res.json(league);
+  });
+
+  // Set main league (admin only)
+  app.post("/api/leagues/:id/set-main", requireAdmin, async (req: any, res) => {
+    try {
+      const leagueId = Number(req.params.id);
+      await storage.setMainLeague(leagueId);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error.message === "League not found") {
+        return res.status(404).json({ error: "League not found" });
+      }
+      throw error;
+    }
   });
   
   app.post(api.leagues.create.path, requireAdmin, async (req, res) => {
