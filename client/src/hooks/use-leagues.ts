@@ -135,6 +135,7 @@ export function useCreateRace() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['races', variables.competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
       toast({ title: "Race Scheduled", description: "Date set!" });
     },
   });
@@ -160,6 +161,14 @@ export function useUpdateLeague() {
       queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.leagues.get.path, id] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['standings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+      queryClient.invalidateQueries({ queryKey: ['races'], exact: false });
       toast({ title: "League Updated" });
     },
   });
