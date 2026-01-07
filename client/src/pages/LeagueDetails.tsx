@@ -39,6 +39,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { IconPicker, getIconComponent, AVAILABLE_ICONS } from "@/components/icon-picker";
+import { Trophy } from "lucide-react";
 
 export default function LeagueDetails() {
   const [match, params] = useRoute("/leagues/:id");
@@ -79,6 +81,11 @@ export default function LeagueDetails() {
   const [deleteLeagueOpen, setDeleteLeagueOpen] = useState(false);
   const [editingComp, setEditingComp] = useState<any>(null);
   const [deletingComp, setDeletingComp] = useState<any>(null);
+  
+  const [leagueIconName, setLeagueIconName] = useState(league?.iconName || "Trophy");
+  const [leagueIconColor, setLeagueIconColor] = useState(league?.iconColor || "#3b82f6");
+  const [compIconName, setCompIconName] = useState("Flag");
+  const [compIconColor, setCompIconColor] = useState("#3b82f6");
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
@@ -116,7 +123,10 @@ export default function LeagueDetails() {
   };
 
   const onUpdateLeague = (data: any) => {
-    updateLeague.mutate({ id: leagueId, data }, {
+    updateLeague.mutate({ 
+      id: leagueId, 
+      data: { ...data, iconName: leagueIconName, iconColor: leagueIconColor } 
+    }, {
       onSuccess: () => setOpenEditLeague(false)
     });
   };
@@ -129,7 +139,10 @@ export default function LeagueDetails() {
 
   const onUpdateComp = (data: any) => {
     if (!editingComp) return;
-    updateCompetition.mutate({ id: editingComp.id, data }, {
+    updateCompetition.mutate({ 
+      id: editingComp.id, 
+      data: { ...data, iconName: compIconName, iconColor: compIconColor } 
+    }, {
       onSuccess: () => setEditingComp(null)
     });
   };
@@ -276,9 +289,18 @@ export default function LeagueDetails() {
           <div key={comp.id} className="p-6 rounded-xl bg-secondary/30 border border-white/5 hover:bg-white/5 transition-all flex items-center justify-between group">
             <Link href={`/competitions/${comp.id}`}>
               <div className="flex items-center gap-4 cursor-pointer flex-1">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-                  <Flag className="w-5 h-5" />
-                </div>
+                {(() => {
+                  const CompIcon = getIconComponent(comp.iconName) || Flag;
+                  const iconColor = comp.iconColor || "#3b82f6";
+                  return (
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${iconColor}20` }}
+                    >
+                      <CompIcon className="w-5 h-5" style={{ color: iconColor }} />
+                    </div>
+                  );
+                })()}
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold font-display italic">{comp.name}</h3>
@@ -307,6 +329,8 @@ export default function LeagueDetails() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => {
                       editCompForm.reset({ name: comp.name, type: comp.type });
+                      setCompIconName(comp.iconName || "Flag");
+                      setCompIconColor(comp.iconColor || "#3b82f6");
                       setEditingComp(comp);
                     }}>
                       <Pencil className="w-4 h-4 mr-2" /> Edit
@@ -333,7 +357,13 @@ export default function LeagueDetails() {
       </div>
 
       {/* Edit League Dialog */}
-      <Dialog open={openEditLeague} onOpenChange={setOpenEditLeague}>
+      <Dialog open={openEditLeague} onOpenChange={(open) => {
+        if (open && league) {
+          setLeagueIconName(league.iconName || "Trophy");
+          setLeagueIconColor(league.iconColor || "#3b82f6");
+        }
+        setOpenEditLeague(open);
+      }}>
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit League</DialogTitle>
@@ -366,6 +396,17 @@ export default function LeagueDetails() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <FormLabel>Icon & Color</FormLabel>
+                <IconPicker 
+                  value={leagueIconName} 
+                  color={leagueIconColor}
+                  onChange={(name, color) => {
+                    setLeagueIconName(name);
+                    setLeagueIconColor(color);
+                  }}
+                />
+              </div>
               <Button type="submit" className="w-full bg-primary font-bold" disabled={updateLeague.isPending}>
                 Save Changes
               </Button>
@@ -435,6 +476,17 @@ export default function LeagueDetails() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <FormLabel>Icon & Color</FormLabel>
+                <IconPicker 
+                  value={compIconName} 
+                  color={compIconColor}
+                  onChange={(name, color) => {
+                    setCompIconName(name);
+                    setCompIconColor(color);
+                  }}
+                />
+              </div>
               <Button type="submit" className="w-full bg-primary font-bold" disabled={updateCompetition.isPending}>
                 Save Changes
               </Button>

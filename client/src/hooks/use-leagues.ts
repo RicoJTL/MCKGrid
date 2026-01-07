@@ -222,6 +222,10 @@ export function useUpdateCompetition() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['competitions', result.leagueId] });
       queryClient.invalidateQueries({ queryKey: ['competition', result.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
       toast({ title: "Competition Updated" });
     },
   });

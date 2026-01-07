@@ -37,6 +37,8 @@ export const leagues = pgTable("leagues", {
   seasonEnd: timestamp("season_end"),
   isMain: boolean("is_main").default(false).notNull(),
   status: leagueStatusEnum("status").default("active").notNull(),
+  iconName: text("icon_name"),
+  iconColor: text("icon_color"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -47,6 +49,8 @@ export const competitions = pgTable("competitions", {
   type: competitionTypeEnum("type").default("series").notNull(),
   rules: jsonb("rules").$type<{ pointsSystem: Record<string, number> }>().default({ pointsSystem: {} }),
   isMain: boolean("is_main").default(false).notNull(),
+  iconName: text("icon_name"),
+  iconColor: text("icon_color"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

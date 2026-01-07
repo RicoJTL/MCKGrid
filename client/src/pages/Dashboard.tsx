@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { Competition } from "@shared/schema";
 import { useMemo } from "react";
+import { getIconComponent } from "@/components/icon-picker";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -126,25 +127,32 @@ export default function Dashboard() {
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
-              {sortedEnrolledCompetitions.map((comp, index) => (
-                <Link key={comp.id} href={`/competitions/${comp.id}`}>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-yellow-500/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
-                    data-testid={`card-my-competition-${comp.id}`}
-                  >
-                    <div className="p-3 rounded-lg bg-yellow-500/20 text-yellow-500">
-                      <Trophy className="w-5 h-5" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className="font-bold text-white truncate">{comp.name}</p>
-                      <p className="text-sm text-muted-foreground capitalize">{comp.type?.replace('_', ' ') || 'Series'}</p>
-                    </div>
-                  </motion.div>
-                </Link>
-              ))}
+              {sortedEnrolledCompetitions.map((comp, index) => {
+                const CompIcon = getIconComponent(comp.iconName) || Trophy;
+                const iconColor = comp.iconColor || "#eab308";
+                return (
+                  <Link key={comp.id} href={`/competitions/${comp.id}`}>
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-yellow-500/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
+                      data-testid={`card-my-competition-${comp.id}`}
+                    >
+                      <div 
+                        className="p-3 rounded-lg"
+                        style={{ backgroundColor: `${iconColor}20` }}
+                      >
+                        <CompIcon className="w-5 h-5" style={{ color: iconColor }} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="font-bold text-white truncate">{comp.name}</p>
+                        <p className="text-sm text-muted-foreground capitalize">{comp.type?.replace('_', ' ') || 'Series'}</p>
+                      </div>
+                    </motion.div>
+                  </Link>
+                );
+              })}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -159,25 +167,32 @@ export default function Dashboard() {
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
-              {sortedAllCompetitions.map((comp, index) => (
-                <Link key={comp.id} href={`/competitions/${comp.id}`}>
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
-                    data-testid={`card-all-competition-${comp.id}`}
-                  >
-                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
-                      <Flag className="w-4 h-4" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className="font-bold text-white truncate">{comp.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{comp.leagueName}</p>
-                    </div>
-                  </motion.div>
-                </Link>
-              ))}
+              {sortedAllCompetitions.map((comp, index) => {
+                const CompIcon = getIconComponent(comp.iconName) || Flag;
+                const iconColor = comp.iconColor || "#3b82f6";
+                return (
+                  <Link key={comp.id} href={`/competitions/${comp.id}`}>
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
+                      data-testid={`card-all-competition-${comp.id}`}
+                    >
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ backgroundColor: `${iconColor}20` }}
+                      >
+                        <CompIcon className="w-4 h-4" style={{ color: iconColor }} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="font-bold text-white truncate">{comp.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{comp.leagueName}</p>
+                      </div>
+                    </motion.div>
+                  </Link>
+                );
+              })}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
