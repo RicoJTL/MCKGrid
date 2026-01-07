@@ -21,6 +21,10 @@ export default function Dashboard() {
     enabled: !!profile?.id,
   });
 
+  const { data: allCompetitions } = useQuery<any[]>({
+    queryKey: ['/api/competitions/active'],
+  });
+
   if (!profileLoading && !profile) {
     setLocation("/profile");
     return null;
@@ -95,7 +99,7 @@ export default function Dashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-primary/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
-                    data-testid={`card-competition-${comp.id}`}
+                    data-testid={`card-my-competition-${comp.id}`}
                   >
                     <div className="p-3 rounded-lg bg-primary/20 text-primary">
                       <Trophy className="w-5 h-5" />
@@ -103,6 +107,39 @@ export default function Dashboard() {
                     <div className="overflow-hidden">
                       <p className="font-bold text-white truncate">{comp.name}</p>
                       <p className="text-sm text-muted-foreground capitalize">{comp.type?.replace('_', ' ') || 'Series'}</p>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* All Active Competitions - Scrollable */}
+      {allCompetitions && allCompetitions.length > 0 && (
+        <div className="p-5 rounded-2xl bg-secondary/30 border border-white/10">
+          <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
+            <Trophy className="w-5 h-5 text-yellow-500" /> All Competitions
+          </h3>
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-2">
+              {allCompetitions.map((comp, index) => (
+                <Link key={comp.id} href={`/competitions/${comp.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-yellow-500/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
+                    data-testid={`card-all-competition-${comp.id}`}
+                  >
+                    <div className="p-2 rounded-lg bg-yellow-500/20 text-yellow-500">
+                      <Trophy className="w-4 h-4" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="font-bold text-white truncate">{comp.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{comp.leagueName}</p>
                     </div>
                   </motion.div>
                 </Link>

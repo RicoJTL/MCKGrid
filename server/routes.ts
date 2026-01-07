@@ -195,6 +195,12 @@ export async function registerRoutes(
     res.json(competitions);
   });
 
+  // Get all active competitions across all leagues
+  app.get("/api/competitions/active", async (req: any, res) => {
+    const competitions = await storage.getAllActiveCompetitions();
+    res.json(competitions);
+  });
+
   // === Leagues ===
   app.get(api.leagues.list.path, async (req, res) => {
     const leagues = await storage.getLeagues();
