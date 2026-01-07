@@ -209,6 +209,20 @@ export async function registerRoutes(
     res.json(races);
   });
 
+  // Get main competition for dashboard
+  app.get("/api/competitions/main", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const competition = await storage.getMainCompetition();
+    res.json(competition);
+  });
+
+  // Set main competition (admin only)
+  app.post("/api/competitions/:id/set-main", requireAdmin, async (req: any, res) => {
+    const competitionId = Number(req.params.id);
+    await storage.setMainCompetition(competitionId);
+    res.json({ success: true });
+  });
+
   // === Leagues ===
   app.get(api.leagues.list.path, async (req, res) => {
     const leagues = await storage.getLeagues();

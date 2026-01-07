@@ -58,6 +58,8 @@ export interface IStorage {
   getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
   getAllActiveCompetitions(): Promise<any[]>;
   getAllUpcomingRaces(): Promise<any[]>;
+  getMainCompetition(): Promise<Competition | null>;
+  setMainCompetition(competitionId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -356,6 +358,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(races.status, 'scheduled'))
       .orderBy(races.date);
     return upcomingRaces;
+  }
+
+  async getMainCompetition(): Promise<Competition | null> {
+    const [main] = await db.select().from(competitions).where(eq(competitions.isMain, true)).limit(1);
+    return main || null;
+  }
+
+  async setMainCompetition(competitionId: number): Promise<void> {
+    await db.update(competitions).set({ isMain: false }).where(eq(competitions.isMain, true));
+    await db.update(competitions).set({ isMain: true }).where(eq(competitions.id, competitionId));
   }
 }
 
