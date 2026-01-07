@@ -71,6 +71,10 @@ export default function CompetitionDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions', compId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions'] });
+      if (competition?.leagueId) {
+        queryClient.invalidateQueries({ queryKey: ['competitions', competition.leagueId] });
+      }
     }
   });
   
