@@ -258,10 +258,10 @@ export default function Dashboard() {
           </div>
           
           {upcomingRaces.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {upcomingRaces.slice(0, 4).map((race) => (
                 <Link key={race.id} href={`/races/${race.id}`}>
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer gap-3">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary font-bold font-display">
                         <span className="text-sm">{format(new Date(race.date), 'dd')}</span>

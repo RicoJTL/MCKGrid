@@ -1,7 +1,9 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import { useEnrolledDrivers, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-enrollments";
@@ -60,6 +62,17 @@ export default function CompetitionDetails() {
   const enrollDriver = useEnrollDriver();
   const unenrollDriver = useUnenrollDriver();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  
+  const setMainCompetition = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/competitions/${id}/set-main`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions', compId] });
+    }
+  });
   
   const [open, setOpen] = useState(false);
   const [openEditComp, setOpenEditComp] = useState(false);
@@ -155,9 +168,16 @@ export default function CompetitionDetails() {
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-display font-bold italic text-white">
-            {competition?.name || 'Championship'}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-display font-bold italic text-white">
+              {competition?.name || 'Championship'}
+            </h1>
+            {competition?.isMain && (
+              <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50">
+                <Star className="w-3 h-3 mr-1" /> Main Championship
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground mt-1">Season standings and race calendar</p>
         </div>
         <div className="flex items-center gap-2">
@@ -175,6 +195,12 @@ export default function CompetitionDetails() {
                     setOpenEditComp(true);
                   }}>
                     <Pencil className="w-4 h-4 mr-2" /> Edit Competition
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => setMainCompetition.mutate(compId)}
+                    disabled={setMainCompetition.isPending || competition?.isMain}
+                  >
+                    <Star className="w-4 h-4 mr-2" /> {competition?.isMain ? 'Main Competition' : 'Set as Main'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setDeleteCompOpen(true)} className="text-destructive">
                     <Trash2 className="w-4 h-4 mr-2" /> Delete Competition

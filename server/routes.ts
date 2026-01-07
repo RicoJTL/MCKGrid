@@ -218,9 +218,16 @@ export async function registerRoutes(
 
   // Set main competition (admin only)
   app.post("/api/competitions/:id/set-main", requireAdmin, async (req: any, res) => {
-    const competitionId = Number(req.params.id);
-    await storage.setMainCompetition(competitionId);
-    res.json({ success: true });
+    try {
+      const competitionId = Number(req.params.id);
+      await storage.setMainCompetition(competitionId);
+      res.json({ success: true });
+    } catch (error: any) {
+      if (error.message === "Competition not found") {
+        return res.status(404).json({ error: "Competition not found" });
+      }
+      throw error;
+    }
   });
 
   // === Leagues ===

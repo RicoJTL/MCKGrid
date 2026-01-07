@@ -366,8 +366,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setMainCompetition(competitionId: number): Promise<void> {
-    await db.update(competitions).set({ isMain: false }).where(eq(competitions.isMain, true));
-    await db.update(competitions).set({ isMain: true }).where(eq(competitions.id, competitionId));
+    await db.transaction(async (tx) => {
+      const [competition] = await tx.select().from(competitions).where(eq(competitions.id, competitionId)).limit(1);
+      if (!competition) {
+        throw new Error("Competition not found");
+      }
+      await tx.update(competitions).set({ isMain: false });
+      await tx.update(competitions).set({ isMain: true }).where(eq(competitions.id, competitionId));
+    });
   }
 }
 
