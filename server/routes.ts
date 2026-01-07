@@ -197,8 +197,16 @@ export async function registerRoutes(
 
   // Get all active competitions across all leagues
   app.get("/api/competitions/active", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     const competitions = await storage.getAllActiveCompetitions();
     res.json(competitions);
+  });
+
+  // Get all upcoming races across all competitions
+  app.get("/api/races/upcoming", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const races = await storage.getAllUpcomingRaces();
+    res.json(races);
   });
 
   // === Leagues ===

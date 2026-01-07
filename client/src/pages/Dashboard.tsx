@@ -25,6 +25,10 @@ export default function Dashboard() {
     queryKey: ['/api/competitions/active'],
   });
 
+  const { data: upcomingRacesData } = useQuery<any[]>({
+    queryKey: ['/api/races/upcoming'],
+  });
+
   if (!profileLoading && !profile) {
     setLocation("/profile");
     return null;
@@ -54,7 +58,7 @@ export default function Dashboard() {
   
   const standings = dashboardData?.standings || [];
   const competition = dashboardData?.competition;
-  const upcomingRaces = dashboardData?.upcomingRaces || [];
+  const upcomingRaces = upcomingRacesData || [];
   const nextRace = upcomingRaces[0];
   
   // Find current user's position
@@ -86,9 +90,9 @@ export default function Dashboard() {
 
       {/* My Competitions - Scrollable Tabs */}
       {enrolledCompetitions && enrolledCompetitions.length > 0 && (
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/30 border border-primary/20">
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20">
           <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
-            <Flag className="w-5 h-5 text-primary" /> My Competitions
+            <Trophy className="w-5 h-5 text-yellow-500" /> My Competitions
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
@@ -98,10 +102,10 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-primary/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
+                    className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-yellow-500/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
                     data-testid={`card-my-competition-${comp.id}`}
                   >
-                    <div className="p-3 rounded-lg bg-primary/20 text-primary">
+                    <div className="p-3 rounded-lg bg-yellow-500/20 text-yellow-500">
                       <Trophy className="w-5 h-5" />
                     </div>
                     <div className="overflow-hidden">
@@ -117,11 +121,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* All Active Competitions - Scrollable */}
+      {/* All Competitions - Scrollable */}
       {allCompetitions && allCompetitions.length > 0 && (
         <div className="p-5 rounded-2xl bg-secondary/30 border border-white/10">
           <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
-            <Trophy className="w-5 h-5 text-yellow-500" /> All Competitions
+            <Flag className="w-5 h-5 text-primary" /> All Competitions
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
@@ -131,11 +135,11 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-yellow-500/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
+                    className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
                     data-testid={`card-all-competition-${comp.id}`}
                   >
-                    <div className="p-2 rounded-lg bg-yellow-500/20 text-yellow-500">
-                      <Trophy className="w-4 h-4" />
+                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                      <Flag className="w-4 h-4" />
                     </div>
                     <div className="overflow-hidden">
                       <p className="font-bold text-white truncate">{comp.name}</p>
@@ -151,30 +155,7 @@ export default function Dashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0 }}
-            className="p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-colors relative overflow-hidden group cursor-pointer"
-            data-testid="card-active-competition"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Trophy className="w-16 h-16" />
-            </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-white/5 text-yellow-500">
-                <Trophy className="w-5 h-5" />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">Active Competitions</span>
-            </div>
-            <div className="text-xl font-bold font-display italic truncate">
-              {competition?.name || 'No active competition'}
-            </div>
-          </motion.div>
-        </Link>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link href={nextRace ? `/races/${nextRace.id}` : '/leagues'}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

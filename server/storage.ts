@@ -57,6 +57,7 @@ export interface IStorage {
   getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]>;
   getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
   getAllActiveCompetitions(): Promise<any[]>;
+  getAllUpcomingRaces(): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -337,6 +338,24 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
       .orderBy(leagues.name, competitions.name);
     return allCompetitions;
+  }
+
+  async getAllUpcomingRaces(): Promise<any[]> {
+    const upcomingRaces = await db
+      .select({
+        id: races.id,
+        name: races.name,
+        date: races.date,
+        location: races.location,
+        status: races.status,
+        competitionId: races.competitionId,
+        competitionName: competitions.name,
+      })
+      .from(races)
+      .innerJoin(competitions, eq(races.competitionId, competitions.id))
+      .where(eq(races.status, 'scheduled'))
+      .orderBy(races.date);
+    return upcomingRaces;
   }
 }
 
