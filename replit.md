@@ -48,10 +48,17 @@ Located in `shared/schema.ts`, the main entities are:
 - **users/sessions**: Replit Auth managed tables (required for auth)
 - **profiles**: User profiles with roles (admin, racer, spectator)
 - **teams**: Racing teams with codes and logos
-- **leagues**: Championship seasons with date ranges
-- **competitions**: Events within leagues (series, head-to-head, time attack)
+- **leagues**: Championship seasons with date ranges, customizable iconName and iconColor
+- **competitions**: Events within leagues (series, head-to-head, time attack), customizable iconName and iconColor
 - **races**: Individual race events with dates and locations
 - **results**: Race results with positions, times, and points
+
+### Customizable Icons and Colors
+Admins can customize the icon and color for leagues and competitions:
+- **IconPicker component**: `client/src/components/icon-picker.tsx` - provides 24+ Lucide icons and color selection
+- **Defaults**: Trophy icon with blue (#3b82f6) for leagues, Flag icon for competitions
+- **Storage**: `iconName` and `iconColor` fields in leagues and competitions tables
+- The IconPicker uses controlled state with useEffect to sync internal state with props
 
 ### Authentication Flow
 Authentication is handled entirely through Replit Auth:
