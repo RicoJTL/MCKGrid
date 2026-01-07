@@ -22,8 +22,10 @@ export function useEnrollDriver() {
     mutationFn: async ({ competitionId, profileId }: { competitionId: number; profileId: number }) => {
       return apiRequest("POST", `/api/competitions/${competitionId}/enrollments`, { profileId });
     },
-    onSuccess: (_, { competitionId }) => {
+    onSuccess: (_, { competitionId, profileId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'enrolled-competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'standings'] });
       toast({ title: "Driver enrolled successfully" });
     },
     onError: (error: Error) => {
@@ -44,8 +46,10 @@ export function useUnenrollDriver() {
     mutationFn: async ({ competitionId, profileId }: { competitionId: number; profileId: number }) => {
       return apiRequest("DELETE", `/api/competitions/${competitionId}/enrollments/${profileId}`);
     },
-    onSuccess: (_, { competitionId }) => {
+    onSuccess: (_, { competitionId, profileId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'enrolled-competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'standings'] });
       toast({ title: "Driver removed from competition" });
     },
     onError: (error: Error) => {

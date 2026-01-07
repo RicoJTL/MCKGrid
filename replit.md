@@ -10,6 +10,11 @@ The application follows a full-stack TypeScript architecture with a React fronte
 
 Preferred communication style: Simple, everyday language.
 
+**CRITICAL UI Requirement**: All UI changes must appear immediately without requiring a page refresh. Every mutation hook must invalidate all related query keys in its `onSuccess` handler to ensure real-time UI updates. This includes:
+- Enrollment mutations must invalidate enrolled-competitions queries
+- Result submissions must invalidate standings and dashboard queries
+- Any data change must invalidate all queries that display that data
+
 ## System Architecture
 
 ### Frontend Architecture
