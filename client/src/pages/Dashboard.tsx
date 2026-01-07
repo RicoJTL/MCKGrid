@@ -199,11 +199,16 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Crown className="w-16 h-16" />
             </div>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg bg-white/5 text-primary">
                 <Crown className="w-5 h-5" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Your Position{mainCompetition ? ` - ${mainCompetition.name}` : ''}</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground">Your Position</span>
+                {mainCompetition && (
+                  <span className="text-xs text-muted-foreground/70 truncate">{mainCompetition.name}</span>
+                )}
+              </div>
             </div>
             <div className="text-2xl font-bold font-display italic">
               {userPosition ? `P${userPosition}` : '--'}
@@ -227,11 +232,16 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Medal className="w-16 h-16" />
             </div>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg bg-white/5 text-green-500">
                 <Medal className="w-5 h-5" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Championship Leader{mainCompetition ? ` - ${mainCompetition.name}` : ''}</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
+                {mainCompetition && (
+                  <span className="text-xs text-muted-foreground/70 truncate">{mainCompetition.name}</span>
+                )}
+              </div>
             </div>
             <div className="text-xl font-bold font-display italic truncate">
               {leader?.driverName || 'TBD'}
@@ -258,23 +268,23 @@ export default function Dashboard() {
           </div>
           
           {upcomingRaces.length > 0 ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {upcomingRaces.slice(0, 4).map((race) => (
                 <Link key={race.id} href={`/races/${race.id}`}>
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer gap-3">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary font-bold font-display">
+                  <div className="flex flex-wrap items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer gap-3">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary font-bold font-display flex-shrink-0">
                         <span className="text-sm">{format(new Date(race.date), 'dd')}</span>
                         <span className="text-[10px]">{format(new Date(race.date), 'MMM')}</span>
                       </div>
-                      <div>
-                        <h4 className="font-bold">{race.name}</h4>
+                      <div className="min-w-0">
+                        <h4 className="font-bold truncate">{race.name}</h4>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> {race.location}
+                          <MapPin className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{race.location}</span>
                         </p>
                       </div>
                     </div>
-                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20">
+                    <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/20 flex-shrink-0">
                       Scheduled
                     </div>
                   </div>
@@ -292,9 +302,12 @@ export default function Dashboard() {
 
         <div className="p-6 rounded-2xl bg-secondary/30 border border-white/5">
           <div className="flex items-center justify-between mb-6 gap-2">
-            <h3 className="text-xl font-bold font-display italic">
-              Championship Standings{mainCompetition ? ` - ${mainCompetition.name}` : ''}
-            </h3>
+            <div className="flex flex-col">
+              <h3 className="text-xl font-bold font-display italic">Championship Standings</h3>
+              {mainCompetition && (
+                <span className="text-xs text-muted-foreground/70 truncate">{mainCompetition.name}</span>
+              )}
+            </div>
             {mainCompetition && (
               <Link href={`/competitions/${mainCompetition.id}`}>
                 <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">

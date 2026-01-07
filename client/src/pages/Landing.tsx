@@ -35,7 +35,7 @@ export default function Landing() {
           </div>
           
           <h1 className="text-5xl md:text-7xl font-display font-bold italic uppercase tracking-tighter mb-6">
-            GRID<span className="text-gradient">LINE</span>
+            MCK <span className="text-gradient">GRID</span>
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-light">

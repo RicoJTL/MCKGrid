@@ -1,8 +1,8 @@
-# Gridline - Go-Karting League Management Platform
+# MCK Grid - Go-Karting League Management Platform
 
 ## Overview
 
-Gridline is a web application for managing and tracking go-karting leagues, competitions, and individual races. The platform provides tools for organizers, racers, teams, and fans to manage racing events, track results, and view championship standings.
+MCK Grid is a web application for managing and tracking go-karting leagues, competitions, and individual races. The platform provides tools for organizers, racers, teams, and fans to manage racing events, track results, and view championship standings.
 
 The application follows a full-stack TypeScript architecture with a React frontend, Express backend, and PostgreSQL database. It uses Replit Auth for authentication and Google Cloud Storage for file uploads.
 
