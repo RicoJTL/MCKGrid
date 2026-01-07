@@ -9,10 +9,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Upload, Camera } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useUpload } from "@/hooks/use-upload";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
@@ -70,8 +73,34 @@ export default function AdminPanel() {
   const [editingProfile, setEditingProfile] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<any>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { uploadFile, isUploading } = useUpload();
+  const queryClient = useQueryClient();
   
   const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
+  
+  const updateProfileImage = useMutation({
+    mutationFn: async ({ id, profileImage }: { id: number; profileImage: string }) => {
+      await apiRequest("PATCH", `/api/profiles/${id}/profile-image`, { profileImage });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+    }
+  });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, profileId: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+    
+    const result = await uploadFile(file);
+    if (result) {
+      updateProfileImage.mutate({ id: profileId, profileImage: result.objectPath });
+    }
+  };
 
   const editForm = useForm<z.infer<typeof driverSchema>>({
     resolver: zodResolver(driverSchema),
@@ -278,11 +307,48 @@ export default function AdminPanel() {
           </CardContent>
         </Card>
 
-        <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
+        <Dialog open={!!editingProfile} onOpenChange={(open) => {
+          if (!open) {
+            setEditingProfile(null);
+            setImagePreview(null);
+          }
+        }}>
           <DialogContent className="bg-card border-white/10">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>
+            
+            {isSuperAdmin && editingProfile && (
+              <div className="flex flex-col items-center gap-4 pb-4 border-b border-white/10">
+                <div className="relative">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage src={imagePreview || editingProfile.profileImage || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-2xl">
+                      {(editingProfile.driverName || editingProfile.fullName || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label 
+                    htmlFor={`profile-image-upload-${editingProfile.id}`}
+                    className="absolute bottom-0 right-0 p-2 bg-primary rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                  </label>
+                  <input
+                    id={`profile-image-upload-${editingProfile.id}`}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, editingProfile.id)}
+                    disabled={isUploading || updateProfileImage.isPending}
+                  />
+                </div>
+                {(isUploading || updateProfileImage.isPending) && (
+                  <p className="text-sm text-muted-foreground">Uploading...</p>
+                )}
+                <p className="text-sm text-muted-foreground">Click the camera icon to change profile picture</p>
+              </div>
+            )}
+            
             <Form {...editForm}>
               <form onSubmit={editForm.handleSubmit(onEditDriver)} className="space-y-4">
                 <FormField
