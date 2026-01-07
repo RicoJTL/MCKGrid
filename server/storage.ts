@@ -60,11 +60,13 @@ export interface IStorage {
   getAllUpcomingRaces(): Promise<any[]>;
   getMainCompetition(): Promise<Competition | null>;
   setMainCompetition(competitionId: number): Promise<void>;
+  getMainLeague(): Promise<League | null>;
+  setMainLeague(leagueId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
   async getLeagues(): Promise<League[]> {
-    return await db.select().from(leagues).orderBy(desc(leagues.seasonStart));
+    return await db.select().from(leagues).orderBy(desc(leagues.isMain), leagues.createdAt, leagues.id);
   }
   async getLeague(id: number): Promise<League | undefined> {
     const [league] = await db.select().from(leagues).where(eq(leagues.id, id));
@@ -375,6 +377,22 @@ export class DatabaseStorage implements IStorage {
       }
       await tx.update(competitions).set({ isMain: false });
       await tx.update(competitions).set({ isMain: true }).where(eq(competitions.id, competitionId));
+    });
+  }
+
+  async getMainLeague(): Promise<League | null> {
+    const [league] = await db.select().from(leagues).where(eq(leagues.isMain, true)).limit(1);
+    return league || null;
+  }
+
+  async setMainLeague(leagueId: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      const [league] = await tx.select().from(leagues).where(eq(leagues.id, leagueId)).limit(1);
+      if (!league) {
+        throw new Error("League not found");
+      }
+      await tx.update(leagues).set({ isMain: false });
+      await tx.update(leagues).set({ isMain: true }).where(eq(leagues.id, leagueId));
     });
   }
 }

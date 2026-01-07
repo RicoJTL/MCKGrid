@@ -34,6 +34,8 @@ export const leagues = pgTable("leagues", {
   description: text("description"),
   seasonStart: timestamp("season_start"),
   seasonEnd: timestamp("season_end"),
+  isMain: boolean("is_main").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const competitions = pgTable("competitions", {
