@@ -1,7 +1,7 @@
-import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions } from "@/hooks/use-leagues";
+import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions, useUpdateRaceCompetitions, useRaceCompetitions } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star, Check } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
@@ -83,6 +83,9 @@ export default function CompetitionDetails() {
   const [deleteCompOpen, setDeleteCompOpen] = useState(false);
   const [editingRace, setEditingRace] = useState<any>(null);
   const [deletingRace, setDeletingRace] = useState<any>(null);
+  const [editSelectedCompetitions, setEditSelectedCompetitions] = useState<number[]>([]);
+  
+  const updateRaceCompetitions = useUpdateRaceCompetitions();
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
@@ -157,13 +160,19 @@ export default function CompetitionDetails() {
   const onUpdateRace = (data: any) => {
     if (!editingRace) return;
     updateRace.mutate({ id: editingRace.id, data: { ...data, date: new Date(data.date) } }, {
-      onSuccess: () => setEditingRace(null)
+      onSuccess: () => {
+        // Update competitions if changed
+        if (editSelectedCompetitions.length > 0) {
+          updateRaceCompetitions.mutate({ raceId: editingRace.id, competitionIds: editSelectedCompetitions });
+        }
+        setEditingRace(null);
+      }
     });
   };
 
   const onDeleteRace = () => {
     if (!deletingRace) return;
-    deleteRace.mutate({ id: deletingRace.id, competitionId: compId }, {
+    deleteRace.mutate({ id: deletingRace.id, leagueId: deletingRace.leagueId }, {
       onSuccess: () => setDeletingRace(null)
     });
   };
@@ -430,13 +439,25 @@ export default function CompetitionDetails() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onClick={async () => {
                               editRaceForm.reset({ 
                                 name: race.name, 
                                 location: race.location, 
                                 date: new Date(race.date).toISOString().slice(0, 16),
                                 status: race.status 
                               });
+                              // Fetch current competitions for this race
+                              try {
+                                const res = await fetch(`/api/races/${race.id}/competitions`, { credentials: "include" });
+                                if (res.ok) {
+                                  const comps = await res.json();
+                                  setEditSelectedCompetitions(comps.map((c: any) => c.id));
+                                } else {
+                                  setEditSelectedCompetitions([compId]);
+                                }
+                              } catch {
+                                setEditSelectedCompetitions([compId]);
+                              }
                               setEditingRace(race);
                             }}>
                               <Pencil className="w-4 h-4 mr-2" /> Edit
@@ -486,13 +507,25 @@ export default function CompetitionDetails() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onClick={async () => {
                               editRaceForm.reset({ 
                                 name: race.name, 
                                 location: race.location, 
                                 date: new Date(race.date).toISOString().slice(0, 16),
                                 status: race.status 
                               });
+                              // Fetch current competitions for this race
+                              try {
+                                const res = await fetch(`/api/races/${race.id}/competitions`, { credentials: "include" });
+                                if (res.ok) {
+                                  const comps = await res.json();
+                                  setEditSelectedCompetitions(comps.map((c: any) => c.id));
+                                } else {
+                                  setEditSelectedCompetitions([compId]);
+                                }
+                              } catch {
+                                setEditSelectedCompetitions([compId]);
+                              }
                               setEditingRace(race);
                             }}>
                               <Pencil className="w-4 h-4 mr-2" /> Edit
@@ -761,7 +794,53 @@ export default function CompetitionDetails() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full bg-primary font-bold" disabled={updateRace.isPending}>
+              <div className="space-y-2">
+                <FormLabel>Competitions</FormLabel>
+                <div className="space-y-2 max-h-40 overflow-y-auto rounded-md border border-white/10 p-2">
+                  {leagueCompetitions?.map((comp: any) => (
+                    <label 
+                      key={comp.id} 
+                      className="flex items-center gap-2 p-2 rounded-md hover-elevate cursor-pointer"
+                      data-testid={`edit-checkbox-competition-${comp.id}`}
+                    >
+                      <div 
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                          editSelectedCompetitions.includes(comp.id) 
+                            ? 'bg-primary border-primary' 
+                            : 'border-white/20'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setEditSelectedCompetitions(prev => 
+                            prev.includes(comp.id) 
+                              ? prev.filter(id => id !== comp.id)
+                              : [...prev, comp.id]
+                          );
+                        }}
+                      >
+                        {editSelectedCompetitions.includes(comp.id) && (
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        )}
+                      </div>
+                      <span className="text-sm">{comp.name}</span>
+                      {comp.isMain && (
+                        <span className="text-xs text-muted-foreground ml-auto">(Main)</span>
+                      )}
+                    </label>
+                  ))}
+                  {(!leagueCompetitions || leagueCompetitions.length === 0) && (
+                    <p className="text-sm text-muted-foreground p-2">No competitions in this league</p>
+                  )}
+                </div>
+                {editSelectedCompetitions.length === 0 && (
+                  <p className="text-sm text-destructive">Select at least one competition</p>
+                )}
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full bg-primary font-bold" 
+                disabled={updateRace.isPending || editSelectedCompetitions.length === 0}
+              >
                 Save Changes
               </Button>
             </form>

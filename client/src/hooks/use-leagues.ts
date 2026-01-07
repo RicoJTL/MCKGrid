@@ -289,6 +289,33 @@ export function useUpdateRace() {
   });
 }
 
+// Update Race Competitions
+export function useUpdateRaceCompetitions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ raceId, competitionIds }: { raceId: number; competitionIds: number[] }) => {
+      const res = await fetch(`/api/races/${raceId}/competitions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ competitionIds }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update race competitions");
+      return { raceId, competitionIds };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/races', result.raceId, 'competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['races'] });
+      // Invalidate standings for all affected competitions
+      for (const compId of result.competitionIds) {
+        queryClient.invalidateQueries({ queryKey: ['standings', compId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/competitions', compId, 'standings'] });
+      }
+    },
+  });
+}
+
 // Delete Race
 export function useDeleteRace() {
   const queryClient = useQueryClient();
