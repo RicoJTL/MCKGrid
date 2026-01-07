@@ -286,12 +286,13 @@ export async function registerRoutes(
   });
 
   app.patch("/api/leagues/:id", requireAdmin, async (req, res) => {
-    const { name, description, seasonStart, seasonEnd } = req.body;
+    const { name, description, seasonStart, seasonEnd, status } = req.body;
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
     if (seasonStart !== undefined) data.seasonStart = new Date(seasonStart);
     if (seasonEnd !== undefined) data.seasonEnd = seasonEnd ? new Date(seasonEnd) : null;
+    if (status !== undefined && (status === 'active' || status === 'completed')) data.status = status;
     const updated = await storage.updateLeague(Number(req.params.id), data);
     res.json(updated);
   });
