@@ -78,6 +78,18 @@ export class DatabaseStorage implements IStorage {
   }
   async updateLeague(id: number, data: Partial<InsertLeague>): Promise<League> {
     const [updated] = await db.update(leagues).set(data).where(eq(leagues.id, id)).returning();
+    
+    // If league is marked as completed, cascade to all races within the league
+    if (data.status === 'completed') {
+      const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
+      const compIds = comps.map(c => c.id);
+      if (compIds.length > 0) {
+        await db.update(races)
+          .set({ status: 'completed' })
+          .where(inArray(races.competitionId, compIds));
+      }
+    }
+    
     return updated;
   }
   async deleteLeague(id: number): Promise<void> {
@@ -305,7 +317,8 @@ export class DatabaseStorage implements IStorage {
       .select({ competition: competitions })
       .from(enrollments)
       .innerJoin(competitions, eq(enrollments.competitionId, competitions.id))
-      .where(eq(enrollments.profileId, profileId));
+      .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
+      .where(and(eq(enrollments.profileId, profileId), eq(leagues.status, 'active')));
     return enrolled.map(e => e.competition);
   }
 
@@ -342,6 +355,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(competitions)
       .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
+      .where(eq(leagues.status, 'active'))
       .orderBy(leagues.name, competitions.name);
     return allCompetitions;
   }
@@ -359,14 +373,20 @@ export class DatabaseStorage implements IStorage {
       })
       .from(races)
       .innerJoin(competitions, eq(races.competitionId, competitions.id))
-      .where(eq(races.status, 'scheduled'))
+      .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
+      .where(and(eq(races.status, 'scheduled'), eq(leagues.status, 'active')))
       .orderBy(races.date);
     return upcomingRaces;
   }
 
   async getMainCompetition(): Promise<Competition | null> {
-    const [main] = await db.select().from(competitions).where(eq(competitions.isMain, true)).limit(1);
-    return main || null;
+    const [main] = await db
+      .select({ competition: competitions })
+      .from(competitions)
+      .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
+      .where(and(eq(competitions.isMain, true), eq(leagues.status, 'active')))
+      .limit(1);
+    return main?.competition || null;
   }
 
   async setMainCompetition(competitionId: number): Promise<void> {
@@ -381,7 +401,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMainLeague(): Promise<League | null> {
-    const [league] = await db.select().from(leagues).where(eq(leagues.isMain, true)).limit(1);
+    const [league] = await db.select().from(leagues).where(and(eq(leagues.isMain, true), eq(leagues.status, 'active'))).limit(1);
     return league || null;
   }
 
