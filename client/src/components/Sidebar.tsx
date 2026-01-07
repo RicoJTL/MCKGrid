@@ -39,7 +39,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <Flag className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-xl font-bold font-display italic tracking-wider text-white">
-              GRID<span className="text-primary">LINE</span>
+              MCK <span className="text-primary">GRID</span>
             </h1>
             <p className="text-xs text-muted-foreground tracking-widest uppercase">Racing</p>
           </div>

@@ -22,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <Flag className="w-5 h-5 text-primary" />
               <span className="font-display font-bold italic text-lg text-white">
-                GRID<span className="text-primary">LINE</span>
+                MCK <span className="text-primary">GRID</span>
               </span>
             </div>
           </Link>

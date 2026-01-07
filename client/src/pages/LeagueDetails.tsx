@@ -1,7 +1,7 @@
 import { useLeague, useCompetitions, useCreateCompetition, useUpdateLeague, useDeleteLeague, useUpdateCompetition, useDeleteCompetition } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical } from "lucide-react";
+import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star } from "lucide-react";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
 import {
@@ -232,7 +232,12 @@ export default function LeagueDetails() {
                   <Flag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold font-display italic">{comp.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold font-display italic">{comp.name}</h3>
+                    {comp.isMain && (
+                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground uppercase tracking-wider text-xs">{comp.type.replace('_', ' ')}</p>
                 </div>
               </div>
