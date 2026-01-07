@@ -1,6 +1,5 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
-import { useDashboardData } from "@/hooks/use-leagues";
 import { Link, useLocation } from "wouter";
 import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag } from "lucide-react";
 import { motion } from "framer-motion";
@@ -13,7 +12,6 @@ import type { Competition } from "@shared/schema";
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: dashboardData, isLoading: dashboardLoading } = useDashboardData();
   const [, setLocation] = useLocation();
 
   const { data: enrolledCompetitions } = useQuery<Competition[]>({
@@ -29,14 +27,21 @@ export default function Dashboard() {
     queryKey: ['/api/races/upcoming'],
   });
 
+  const { data: mainCompetition } = useQuery<Competition | null>({
+    queryKey: ['/api/competitions/main'],
+  });
+
+  const { data: mainStandings } = useQuery<any[]>({
+    queryKey: ['/api/competitions', mainCompetition?.id, 'standings'],
+    enabled: !!mainCompetition?.id,
+  });
+
   if (!profileLoading && !profile) {
     setLocation("/profile");
     return null;
   }
 
-  const isLoading = profileLoading || dashboardLoading;
-
-  if (isLoading) {
+  if (profileLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-64" />
@@ -56,13 +61,12 @@ export default function Dashboard() {
 
   const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
   
-  const standings = dashboardData?.standings || [];
-  const competition = dashboardData?.competition;
+  const standings = mainStandings || [];
   const upcomingRaces = upcomingRacesData || [];
   const nextRace = upcomingRaces[0];
   
-  // Find current user's position
-  const userStanding = standings.find((s) => s.racerId === profile?.id);
+  // Find current user's position in main competition
+  const userStanding = standings.find((s: any) => s.racerId === profile?.id);
   const userPosition = userStanding ? standings.indexOf(userStanding) + 1 : null;
   const leader = standings[0];
 
@@ -184,7 +188,7 @@ export default function Dashboard() {
           </motion.div>
         </Link>
 
-        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
+        <Link href={mainCompetition ? `/competitions/${mainCompetition.id}` : '/leagues'}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -199,7 +203,7 @@ export default function Dashboard() {
               <div className="p-2 rounded-lg bg-white/5 text-primary">
                 <Crown className="w-5 h-5" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Your Position</span>
+              <span className="text-sm font-medium text-muted-foreground">Your Position{mainCompetition ? ` - ${mainCompetition.name}` : ''}</span>
             </div>
             <div className="text-2xl font-bold font-display italic">
               {userPosition ? `P${userPosition}` : '--'}
@@ -212,7 +216,7 @@ export default function Dashboard() {
           </motion.div>
         </Link>
 
-        <Link href={competition ? `/competitions/${competition.id}` : '/leagues'}>
+        <Link href={mainCompetition ? `/competitions/${mainCompetition.id}` : '/leagues'}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -227,7 +231,7 @@ export default function Dashboard() {
               <div className="p-2 rounded-lg bg-white/5 text-green-500">
                 <Medal className="w-5 h-5" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Championship Leader</span>
+              <span className="text-sm font-medium text-muted-foreground">Championship Leader{mainCompetition ? ` - ${mainCompetition.name}` : ''}</span>
             </div>
             <div className="text-xl font-bold font-display italic truncate">
               {leader?.driverName || 'TBD'}
@@ -288,9 +292,11 @@ export default function Dashboard() {
 
         <div className="p-6 rounded-2xl bg-secondary/30 border border-white/5">
           <div className="flex items-center justify-between mb-6 gap-2">
-            <h3 className="text-xl font-bold font-display italic">Championship Standings</h3>
-            {competition && (
-              <Link href={`/competitions/${competition.id}`}>
+            <h3 className="text-xl font-bold font-display italic">
+              Championship Standings{mainCompetition ? ` - ${mainCompetition.name}` : ''}
+            </h3>
+            {mainCompetition && (
+              <Link href={`/competitions/${mainCompetition.id}`}>
                 <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">
                   Full Table <ArrowRight className="w-3 h-3" />
                 </span>
