@@ -841,16 +841,18 @@ export async function syncSeasonEndBadgesForLeague(leagueId: number): Promise<vo
 
   // For each driver, sync their season-end badges for THIS league
   for (const driverId of allDriverIds) {
-    const existingBadgeSlugs = await getExistingBadges(driverId);
+    // Note: We don't use getExistingBadges here because season-end badges can exist
+    // multiple times (once per league). awardBadgeIfNotExists handles the proper
+    // league-scoped check internally.
     
     for (const slug of SEASON_END_BADGE_SLUGS) {
       const shouldHave = eligibleBadges.get(slug)!.has(driverId);
-      const hasIt = existingBadgeSlugs.has(slug);
       
-      if (shouldHave && !hasIt) {
-        // Award the badge with leagueId for tracking
-        await awardBadgeIfNotExists(driverId, slug, existingBadgeSlugs, leagueId);
-      } else if (!shouldHave) {
+      if (shouldHave) {
+        // Try to award the badge - awardBadgeIfNotExists will check if this
+        // specific (driverId, badgeId, leagueId) combination already exists
+        await awardBadgeIfNotExists(driverId, slug, new Set(), leagueId);
+      } else {
         // Revoke the badge - only revoke if it was awarded by THIS league
         const badge = await getBadgeBySlug(slug);
         if (badge) {
