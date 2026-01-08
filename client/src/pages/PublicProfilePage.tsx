@@ -37,6 +37,13 @@ export default function PublicProfilePage() {
     enabled: !!profileId,
   });
 
+  const { data: profileIcons } = useQuery<any[]>({
+    queryKey: ['/api/profiles', profileId, 'driver-icons'],
+    enabled: !!profileId,
+  });
+  
+  const hasIcons = (profileIcons?.length ?? 0) > 0;
+
   const groupedHistory = raceHistoryByCompetition?.reduce((acc, result) => {
     const compId = result.competitionId;
     if (!acc[compId]) {
@@ -147,9 +154,11 @@ export default function PublicProfilePage() {
             <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-badges">
               <Award className="w-4 h-4 mr-2" /> Badges
             </TabsTrigger>
-            <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-icons">
-              <Sparkles className="w-4 h-4 mr-2" /> Icons
-            </TabsTrigger>
+            {hasIcons && (
+              <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-icons">
+                <Sparkles className="w-4 h-4 mr-2" /> Icons
+              </TabsTrigger>
+            )}
             <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-history">
               <Trophy className="w-4 h-4 mr-2" /> History
             </TabsTrigger>
@@ -168,9 +177,11 @@ export default function PublicProfilePage() {
             <BadgesSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
           </TabsContent>
 
-          <TabsContent value="icons" className="mt-6">
-            <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
-          </TabsContent>
+          {hasIcons && (
+            <TabsContent value="icons" className="mt-6">
+              <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
+            </TabsContent>
+          )}
 
           <TabsContent value="history" className="space-y-6 mt-6">
             <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>

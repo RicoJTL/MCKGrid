@@ -46,27 +46,6 @@ export default function ProfilePage() {
   
   const [activeTab, setActiveTab] = useState<string>('stats');
   const [tabInitialized, setTabInitialized] = useState(false);
-  
-  useEffect(() => {
-    if (profile && !tabInitialized) {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'badges' && isDriver) {
-        setActiveTab('badges');
-      } else if (hash === 'icons' && isDriver) {
-        setActiveTab('icons');
-      } else {
-        setActiveTab(isDriver ? 'stats' : 'settings');
-      }
-      setTabInitialized(true);
-    }
-  }, [profile, isDriver, tabInitialized]);
-  
-  useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash === 'badges' && isDriver && tabInitialized) {
-      setActiveTab('badges');
-    }
-  }, [location, isDriver, tabInitialized]);
 
   const { data: raceHistoryByCompetition } = useQuery<any[]>({
     queryKey: ['/api/profiles', profile?.id, 'history-by-competition'],
@@ -77,6 +56,34 @@ export default function ProfilePage() {
     queryKey: ['/api/profiles'],
     enabled: !!profile?.id,
   });
+
+  const { data: profileIcons } = useQuery<any[]>({
+    queryKey: ['/api/profiles', profile?.id, 'driver-icons'],
+    enabled: !!profile?.id,
+  });
+  
+  const hasIcons = (profileIcons?.length ?? 0) > 0;
+  
+  useEffect(() => {
+    if (profile && !tabInitialized) {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'badges' && isDriver) {
+        setActiveTab('badges');
+      } else if (hash === 'icons' && isDriver && hasIcons) {
+        setActiveTab('icons');
+      } else {
+        setActiveTab(isDriver ? 'stats' : 'settings');
+      }
+      setTabInitialized(true);
+    }
+  }, [profile, isDriver, tabInitialized, hasIcons]);
+  
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'badges' && isDriver && tabInitialized) {
+      setActiveTab('badges');
+    }
+  }, [location, isDriver, tabInitialized]);
 
   const groupedHistory = raceHistoryByCompetition?.reduce((acc, result) => {
     const compId = result.competitionId;
@@ -212,9 +219,11 @@ export default function ProfilePage() {
               <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
                 <Award className="w-4 h-4 mr-2" /> Badges
               </TabsTrigger>
-              <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-icons">
-                <Sparkles className="w-4 h-4 mr-2" /> Icons
-              </TabsTrigger>
+              {hasIcons && (
+                <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-icons">
+                  <Sparkles className="w-4 h-4 mr-2" /> Icons
+                </TabsTrigger>
+              )}
               <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-goals">
                 <Target className="w-4 h-4 mr-2" /> Goals
               </TabsTrigger>
@@ -249,9 +258,11 @@ export default function ProfilePage() {
               <BadgesSection profile={profile} isOwnProfile={true} />
             </TabsContent>
 
-            <TabsContent value="icons" className="mt-6">
-              <DriverIconsSection profile={profile} isOwnProfile={true} />
-            </TabsContent>
+            {hasIcons && (
+              <TabsContent value="icons" className="mt-6">
+                <DriverIconsSection profile={profile} isOwnProfile={true} />
+              </TabsContent>
+            )}
 
             <TabsContent value="goals" className="mt-6">
               <SeasonGoals profile={profile} />
