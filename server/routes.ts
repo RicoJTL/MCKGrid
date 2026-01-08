@@ -129,14 +129,13 @@ export async function registerRoutes(
     const targetProfile = await storage.getProfileById(Number(req.params.id));
     if (!targetProfile) return res.status(404).json({ error: "Profile not found" });
     
-    // Return public profile info (exclude sensitive fields if any)
+    // Return public profile info (exclude adminLevel for security)
     res.json({
       id: targetProfile.id,
       driverName: targetProfile.driverName,
       fullName: targetProfile.fullName,
       profileImage: targetProfile.profileImage,
       role: targetProfile.role,
-      adminLevel: targetProfile.adminLevel,
     });
   });
 
