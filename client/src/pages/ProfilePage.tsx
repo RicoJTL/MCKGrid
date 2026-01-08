@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
-import { DriverStatsDashboard, RecentResults, PersonalBests, BadgesSection, SeasonGoals, HeadToHead, CalendarSync } from "@/components/driver-stats";
+import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync } from "@/components/driver-stats";
 import { Link, useLocation } from "wouter";
 import type { Profile } from "@shared/schema";
 
@@ -203,9 +203,6 @@ export default function ProfilePage() {
               <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-stats">
                 <BarChart3 className="w-4 h-4 mr-2" /> Stats
               </TabsTrigger>
-              <TabsTrigger value="personal-bests" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-personal-bests">
-                <Timer className="w-4 h-4 mr-2" /> Personal Bests
-              </TabsTrigger>
               <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
                 <Award className="w-4 h-4 mr-2" /> Badges
               </TabsTrigger>
@@ -238,9 +235,6 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="personal-bests" className="mt-6">
-              <PersonalBests profile={profile} />
-            </TabsContent>
 
             <TabsContent value="badges" className="mt-6">
               <BadgesSection profile={profile} isOwnProfile={true} />
