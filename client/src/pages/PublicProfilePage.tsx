@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarChart3, Timer, Award } from "lucide-react";
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, PersonalBests, BadgesSection } from "@/components/driver-stats";
+import { useProfile } from "@/hooks/use-profile";
 import type { Profile } from "@shared/schema";
 
 interface PublicProfile {
@@ -20,6 +21,9 @@ interface PublicProfile {
 export default function PublicProfilePage() {
   const { id } = useParams<{ id: string }>();
   const profileId = Number(id);
+  const { data: myProfile } = useProfile();
+  
+  const isAdmin = myProfile?.adminLevel === 'admin' || myProfile?.adminLevel === 'super_admin';
 
   const { data: publicProfile, isLoading: isLoadingProfile } = useQuery<PublicProfile>({
     queryKey: ['/api/profiles/public', profileId],
@@ -152,7 +156,7 @@ export default function PublicProfilePage() {
           </TabsContent>
 
           <TabsContent value="badges" className="mt-6">
-            <BadgesSection profile={mockProfile} isOwnProfile={false} />
+            <BadgesSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6 mt-6">

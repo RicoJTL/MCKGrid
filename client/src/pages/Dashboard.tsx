@@ -1,16 +1,18 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
-import { motion } from "framer-motion";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Competition, RaceCheckin } from "@shared/schema";
-import { useMemo } from "react";
+import type { Competition, RaceCheckin, Badge as BadgeType } from "@shared/schema";
+import { useMemo, useState, useEffect } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
+import { getBadgeIcon } from "@/components/badge-icons";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -55,6 +57,32 @@ export default function Dashboard() {
     queryKey: ['/api/profiles', profile?.id, 'recent-results'],
     enabled: !!profile?.id && profile?.role === 'racer',
   });
+
+  // Badge notifications
+  const { data: badgeNotifications } = useQuery<{ notification: { id: number; createdAt: string }; badge: BadgeType }[]>({
+    queryKey: ['/api/badge-notifications'],
+    enabled: !!profile?.id,
+  });
+
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
+
+  const markReadMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/badge-notifications/mark-read"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
+      setDismissedIds(new Set());
+    },
+  });
+
+  const handleDismissBadgeNotifications = () => {
+    const currentIds = new Set(badgeNotifications?.map(n => n.notification.id) || []);
+    setDismissedIds(currentIds);
+    markReadMutation.mutate();
+  };
+
+  const visibleBadgeNotifications = (badgeNotifications || []).filter(
+    n => !dismissedIds.has(n.notification.id)
+  );
 
   // Fetch check-in status for all upcoming races (only for racers)
   const checkinQueries = useQueries({
@@ -199,6 +227,67 @@ export default function Dashboard() {
           </div>
         </motion.div>
       )}
+
+      {/* Badge Notification Banner */}
+      <AnimatePresence>
+        {visibleBadgeNotifications.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30"
+            data-testid="banner-badge-notification"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/20">
+                  <Award className="w-6 h-6 text-yellow-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-yellow-300">New Badge{visibleBadgeNotifications.length > 1 ? 's' : ''} Unlocked!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You've earned {visibleBadgeNotifications.length} new badge{visibleBadgeNotifications.length > 1 ? 's' : ''}!
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {visibleBadgeNotifications.slice(0, 3).map((item) => {
+                  const CustomIcon = getBadgeIcon(item.badge.iconName);
+                  const FallbackIcon = getIconComponent(item.badge.iconName) || Award;
+                  return (
+                    <div
+                      key={item.notification.id}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                      style={{ backgroundColor: `${item.badge.iconColor}25`, borderColor: `${item.badge.iconColor}40` }}
+                      data-testid={`badge-notification-${item.badge.id}`}
+                    >
+                      {CustomIcon ? (
+                        <CustomIcon className="w-4 h-4" style={{ color: item.badge.iconColor }} />
+                      ) : (
+                        <FallbackIcon className="w-4 h-4" style={{ color: item.badge.iconColor }} />
+                      )}
+                      <span className="text-sm font-medium">{item.badge.name}</span>
+                    </div>
+                  );
+                })}
+                {visibleBadgeNotifications.length > 3 && (
+                  <span className="text-sm text-yellow-300">+{visibleBadgeNotifications.length - 3} more</span>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-yellow-300"
+                  onClick={handleDismissBadgeNotifications}
+                  disabled={markReadMutation.isPending}
+                  data-testid="button-dismiss-badge-notifications"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* My Competitions - Scrollable Tabs */}
       {sortedEnrolledCompetitions.length > 0 && (

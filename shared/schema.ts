@@ -143,6 +143,14 @@ export const personalBests = pgTable("personal_bests", {
   achievedAt: timestamp("achieved_at").defaultNow().notNull(),
 });
 
+export const badgeNotifications = pgTable("badge_notifications", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  badgeId: integer("badge_id").references(() => badges.id).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
@@ -208,6 +216,11 @@ export const personalBestsRelations = relations(personalBests, ({ one }) => ({
   race: one(races, { fields: [personalBests.raceId], references: [races.id] }),
 }));
 
+export const badgeNotificationsRelations = relations(badgeNotifications, ({ one }) => ({
+  profile: one(profiles, { fields: [badgeNotifications.profileId], references: [profiles.id] }),
+  badge: one(badges, { fields: [badgeNotifications.badgeId], references: [badges.id] }),
+}));
+
 // Schemas
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true });
@@ -222,6 +235,7 @@ export const insertProfileBadgeSchema = createInsertSchema(profileBadges).omit({
 export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, createdAt: true });
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });
 export const insertPersonalBestSchema = createInsertSchema(personalBests).omit({ id: true, achievedAt: true });
+export const insertBadgeNotificationSchema = createInsertSchema(badgeNotifications).omit({ id: true, isRead: true, createdAt: true });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -250,3 +264,5 @@ export type ProfileBadge = typeof profileBadges.$inferSelect;
 export type SeasonGoal = typeof seasonGoals.$inferSelect;
 export type RaceCheckin = typeof raceCheckins.$inferSelect;
 export type PersonalBest = typeof personalBests.$inferSelect;
+export type BadgeNotification = typeof badgeNotifications.$inferSelect;
+export type InsertBadgeNotification = z.infer<typeof insertBadgeNotificationSchema>;

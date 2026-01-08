@@ -25,6 +25,7 @@ import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType } fr
 interface DriverStatsProps {
   profile: Profile;
   isOwnProfile?: boolean;
+  isAdmin?: boolean;
 }
 
 export function DriverStatsDashboard({ profile }: DriverStatsProps) {
@@ -180,13 +181,28 @@ const BADGE_CATEGORY_ORDER = [
   "league_laughs",
 ];
 
-export function BadgesSection({ profile, isOwnProfile = false }: DriverStatsProps) {
+export function BadgesSection({ profile, isOwnProfile = false, isAdmin = false }: DriverStatsProps) {
+  const { toast } = useToast();
+  
   const { data: allBadges, isLoading: loadingAll } = useQuery<BadgeType[]>({
     queryKey: ['/api/badges'],
   });
 
   const { data: earnedBadges, isLoading: loadingEarned } = useQuery<{ badge: BadgeType; earnedAt: string }[]>({
     queryKey: ['/api/profiles', profile.id, 'badges'],
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (badgeId: number) =>
+      apiRequest("DELETE", `/api/profiles/${profile.id}/badges/${badgeId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'badges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+      toast({ title: "Badge Revoked", description: "The badge has been removed from this driver." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to revoke badge", variant: "destructive" });
+    },
   });
 
   if (loadingAll || loadingEarned) {
@@ -304,6 +320,18 @@ export function BadgesSection({ profile, isOwnProfile = false }: DriverStatsProp
                             {badge.description}
                           </p>
                         </div>
+                        {isAdmin && !isOwnProfile && isUnlocked && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="flex-shrink-0 text-muted-foreground"
+                            onClick={() => revokeMutation.mutate(badge.id)}
+                            disabled={revokeMutation.isPending}
+                            data-testid={`button-revoke-badge-${badge.id}`}
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     );
                   })}

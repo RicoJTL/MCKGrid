@@ -1,9 +1,9 @@
 import { db } from "./db";
 import { 
   leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
-  badges, profileBadges, seasonGoals, raceCheckins, personalBests,
+  badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
   type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
-  type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest,
+  type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest
 } from "@shared/schema";
@@ -80,6 +80,10 @@ export interface IStorage {
   deleteBadge(id: number): Promise<void>;
   seedPredefinedBadges(): Promise<void>;
   getBadgeBySlug(slug: string): Promise<Badge | undefined>;
+  
+  // Badge Notifications
+  getUnreadBadgeNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; badge: Badge }[]>;
+  markBadgeNotificationsRead(profileId: number): Promise<void>;
   
   // Season Goals
   getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
@@ -707,12 +711,36 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) return existing[0];
     
     const [badge] = await db.insert(profileBadges).values({ profileId, badgeId }).returning();
+    
+    await db.insert(badgeNotifications).values({ profileId, badgeId });
+    
     return badge;
   }
 
   async revokeBadge(profileId: number, badgeId: number): Promise<void> {
     await db.delete(profileBadges)
       .where(and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badgeId)));
+    await db.delete(badgeNotifications)
+      .where(and(eq(badgeNotifications.profileId, profileId), eq(badgeNotifications.badgeId, badgeId)));
+  }
+  
+  async getUnreadBadgeNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; badge: Badge }[]> {
+    const result = await db
+      .select({
+        notification: { id: badgeNotifications.id, createdAt: badgeNotifications.createdAt },
+        badge: badges,
+      })
+      .from(badgeNotifications)
+      .innerJoin(badges, eq(badgeNotifications.badgeId, badges.id))
+      .where(and(eq(badgeNotifications.profileId, profileId), eq(badgeNotifications.isRead, false)))
+      .orderBy(desc(badgeNotifications.createdAt));
+    return result;
+  }
+  
+  async markBadgeNotificationsRead(profileId: number): Promise<void> {
+    await db.update(badgeNotifications)
+      .set({ isRead: true })
+      .where(eq(badgeNotifications.profileId, profileId));
   }
 
   async getProfilesWithBadge(badgeId: number): Promise<{ profileId: number; badgeId: number }[]> {

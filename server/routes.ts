@@ -633,6 +633,25 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // Badge Notifications (for logged-in user)
+  app.get("/api/badge-notifications", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.json([]);
+    const notifications = await storage.getUnreadBadgeNotifications(profile.id);
+    res.json(notifications);
+  });
+
+  app.post("/api/badge-notifications/mark-read", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    await storage.markBadgeNotificationsRead(profile.id);
+    res.sendStatus(204);
+  });
+
   // === Season Goals (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/goals", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
