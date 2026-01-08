@@ -187,21 +187,57 @@ export async function registerRoutes(
     res.json(updated);
   });
 
-  // Get profile race history
+  // Get profile race history (only accessible to profile owner or admins)
   app.get("/api/profiles/:id/history", async (req: any, res) => {
-    const history = await storage.getProfileRaceHistory(Number(req.params.id));
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    // Only allow profile owner or admins to view history
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own race history" });
+    }
+    
+    const history = await storage.getProfileRaceHistory(targetId);
     res.json(history);
   });
 
-  // Get profile race history grouped by competition (retains history even if unenrolled)
+  // Get profile race history grouped by competition (only accessible to profile owner or admins)
   app.get("/api/profiles/:id/history-by-competition", async (req: any, res) => {
-    const history = await storage.getProfileRaceHistoryByCompetition(Number(req.params.id));
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    // Only allow profile owner or admins to view history
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own race history" });
+    }
+    
+    const history = await storage.getProfileRaceHistoryByCompetition(targetId);
     res.json(history);
   });
 
-  // Get competitions a driver is enrolled in
+  // Get competitions a driver is enrolled in (only accessible to profile owner or admins)
   app.get("/api/profiles/:id/enrolled-competitions", async (req: any, res) => {
-    const competitions = await storage.getDriverEnrolledCompetitions(Number(req.params.id));
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    // Only allow profile owner or admins to view enrolled competitions
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own enrolled competitions" });
+    }
+    
+    const competitions = await storage.getDriverEnrolledCompetitions(targetId);
     res.json(competitions);
   });
 
@@ -467,17 +503,37 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
-  // === Driver Stats ===
+  // === Driver Stats (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/stats", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const stats = await storage.getDriverStats(Number(req.params.id));
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own stats" });
+    }
+    
+    const stats = await storage.getDriverStats(targetId);
     res.json(stats);
   });
 
   app.get("/api/profiles/:id/recent-results", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own results" });
+    }
+    
     const limit = req.query.limit ? Number(req.query.limit) : 5;
-    const results = await storage.getRecentResults(Number(req.params.id), limit);
+    const results = await storage.getRecentResults(targetId, limit);
     res.json(results);
   });
 
@@ -488,10 +544,20 @@ export async function registerRoutes(
     res.json(stats);
   });
 
-  // === Personal Bests ===
+  // === Personal Bests (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/personal-bests", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const bests = await storage.getPersonalBests(Number(req.params.id));
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own personal bests" });
+    }
+    
+    const bests = await storage.getPersonalBests(targetId);
     res.json(bests);
   });
 
@@ -532,11 +598,21 @@ export async function registerRoutes(
     res.json(awarded);
   });
 
-  // === Season Goals ===
+  // === Season Goals (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/goals", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    const targetId = Number(req.params.id);
+    
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own goals" });
+    }
+    
     const leagueId = req.query.leagueId ? Number(req.query.leagueId) : undefined;
-    const goals = await storage.getSeasonGoals(Number(req.params.id), leagueId);
+    const goals = await storage.getSeasonGoals(targetId, leagueId);
     res.json(goals);
   });
 
@@ -554,6 +630,16 @@ export async function registerRoutes(
 
   app.patch("/api/goals/:id", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    
+    // Verify ownership of the goal
+    const goal = await storage.getSeasonGoalById(Number(req.params.id));
+    if (!goal || goal.profileId !== profile.id) {
+      return res.status(403).json({ error: "Can only update your own goals" });
+    }
+    
     const { targetValue, currentValue } = req.body;
     const data: any = {};
     if (targetValue !== undefined) data.targetValue = targetValue;
@@ -564,6 +650,16 @@ export async function registerRoutes(
 
   app.delete("/api/goals/:id", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    
+    // Verify ownership of the goal
+    const goal = await storage.getSeasonGoalById(Number(req.params.id));
+    if (!goal || goal.profileId !== profile.id) {
+      return res.status(403).json({ error: "Can only delete your own goals" });
+    }
+    
     await storage.deleteSeasonGoal(Number(req.params.id));
     res.sendStatus(204);
   });
@@ -589,6 +685,11 @@ export async function registerRoutes(
     const userId = req.user.claims.sub;
     const profile = await storage.getProfile(userId);
     if (!profile) return res.status(404).json({ error: "Profile not found" });
+    
+    // Only racers can check in to races
+    if (profile.role !== 'racer') {
+      return res.status(403).json({ error: "Only drivers can check in to races" });
+    }
     
     const { status } = req.body;
     if (!['confirmed', 'maybe', 'not_attending'].includes(status)) {

@@ -15,7 +15,7 @@ interface RaceCheckinProps {
 export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   const { data: myCheckin, isLoading } = useQuery<RaceCheckin | null>({
     queryKey: ['/api/races', race.id, 'my-checkin'],
-    enabled: !!profile,
+    enabled: !!profile && profile.role === 'racer',
   });
 
   const checkinMutation = useMutation({
@@ -27,7 +27,8 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
     },
   });
 
-  if (!profile) return null;
+  // Only racers can check in
+  if (!profile || profile.role !== 'racer') return null;
   if (isLoading) return <Skeleton className="h-9 w-24" />;
 
   const statusConfig = {

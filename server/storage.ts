@@ -77,6 +77,7 @@ export interface IStorage {
   
   // Season Goals
   getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
+  getSeasonGoalById(id: number): Promise<SeasonGoal | undefined>;
   createSeasonGoal(goal: InsertSeasonGoal): Promise<SeasonGoal>;
   updateSeasonGoal(id: number, data: Partial<SeasonGoal>): Promise<SeasonGoal>;
   deleteSeasonGoal(id: number): Promise<void>;
@@ -602,6 +603,11 @@ export class DatabaseStorage implements IStorage {
         .where(and(eq(seasonGoals.profileId, profileId), eq(seasonGoals.leagueId, leagueId)));
     }
     return await db.select().from(seasonGoals).where(eq(seasonGoals.profileId, profileId));
+  }
+
+  async getSeasonGoalById(id: number): Promise<SeasonGoal | undefined> {
+    const [goal] = await db.select().from(seasonGoals).where(eq(seasonGoals.id, id));
+    return goal;
   }
 
   async createSeasonGoal(goal: InsertSeasonGoal): Promise<SeasonGoal> {
