@@ -563,7 +563,7 @@ export default function CompetitionDetails() {
 
             return (
               <div className="space-y-6">
-                <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
+                <div id="enrolled-drivers" className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden scroll-mt-4">
                   <div className="p-4 border-b border-white/5">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       <Users className="w-5 h-5" />

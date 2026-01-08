@@ -3,9 +3,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle, UserPlus } from "lucide-react";
 import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
+import { Link } from "wouter";
 
 interface RaceCheckinProps {
   race: Race;
@@ -13,15 +14,17 @@ interface RaceCheckinProps {
 }
 
 export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
+  const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+  
   const { data: myCheckin, isLoading } = useQuery<RaceCheckin | null>({
     queryKey: ['/api/races', race.id, 'my-checkin'],
     enabled: !!profile && profile.role === 'racer',
   });
 
-  // Fetch race's competitions and driver's enrolled competitions
+  // Fetch race's competitions (for enrollment checks and admin linking)
   const { data: raceCompetitions } = useQuery<Competition[]>({
     queryKey: ['/api/races', race.id, 'competitions'],
-    enabled: !!profile && profile.role === 'racer',
+    enabled: !!profile,
   });
 
   const { data: enrolledCompetitions } = useQuery<Competition[]>({
@@ -45,12 +48,23 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   // Check if driver is enrolled in at least one competition for this race
   const enrolledCompIds = new Set(enrolledCompetitions?.map(c => c.id) || []);
   const isEnrolled = raceCompetitions?.some(c => enrolledCompIds.has(c.id)) ?? false;
+  const firstCompetition = raceCompetitions?.[0];
 
   if (!isEnrolled && raceCompetitions && enrolledCompetitions) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <AlertCircle className="w-4 h-4 text-yellow-500" />
-        <span>You need to be enrolled in this competition to confirm attendance. Please contact an admin.</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <AlertCircle className="w-4 h-4 text-yellow-500" />
+          <span>You need to be enrolled in this competition to confirm attendance. Please contact an admin.</span>
+        </div>
+        {isAdmin && firstCompetition && (
+          <Link href={`/competitions/${firstCompetition.id}#enrolled-drivers`}>
+            <Button size="sm" variant="outline" data-testid="button-enroll-drivers">
+              <UserPlus className="w-4 h-4 mr-1" />
+              Enroll Drivers
+            </Button>
+          </Link>
+        )}
       </div>
     );
   }

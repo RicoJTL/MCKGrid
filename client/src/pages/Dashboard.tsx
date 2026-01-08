@@ -64,15 +64,19 @@ export default function Dashboard() {
     })),
   });
 
-  // Find races where the driver hasn't checked in yet
+  // Find races where the driver hasn't checked in yet AND is enrolled in that competition
   const racesNeedingCheckin = useMemo(() => {
-    if (!upcomingRacesData || !profile || profile.role !== 'racer') return [];
+    if (!upcomingRacesData || !profile || profile.role !== 'racer' || !enrolledCompetitions) return [];
+    
+    const enrolledCompIds = new Set(enrolledCompetitions.map(c => c.id));
     
     return upcomingRacesData.slice(0, 5).filter((race: any, index: number) => {
       const checkinData = checkinQueries[index]?.data as RaceCheckin | null | undefined;
-      return !checkinData;
+      // Only show races where driver is enrolled in the competition
+      const isEnrolled = race.competitionId && enrolledCompIds.has(race.competitionId);
+      return !checkinData && isEnrolled;
     });
-  }, [upcomingRacesData, checkinQueries, profile]);
+  }, [upcomingRacesData, checkinQueries, profile, enrolledCompetitions]);
 
   // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
   const sortedEnrolledCompetitions = useMemo(() => {
