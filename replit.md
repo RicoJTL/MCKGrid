@@ -99,15 +99,15 @@ The system automatically awards badges based on driver performance:
 - Race milestones: first_race, first_podium, first_win, late_bloomer
 - Streaks: back_to_back, podium_run, top_5_regular
 - Season stats: points_scorer, top_half_hero, plum_tomato_champion, the_yo_yo
-- Qualifying (if data exists): pole_position, grid_climber, perfect_weekend
+- Qualifying (when data entered): pole_position, grid_climber, perfect_weekend, quali_specialist
 
 **Auto-awarded when league marked "completed":**
 - Attendance: season_complete, iron_driver, never_quit, last_but_loyal, league_laughs_never_quit
 - Championship positions: mck_champion, runner_up, third_overall, best_of_rest
 - Special awards: dominator (most wins), podium_king (most podiums)
+- Qualifying awards: the_flash (most poles), quali_merchant (most times quali > finish), most_dramatic_swing (biggest grid climb)
 
 **Cannot be automated (require data not currently tracked):**
-- Qualifying badges: quali_specialist, the_flash, quali_merchant, most_dramatic_swing
 - Tier changes: first_promotion, relegation_fodder
 - Multi-season: league_legend, hall_of_fame, most_improved
 

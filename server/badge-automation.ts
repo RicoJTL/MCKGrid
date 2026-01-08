@@ -245,6 +245,18 @@ export async function checkAndAwardBadges(profileId: number): Promise<string[]> 
         awardedBadges.push("perfect_weekend");
       }
     }
+
+    for (const leagueId of uniqueLeagues) {
+      const seasonResults = getSeasonResults(stats.results, leagueId);
+      const qualiTop3Count = seasonResults.filter(
+        (r) => r.qualifyingPosition !== null && r.qualifyingPosition <= 3
+      ).length;
+      if (qualiTop3Count >= 5) {
+        if (await awardBadgeIfNotExists(profileId, "quali_specialist", existingBadges)) {
+          awardedBadges.push("quali_specialist");
+        }
+      }
+    }
   }
 
   return awardedBadges;
@@ -267,19 +279,44 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
       raceId: results.raceId,
       position: results.position,
       points: results.points,
+      qualifyingPosition: results.qualifyingPosition,
     })
     .from(results)
     .where(inArray(results.raceId, raceIds));
 
-  const driverStats = new Map<number, { races: Set<number>; points: number; wins: number; podiums: number; positions: number[] }>();
+  const driverStats = new Map<number, { 
+    races: Set<number>; 
+    points: number; 
+    wins: number; 
+    podiums: number; 
+    positions: number[];
+    polePositions: number;
+    qualiHigherThanFinish: number;
+    bestGridClimb: number;
+  }>();
   
   for (const r of allResults) {
     if (!driverStats.has(r.racerId)) {
-      driverStats.set(r.racerId, { races: new Set(), points: 0, wins: 0, podiums: 0, positions: [] });
+      driverStats.set(r.racerId, { 
+        races: new Set(), 
+        points: 0, 
+        wins: 0, 
+        podiums: 0, 
+        positions: [],
+        polePositions: 0,
+        qualiHigherThanFinish: 0,
+        bestGridClimb: 0,
+      });
     }
     const stats = driverStats.get(r.racerId)!;
     stats.races.add(r.raceId);
     stats.points += r.points;
+    if (r.qualifyingPosition !== null) {
+      if (r.qualifyingPosition === 1) stats.polePositions++;
+      if (r.qualifyingPosition < r.position) stats.qualiHigherThanFinish++;
+      const gridClimb = r.qualifyingPosition - r.position;
+      if (gridClimb > stats.bestGridClimb) stats.bestGridClimb = gridClimb;
+    }
     stats.positions.push(r.position);
     if (r.position === 1) stats.wins++;
     if (r.position <= 3) stats.podiums++;
@@ -364,6 +401,42 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
     if (await awardBadgeIfNotExists(pk.profileId, "podium_king", existingBadges)) {
       const existing = awardedMap.get(pk.profileId) || [];
       awardedMap.set(pk.profileId, [...existing, "podium_king"]);
+    }
+  }
+
+  const maxPoles = Math.max(...standings.map((s) => s.polePositions));
+  if (maxPoles > 0) {
+    const flashDrivers = standings.filter((s) => s.polePositions === maxPoles);
+    for (const fd of flashDrivers) {
+      const existingBadges = await getExistingBadges(fd.profileId);
+      if (await awardBadgeIfNotExists(fd.profileId, "the_flash", existingBadges)) {
+        const existing = awardedMap.get(fd.profileId) || [];
+        awardedMap.set(fd.profileId, [...existing, "the_flash"]);
+      }
+    }
+  }
+
+  const maxQualiHigher = Math.max(...standings.map((s) => s.qualiHigherThanFinish));
+  if (maxQualiHigher > 0) {
+    const qualiMerchants = standings.filter((s) => s.qualiHigherThanFinish === maxQualiHigher);
+    for (const qm of qualiMerchants) {
+      const existingBadges = await getExistingBadges(qm.profileId);
+      if (await awardBadgeIfNotExists(qm.profileId, "quali_merchant", existingBadges)) {
+        const existing = awardedMap.get(qm.profileId) || [];
+        awardedMap.set(qm.profileId, [...existing, "quali_merchant"]);
+      }
+    }
+  }
+
+  const maxGridClimb = Math.max(...standings.map((s) => s.bestGridClimb));
+  if (maxGridClimb > 0) {
+    const dramaticSwings = standings.filter((s) => s.bestGridClimb === maxGridClimb);
+    for (const ds of dramaticSwings) {
+      const existingBadges = await getExistingBadges(ds.profileId);
+      if (await awardBadgeIfNotExists(ds.profileId, "most_dramatic_swing", existingBadges)) {
+        const existing = awardedMap.get(ds.profileId) || [];
+        awardedMap.set(ds.profileId, [...existing, "most_dramatic_swing"]);
+      }
     }
   }
 
