@@ -434,6 +434,8 @@ export class DatabaseStorage implements IStorage {
         leagueId: competitions.leagueId,
         leagueName: leagues.name,
         isMain: competitions.isMain,
+        iconName: competitions.iconName,
+        iconColor: competitions.iconColor,
         createdAt: competitions.createdAt,
       })
       .from(competitions)
