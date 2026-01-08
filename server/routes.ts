@@ -123,6 +123,23 @@ export async function registerRoutes(
     res.json(profiles);
   });
 
+  // Get public profile by ID (viewable by all authenticated users)
+  app.get("/api/profiles/public/:id", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const targetProfile = await storage.getProfileById(Number(req.params.id));
+    if (!targetProfile) return res.status(404).json({ error: "Profile not found" });
+    
+    // Return public profile info (exclude sensitive fields if any)
+    res.json({
+      id: targetProfile.id,
+      driverName: targetProfile.driverName,
+      fullName: targetProfile.fullName,
+      profileImage: targetProfile.profileImage,
+      role: targetProfile.role,
+      adminLevel: targetProfile.adminLevel,
+    });
+  });
+
   // Admin: Create a new driver profile (role is account type, admin access is separate)
   app.post("/api/profiles/create-driver", requireAdmin, async (req: any, res) => {
     try {
