@@ -309,6 +309,14 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
         }
       }
 
+      const bottomHalfCount = driver.positions.filter((p: number) => p > Math.ceil(standings.length / 2)).length;
+      const allBottomHalf = bottomHalfCount === driver.positions.length;
+      if (allBottomHalf) {
+        if (await awardBadgeIfNotExists(driver.profileId, "league_laughs_never_quit", existingBadges)) {
+          awarded.push("league_laughs_never_quit");
+        }
+      }
+
       if (i === standings.length - 1) {
         if (await awardBadgeIfNotExists(driver.profileId, "last_but_loyal", existingBadges)) {
           awarded.push("last_but_loyal");

@@ -293,10 +293,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Auto-check and award badges for all drivers in the race
-    const { checkAndAwardBadges } = await import("./badge-automation");
-    for (const result of insertedResults) {
-      if (result.racerId) {
-        await checkAndAwardBadges(result.racerId);
+    if (insertedResults.length > 0) {
+      const { checkAndAwardBadges } = await import("./badge-automation");
+      const uniqueRacerIds = Array.from(new Set(insertedResults.map(r => r.racerId).filter(Boolean)));
+      for (const racerId of uniqueRacerIds) {
+        await checkAndAwardBadges(racerId);
       }
     }
     
