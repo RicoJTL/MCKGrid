@@ -5,7 +5,7 @@ import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2,
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEnrolledDrivers, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-enrollments";
 import { format } from "date-fns";
 import {
@@ -84,6 +84,20 @@ export default function CompetitionDetails() {
   const [editingRace, setEditingRace] = useState<any>(null);
   const [deletingRace, setDeletingRace] = useState<any>(null);
   const [editSelectedCompetitions, setEditSelectedCompetitions] = useState<number[]>([]);
+  
+  // Handle tab switching via URL hash
+  const getInitialTab = () => {
+    if (typeof window !== 'undefined' && window.location.hash === '#drivers') return 'drivers';
+    if (typeof window !== 'undefined' && window.location.hash === '#races') return 'races';
+    return 'standings';
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+  
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#drivers') setActiveTab('drivers');
+    else if (hash === '#races') setActiveTab('races');
+  }, []);
   
   const updateRaceCompetitions = useUpdateRaceCompetitions();
 
@@ -333,7 +347,7 @@ export default function CompetitionDetails() {
         </div>
       </div>
 
-      <Tabs defaultValue="standings" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-secondary/50 border border-white/5">
           <TabsTrigger value="standings" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             <Trophy className="w-4 h-4 mr-2" />

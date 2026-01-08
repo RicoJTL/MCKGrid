@@ -58,7 +58,7 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
           <span>You need to be enrolled in this competition to confirm attendance. Please contact an admin.</span>
         </div>
         {isAdmin && firstCompetition && (
-          <Link href={`/competitions/${firstCompetition.id}#enrolled-drivers`}>
+          <Link href={`/competitions/${firstCompetition.id}#drivers`}>
             <Button size="sm" variant="outline" data-testid="button-enroll-drivers">
               <UserPlus className="w-4 h-4 mr-1" />
               Enroll Drivers
