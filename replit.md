@@ -84,6 +84,14 @@ Admin level badges (purple for Super Admin, yellow for Admin) are permanently di
 
 Special user: `ibzmebude@gmail.com` is auto-promoted to super_admin on login.
 
+### Public Profiles
+Authenticated users can view any driver's public profile at `/profiles/:id`:
+- **Publicly visible**: Stats (races, points, wins, podiums), Personal Bests, Badges, Race History
+- **Private (own profile only)**: Goals, Head-to-Head comparisons, Settings
+- **API endpoint**: `GET /api/profiles/public/:id` returns only safe fields (id, driverName, fullName, profileImage, role)
+- **Clickable links**: Driver names in standings, race results, and driver lists link to public profiles
+- **Component**: `client/src/pages/PublicProfilePage.tsx`
+
 ## External Dependencies
 
 ### Database

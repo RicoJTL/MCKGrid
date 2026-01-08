@@ -226,7 +226,13 @@ export default function RaceDetails() {
                        result.position === 3 ? <span className="text-amber-700">3rd</span> :
                        `${result.position}th`}
                     </TableCell>
-                    <TableCell className="font-bold">{getDriverName(result.racerId)}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/profiles/${result.racerId}`}>
+                        <span className="hover:text-primary cursor-pointer transition-colors" data-testid={`link-driver-${result.racerId}`}>
+                          {getDriverName(result.racerId)}
+                        </span>
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {result.qualifyingPosition ? `P${result.qualifyingPosition}` : "-"}
                     </TableCell>

@@ -395,7 +395,11 @@ export default function CompetitionDetails() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-bold">{driver.driverName || 'Unknown Driver'}</span>
+                        <Link href={`/profiles/${driver.racerId}`}>
+                          <span className="font-bold hover:text-primary cursor-pointer transition-colors" data-testid={`link-driver-${driver.racerId}`}>
+                            {driver.driverName || 'Unknown Driver'}
+                          </span>
+                        </Link>
                       </td>
                       <td className="p-4 text-center">
                         <span className="font-display font-bold text-xl text-primary">{driver.points}</span>
@@ -599,7 +603,11 @@ export default function CompetitionDetails() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold truncate">{driver.driverName || driver.fullName}</p>
+                            <Link href={`/profiles/${driver.id}`}>
+                              <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
+                                {driver.driverName || driver.fullName}
+                              </p>
+                            </Link>
                           </div>
                           {isAdmin && (
                             <Button
@@ -645,7 +653,11 @@ export default function CompetitionDetails() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold truncate">{driver.driverName || driver.fullName}</p>
+                            <Link href={`/profiles/${driver.id}`}>
+                              <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
+                                {driver.driverName || driver.fullName}
+                              </p>
+                            </Link>
                           </div>
                           <Button
                             variant="secondary"
