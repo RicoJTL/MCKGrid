@@ -139,19 +139,20 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteLeague(id: number): Promise<void> {
-    // Cascade delete: delete race results, race_competitions links, races, competitions, enrollments
+    // Cascade delete: delete all races in this league (which cascades to results, check-ins, etc.)
     const leagueRaces = await db.select().from(races).where(eq(races.leagueId, id));
     for (const race of leagueRaces) {
-      await db.delete(results).where(eq(results.raceId, race.id));
-      await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, race.id));
+      await this.deleteRace(race.id);
     }
-    await db.delete(races).where(eq(races.leagueId, id));
     
+    // Delete all competitions in this league (which cascades to enrollments)
     const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
     for (const comp of comps) {
       await db.delete(enrollments).where(eq(enrollments.competitionId, comp.id));
     }
     await db.delete(competitions).where(eq(competitions.leagueId, id));
+    
+    // Delete the league
     await db.delete(leagues).where(eq(leagues.id, id));
   }
 
