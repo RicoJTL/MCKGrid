@@ -1,7 +1,7 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -36,6 +36,23 @@ export default function Dashboard() {
   const { data: mainStandings } = useQuery<any[]>({
     queryKey: ['/api/competitions', mainCompetition?.id, 'standings'],
     enabled: !!mainCompetition?.id,
+  });
+
+  const { data: driverStats } = useQuery<{
+    totalRaces: number;
+    totalPoints: number;
+    avgPosition: number;
+    wins: number;
+    podiums: number;
+    bestPosition: number;
+  }>({
+    queryKey: ['/api/profiles', profile?.id, 'stats'],
+    enabled: !!profile?.id && profile?.role === 'racer',
+  });
+
+  const { data: recentResults } = useQuery<any[]>({
+    queryKey: ['/api/profiles', profile?.id, 'recent-results'],
+    enabled: !!profile?.id && profile?.role === 'racer',
   });
 
   // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
@@ -295,6 +312,48 @@ export default function Dashboard() {
           </motion.div>
         </Link>
       </div>
+
+      {/* Driver Stats (for racers only) */}
+      {profile?.role === 'racer' && driverStats && driverStats.totalRaces > 0 && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/30 border border-primary/20">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" /> Your Stats
+            </h3>
+            <Link href="/profile">
+              <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">
+                View Profile <ArrowRight className="w-3 h-3" />
+              </span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display text-primary">{driverStats.totalRaces}</div>
+              <div className="text-xs text-muted-foreground">Races</div>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display text-green-400">{driverStats.totalPoints}</div>
+              <div className="text-xs text-muted-foreground">Points</div>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display text-yellow-400">{driverStats.wins}</div>
+              <div className="text-xs text-muted-foreground">Wins</div>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display text-orange-400">{driverStats.podiums}</div>
+              <div className="text-xs text-muted-foreground">Podiums</div>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display">{driverStats.avgPosition}</div>
+              <div className="text-xs text-muted-foreground">Avg Pos</div>
+            </div>
+            <div className="p-3 rounded-xl bg-secondary/50 text-center">
+              <div className="text-2xl font-bold font-display text-blue-400">P{driverStats.bestPosition}</div>
+              <div className="text-xs text-muted-foreground">Best</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Races & Standings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

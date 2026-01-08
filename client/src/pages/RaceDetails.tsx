@@ -156,6 +156,28 @@ export default function RaceDetails() {
         )}
       </div>
 
+      {race.status === 'scheduled' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <RaceCountdown race={race} />
+            {profile?.role === 'racer' && (
+              <div className="p-4 rounded-xl bg-secondary/30 border border-white/5 space-y-3">
+                <h3 className="font-bold flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" /> Your Attendance
+                </h3>
+                <RaceCheckinButton race={race} profile={profile} />
+              </div>
+            )}
+          </div>
+          <div className="p-4 rounded-xl bg-secondary/30 border border-white/5">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" /> Who's Coming
+            </h3>
+            <RaceCheckinList raceId={raceId} />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h2 className="text-2xl font-display font-bold italic flex items-center gap-2">
