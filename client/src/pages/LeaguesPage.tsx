@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -114,6 +115,7 @@ export default function LeaguesPage() {
             <DialogContent className="bg-card border-white/10 text-foreground">
               <DialogHeader>
                 <DialogTitle className="font-display italic text-2xl">Create New League</DialogTitle>
+                <DialogDescription className="sr-only">Create a new racing league</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
@@ -250,6 +252,7 @@ export default function LeaguesPage() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit League</DialogTitle>
+            <DialogDescription className="sr-only">Edit league details</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onUpdate)} className="space-y-4">

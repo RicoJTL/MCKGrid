@@ -853,6 +853,7 @@ export default function AdminPanel() {
           <DialogContent className="bg-card border-white/10">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription className="sr-only">Edit user details and permissions</DialogDescription>
             </DialogHeader>
             
             {isSuperAdmin && editingProfile && (
@@ -947,6 +948,7 @@ export default function AdminPanel() {
           <DialogContent className="bg-card border-white/10">
             <DialogHeader>
               <DialogTitle>Create Driver</DialogTitle>
+              <DialogDescription className="sr-only">Create a new driver profile</DialogDescription>
             </DialogHeader>
             <Form {...createForm}>
               <form onSubmit={createForm.handleSubmit(onCreateDriver)} className="space-y-4">

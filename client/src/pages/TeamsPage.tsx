@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -79,7 +80,10 @@ export default function TeamsPage() {
               <Button className="bg-primary hover:bg-primary/90 font-bold"><Plus className="mr-2 w-4 h-4"/> Create Team</Button>
             </DialogTrigger>
             <DialogContent className="bg-card border-white/10">
-              <DialogHeader><DialogTitle>New Team</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>New Team</DialogTitle>
+                <DialogDescription className="sr-only">Create a new racing team</DialogDescription>
+              </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField name="name" control={form.control} render={({field}) => (

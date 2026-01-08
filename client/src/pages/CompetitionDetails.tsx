@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -264,6 +265,7 @@ export default function CompetitionDetails() {
                 <DialogContent className="bg-card border-white/10">
                   <DialogHeader>
                     <DialogTitle>Schedule New Race</DialogTitle>
+                    <DialogDescription className="sr-only">Create a new race for this competition</DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -706,6 +708,7 @@ export default function CompetitionDetails() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit Competition</DialogTitle>
+            <DialogDescription className="sr-only">Edit competition details</DialogDescription>
           </DialogHeader>
           <Form {...compForm}>
             <form onSubmit={compForm.handleSubmit(onUpdateComp)} className="space-y-4">
@@ -775,6 +778,7 @@ export default function CompetitionDetails() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit Race</DialogTitle>
+            <DialogDescription className="sr-only">Edit race details</DialogDescription>
           </DialogHeader>
           <Form {...editRaceForm}>
             <form onSubmit={editRaceForm.handleSubmit(onUpdateRace)} className="space-y-4">

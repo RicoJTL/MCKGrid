@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -272,6 +273,7 @@ export default function RaceDetails() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit Race</DialogTitle>
+            <DialogDescription className="sr-only">Edit race details</DialogDescription>
           </DialogHeader>
           <Form {...editRaceForm}>
             <form onSubmit={editRaceForm.handleSubmit(onUpdateRace)} className="space-y-4">

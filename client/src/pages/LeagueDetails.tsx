@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -244,6 +245,7 @@ export default function LeagueDetails() {
             <DialogContent className="bg-card border-white/10">
               <DialogHeader>
                 <DialogTitle>New Competition</DialogTitle>
+                <DialogDescription className="sr-only">Create a new competition in this league</DialogDescription>
               </DialogHeader>
               <Form {...compForm}>
                 <form onSubmit={compForm.handleSubmit(onSubmitComp)} className="space-y-4">
@@ -382,6 +384,7 @@ export default function LeagueDetails() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit League</DialogTitle>
+            <DialogDescription className="sr-only">Edit league details</DialogDescription>
           </DialogHeader>
           <Form {...leagueForm}>
             <form onSubmit={leagueForm.handleSubmit(onUpdateLeague)} className="space-y-4">
@@ -453,6 +456,7 @@ export default function LeagueDetails() {
         <DialogContent className="bg-card border-white/10">
           <DialogHeader>
             <DialogTitle>Edit Competition</DialogTitle>
+            <DialogDescription className="sr-only">Edit competition details</DialogDescription>
           </DialogHeader>
           <Form {...editCompForm}>
             <form onSubmit={editCompForm.handleSubmit(onUpdateComp)} className="space-y-4">

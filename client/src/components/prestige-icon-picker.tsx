@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -139,6 +140,7 @@ export function PrestigeIconPicker({ value, onChange, triggerLabel = "Select Ico
       <DialogContent className="max-w-2xl bg-card border-white/10">
         <DialogHeader>
           <DialogTitle className="font-display italic text-xl">Choose Prestigious Icon</DialogTitle>
+          <DialogDescription className="sr-only">Select an icon and color for this prestigious symbol</DialogDescription>
         </DialogHeader>
         
         <div className="grid grid-cols-2 gap-6">
