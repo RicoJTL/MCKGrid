@@ -77,22 +77,41 @@ async function getBadgeBySlug(slug: string): Promise<{ id: number } | null> {
 async function awardBadgeIfNotExists(
   profileId: number,
   slug: string,
-  existingBadges: Set<string>
+  existingBadges: Set<string>,
+  leagueId?: number // Optional: for season-end badges, tracks which league awarded it
 ): Promise<boolean> {
-  if (existingBadges.has(slug)) return false;
+  // For non-league badges, skip if already have it
+  // For league badges, we need to check if this specific league's badge exists
+  if (!leagueId && existingBadges.has(slug)) return false;
 
   const badge = await getBadgeBySlug(slug);
   if (!badge) return false;
 
-  const existing = await db
-    .select()
-    .from(profileBadges)
-    .where(and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badge.id)))
-    .limit(1);
+  // Check for existing badge (with leagueId if provided)
+  let existing;
+  if (leagueId) {
+    // For season-end badges, check if this specific league's badge exists
+    existing = await db
+      .select()
+      .from(profileBadges)
+      .where(and(
+        eq(profileBadges.profileId, profileId), 
+        eq(profileBadges.badgeId, badge.id),
+        eq(profileBadges.leagueId, leagueId)
+      ))
+      .limit(1);
+  } else {
+    // For non-league badges, check if any instance exists
+    existing = await db
+      .select()
+      .from(profileBadges)
+      .where(and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badge.id)))
+      .limit(1);
+  }
 
   if (existing.length > 0) return false;
 
-  await db.insert(profileBadges).values({ profileId, badgeId: badge.id });
+  await db.insert(profileBadges).values({ profileId, badgeId: badge.id, leagueId });
   
   const { badgeNotifications } = await import("@shared/schema");
   await db.insert(badgeNotifications).values({ profileId, badgeId: badge.id });
@@ -437,6 +456,49 @@ export async function syncBadgesForDriver(profileId: number): Promise<{ awarded:
     }
   }
   
+  // Also handle season-end badge revocation
+  // Get all completed leagues the driver currently has results in
+  const completedLeaguesWithResults = await db
+    .selectDistinct({ leagueId: races.leagueId })
+    .from(results)
+    .innerJoin(races, eq(results.raceId, races.id))
+    .innerJoin(leagues, eq(races.leagueId, leagues.id))
+    .where(and(
+      eq(results.racerId, profileId),
+      eq(leagues.status, 'completed')
+    ));
+  
+  const completedLeagueIdsWithResults = new Set(completedLeaguesWithResults.map(l => l.leagueId));
+  
+  // Get season-end badges the driver currently has (with their leagueId)
+  const seasonBadgesHeld = await db
+    .select({ 
+      badgeId: profileBadges.badgeId,
+      leagueId: profileBadges.leagueId,
+      slug: badges.slug 
+    })
+    .from(profileBadges)
+    .innerJoin(badges, eq(profileBadges.badgeId, badges.id))
+    .where(and(
+      eq(profileBadges.profileId, profileId),
+      inArray(badges.slug, SEASON_END_BADGE_SLUGS)
+    ));
+  
+  // Revoke any season-end badges where driver no longer has results in that league
+  for (const badge of seasonBadgesHeld) {
+    if (badge.leagueId && !completedLeagueIdsWithResults.has(badge.leagueId)) {
+      // Driver has badge from a league they no longer have results in - revoke it
+      await db.delete(profileBadges).where(
+        and(
+          eq(profileBadges.profileId, profileId),
+          eq(profileBadges.badgeId, badge.badgeId),
+          eq(profileBadges.leagueId, badge.leagueId)
+        )
+      );
+      revoked.push(badge.slug);
+    }
+  }
+  
   return { awarded, revoked };
 }
 
@@ -510,16 +572,16 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
     const awarded: string[] = [];
 
     if (driver.races.size === raceIds.length) {
-      if (await awardBadgeIfNotExists(driver.profileId, "season_complete", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "season_complete", existingBadges, leagueId)) {
         awarded.push("season_complete");
       }
-      if (await awardBadgeIfNotExists(driver.profileId, "iron_driver", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "iron_driver", existingBadges, leagueId)) {
         awarded.push("iron_driver");
       }
 
       const allP8OrBelow = driver.positions.every((p: number) => p >= 8);
       if (allP8OrBelow) {
-        if (await awardBadgeIfNotExists(driver.profileId, "never_quit", existingBadges)) {
+        if (await awardBadgeIfNotExists(driver.profileId, "never_quit", existingBadges, leagueId)) {
           awarded.push("never_quit");
         }
       }
@@ -527,32 +589,32 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
       const bottomHalfCount = driver.positions.filter((p: number) => p > Math.ceil(standings.length / 2)).length;
       const allBottomHalf = bottomHalfCount === driver.positions.length;
       if (allBottomHalf) {
-        if (await awardBadgeIfNotExists(driver.profileId, "league_laughs_never_quit", existingBadges)) {
+        if (await awardBadgeIfNotExists(driver.profileId, "league_laughs_never_quit", existingBadges, leagueId)) {
           awarded.push("league_laughs_never_quit");
         }
       }
 
       if (i === standings.length - 1) {
-        if (await awardBadgeIfNotExists(driver.profileId, "last_but_loyal", existingBadges)) {
+        if (await awardBadgeIfNotExists(driver.profileId, "last_but_loyal", existingBadges, leagueId)) {
           awarded.push("last_but_loyal");
         }
       }
     }
 
     if (i === 0) {
-      if (await awardBadgeIfNotExists(driver.profileId, "mck_champion", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "mck_champion", existingBadges, leagueId)) {
         awarded.push("mck_champion");
       }
     } else if (i === 1) {
-      if (await awardBadgeIfNotExists(driver.profileId, "runner_up", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "runner_up", existingBadges, leagueId)) {
         awarded.push("runner_up");
       }
     } else if (i === 2) {
-      if (await awardBadgeIfNotExists(driver.profileId, "third_overall", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "third_overall", existingBadges, leagueId)) {
         awarded.push("third_overall");
       }
     } else if (i === 3) {
-      if (await awardBadgeIfNotExists(driver.profileId, "best_of_rest", existingBadges)) {
+      if (await awardBadgeIfNotExists(driver.profileId, "best_of_rest", existingBadges, leagueId)) {
         awarded.push("best_of_rest");
       }
     }
@@ -566,7 +628,7 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
   const dominators = standings.filter((s) => s.wins === maxWins && maxWins > 0);
   for (const dom of dominators) {
     const existingBadges = await getExistingBadges(dom.profileId);
-    if (await awardBadgeIfNotExists(dom.profileId, "dominator", existingBadges)) {
+    if (await awardBadgeIfNotExists(dom.profileId, "dominator", existingBadges, leagueId)) {
       const existing = awardedMap.get(dom.profileId) || [];
       awardedMap.set(dom.profileId, [...existing, "dominator"]);
     }
@@ -576,7 +638,7 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
   const podiumKings = standings.filter((s) => s.podiums === maxPodiums && maxPodiums > 0);
   for (const pk of podiumKings) {
     const existingBadges = await getExistingBadges(pk.profileId);
-    if (await awardBadgeIfNotExists(pk.profileId, "podium_king", existingBadges)) {
+    if (await awardBadgeIfNotExists(pk.profileId, "podium_king", existingBadges, leagueId)) {
       const existing = awardedMap.get(pk.profileId) || [];
       awardedMap.set(pk.profileId, [...existing, "podium_king"]);
     }
@@ -587,7 +649,7 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
     const flashDrivers = standings.filter((s) => s.polePositions === maxPoles);
     for (const fd of flashDrivers) {
       const existingBadges = await getExistingBadges(fd.profileId);
-      if (await awardBadgeIfNotExists(fd.profileId, "the_flash", existingBadges)) {
+      if (await awardBadgeIfNotExists(fd.profileId, "the_flash", existingBadges, leagueId)) {
         const existing = awardedMap.get(fd.profileId) || [];
         awardedMap.set(fd.profileId, [...existing, "the_flash"]);
       }
@@ -599,7 +661,7 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
     const qualiMerchants = standings.filter((s) => s.qualiHigherThanFinish === maxQualiHigher);
     for (const qm of qualiMerchants) {
       const existingBadges = await getExistingBadges(qm.profileId);
-      if (await awardBadgeIfNotExists(qm.profileId, "quali_merchant", existingBadges)) {
+      if (await awardBadgeIfNotExists(qm.profileId, "quali_merchant", existingBadges, leagueId)) {
         const existing = awardedMap.get(qm.profileId) || [];
         awardedMap.set(qm.profileId, [...existing, "quali_merchant"]);
       }
@@ -611,7 +673,7 @@ export async function checkSeasonEndBadges(leagueId: number): Promise<Map<number
     const dramaticSwings = standings.filter((s) => s.bestGridClimb === maxGridClimb);
     for (const ds of dramaticSwings) {
       const existingBadges = await getExistingBadges(ds.profileId);
-      if (await awardBadgeIfNotExists(ds.profileId, "most_dramatic_swing", existingBadges)) {
+      if (await awardBadgeIfNotExists(ds.profileId, "most_dramatic_swing", existingBadges, leagueId)) {
         const existing = awardedMap.get(ds.profileId) || [];
         awardedMap.set(ds.profileId, [...existing, "most_dramatic_swing"]);
       }
@@ -758,28 +820,45 @@ export async function syncSeasonEndBadgesForLeague(leagueId: number): Promise<vo
     standings.filter(s => s.bestGridClimb === maxGridClimb).forEach(s => eligibleBadges.get("most_dramatic_swing")!.add(s.profileId));
   }
 
-  // Get all drivers who participated in this league
-  const allDriverIds = Array.from(driverStats.keys());
+  // Get all drivers who currently have results in this league
+  const currentDriverIds = Array.from(driverStats.keys());
+  
+  // Also find drivers who have season-end badges specifically for THIS league
+  // These need to be checked for revocation
+  const driversWithLeagueBadges = await db
+    .select({ profileId: profileBadges.profileId })
+    .from(profileBadges)
+    .innerJoin(badges, eq(profileBadges.badgeId, badges.id))
+    .where(and(
+      inArray(badges.slug, SEASON_END_BADGE_SLUGS),
+      eq(profileBadges.leagueId, leagueId)
+    ));
+  
+  const allDriverIds = Array.from(new Set([
+    ...currentDriverIds,
+    ...driversWithLeagueBadges.map(d => d.profileId)
+  ]));
 
-  // For each driver, sync their season-end badges
+  // For each driver, sync their season-end badges for THIS league
   for (const driverId of allDriverIds) {
-    const existingBadges = await getExistingBadges(driverId);
+    const existingBadgeSlugs = await getExistingBadges(driverId);
     
     for (const slug of SEASON_END_BADGE_SLUGS) {
       const shouldHave = eligibleBadges.get(slug)!.has(driverId);
-      const hasIt = existingBadges.some(b => b.slug === slug);
+      const hasIt = existingBadgeSlugs.has(slug);
       
       if (shouldHave && !hasIt) {
-        // Award the badge
-        await awardBadgeIfNotExists(driverId, slug, existingBadges);
-      } else if (!shouldHave && hasIt) {
-        // Revoke the badge
-        const badge = existingBadges.find(b => b.slug === slug);
+        // Award the badge with leagueId for tracking
+        await awardBadgeIfNotExists(driverId, slug, existingBadgeSlugs, leagueId);
+      } else if (!shouldHave) {
+        // Revoke the badge - only revoke if it was awarded by THIS league
+        const badge = await getBadgeBySlug(slug);
         if (badge) {
           await db.delete(profileBadges).where(
             and(
               eq(profileBadges.profileId, driverId),
-              eq(profileBadges.badgeId, badge.badgeId)
+              eq(profileBadges.badgeId, badge.id),
+              eq(profileBadges.leagueId, leagueId) // Only revoke if from this league
             )
           );
         }

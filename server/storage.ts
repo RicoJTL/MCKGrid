@@ -248,6 +248,9 @@ export class DatabaseStorage implements IStorage {
     return links.map(l => l.competition);
   }
   async deleteRace(id: number): Promise<void> {
+    // Get race info before deleting (for league-based badge sync)
+    const race = await this.getRace(id);
+    
     // Get affected drivers before deleting results
     const affectedResults = await db.select({ racerId: results.racerId }).from(results).where(eq(results.raceId, id));
     const affectedRacerIds = Array.from(new Set(affectedResults.map(r => r.racerId)));
@@ -264,11 +267,16 @@ export class DatabaseStorage implements IStorage {
     await db.delete(races).where(eq(races.id, id));
     
     // Sync badges for all affected drivers (may revoke badges they no longer qualify for)
+    const { syncBadgesForDriver, syncSeasonEndBadgesForLeague } = await import("./badge-automation");
     if (affectedRacerIds.length > 0) {
-      const { syncBadgesForDriver } = await import("./badge-automation");
       for (const racerId of affectedRacerIds) {
         await syncBadgesForDriver(racerId);
       }
+    }
+    
+    // Sync season-end badges if this race was in a completed league
+    if (race && race.leagueId) {
+      await syncSeasonEndBadgesForLeague(race.leagueId);
     }
   }
 
@@ -325,7 +333,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sync badges for all affected drivers (both new and removed)
-    const { syncBadgesForDriver } = await import("./badge-automation");
+    const { syncBadgesForDriver, syncSeasonEndBadgesForLeague } = await import("./badge-automation");
     
     // Sync for drivers in the new results (may award new badges)
     const uniqueNewRacerIds = Array.from(new Set(insertedResults.map(r => r.racerId).filter(Boolean)));
@@ -338,6 +346,11 @@ export class DatabaseStorage implements IStorage {
       if (!newRacerIds.has(racerId)) {
         await syncBadgesForDriver(racerId);
       }
+    }
+    
+    // Sync season-end badges if this race is in a completed league
+    if (race && race.leagueId) {
+      await syncSeasonEndBadgesForLeague(race.leagueId);
     }
     
     return insertedResults;

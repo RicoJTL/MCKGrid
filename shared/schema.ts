@@ -114,6 +114,7 @@ export const profileBadges = pgTable("profile_badges", {
   profileId: integer("profile_id").references(() => profiles.id).notNull(),
   badgeId: integer("badge_id").references(() => badges.id).notNull(),
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
+  leagueId: integer("league_id").references(() => leagues.id), // For season-end badges, tracks which league awarded it
 });
 
 export const seasonGoals = pgTable("season_goals", {
