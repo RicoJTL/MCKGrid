@@ -33,7 +33,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCompetitionSchema, insertLeagueSchema } from "@shared/schema";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -265,32 +265,18 @@ export default function LeagueDetails() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="series" textValue="Series">
-                              <div className="flex flex-col py-1">
-                                <span className="font-medium">Series</span>
-                                <span className="text-xs text-muted-foreground">Multiple races, points accumulate across the season</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="single_event" textValue="Single Event">
-                              <div className="flex flex-col py-1">
-                                <span className="font-medium">Single Event</span>
-                                <span className="text-xs text-muted-foreground">Standalone race, no championship points</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="head_to_head" textValue="Head to Head">
-                              <div className="flex flex-col py-1">
-                                <span className="font-medium">Head to Head</span>
-                                <span className="text-xs text-muted-foreground">Tournament bracket, winner advances</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="time_attack" textValue="Time Attack">
-                              <div className="flex flex-col py-1">
-                                <span className="font-medium">Time Attack</span>
-                                <span className="text-xs text-muted-foreground">Fastest individual lap time wins</span>
-                              </div>
-                            </SelectItem>
+                            <SelectItem value="series">Series</SelectItem>
+                            <SelectItem value="single_event">Single Event</SelectItem>
+                            <SelectItem value="head_to_head">Head to Head</SelectItem>
+                            <SelectItem value="time_attack">Time Attack</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription className="text-xs">
+                          {field.value === "series" && "Multiple races, points accumulate across the season"}
+                          {field.value === "single_event" && "Standalone race, no championship points"}
+                          {field.value === "head_to_head" && "Tournament bracket, winner advances"}
+                          {field.value === "time_attack" && "Fastest individual lap time wins"}
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -488,32 +474,18 @@ export default function LeagueDetails() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="series" textValue="Series">
-                          <div className="flex flex-col py-1">
-                            <span className="font-medium">Series</span>
-                            <span className="text-xs text-muted-foreground">Multiple races, points accumulate across the season</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="single_event" textValue="Single Event">
-                          <div className="flex flex-col py-1">
-                            <span className="font-medium">Single Event</span>
-                            <span className="text-xs text-muted-foreground">Standalone race, no championship points</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="head_to_head" textValue="Head to Head">
-                          <div className="flex flex-col py-1">
-                            <span className="font-medium">Head to Head</span>
-                            <span className="text-xs text-muted-foreground">Tournament bracket, winner advances</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="time_attack" textValue="Time Attack">
-                          <div className="flex flex-col py-1">
-                            <span className="font-medium">Time Attack</span>
-                            <span className="text-xs text-muted-foreground">Fastest individual lap time wins</span>
-                          </div>
-                        </SelectItem>
+                        <SelectItem value="series">Series</SelectItem>
+                        <SelectItem value="single_event">Single Event</SelectItem>
+                        <SelectItem value="head_to_head">Head to Head</SelectItem>
+                        <SelectItem value="time_attack">Time Attack</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormDescription className="text-xs">
+                      {field.value === "series" && "Multiple races, points accumulate across the season"}
+                      {field.value === "single_event" && "Standalone race, no championship points"}
+                      {field.value === "head_to_head" && "Tournament bracket, winner advances"}
+                      {field.value === "time_attack" && "Fastest individual lap time wins"}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
