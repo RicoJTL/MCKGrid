@@ -212,6 +212,7 @@ export default function RaceDetails() {
                 <TableRow className="hover:bg-transparent border-white/5">
                   <TableHead className="w-[80px] text-white font-bold">Pos</TableHead>
                   <TableHead className="text-white font-bold">Driver</TableHead>
+                  <TableHead className="text-white font-bold">Quali</TableHead>
                   <TableHead className="text-white font-bold">Race Time</TableHead>
                   <TableHead className="text-right text-white font-bold">Points</TableHead>
                 </TableRow>
@@ -226,13 +227,16 @@ export default function RaceDetails() {
                        `${result.position}th`}
                     </TableCell>
                     <TableCell className="font-bold">{getDriverName(result.racerId)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {result.qualifyingPosition ? `P${result.qualifyingPosition}` : "-"}
+                    </TableCell>
                     <TableCell className="font-mono text-muted-foreground">{result.raceTime || "--:--"}</TableCell>
                     <TableCell className="text-right font-bold text-lg text-primary">{result.points}</TableCell>
                   </TableRow>
                 ))}
                 {(!results || results.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                       No results entered yet.
                     </TableCell>
                   </TableRow>
@@ -393,6 +397,7 @@ export default function RaceDetails() {
 interface ResultEntry {
   racerId: string;
   position: string;
+  qualifyingPosition: string;
   raceTime: string;
   points: string;
 }
@@ -422,17 +427,18 @@ function ResultsEditor({
       return existingResults.map(r => ({
         racerId: String(r.racerId),
         position: String(r.position),
+        qualifyingPosition: r.qualifyingPosition ? String(r.qualifyingPosition) : "",
         raceTime: r.raceTime || "",
         points: String(r.points)
       }));
     }
-    return [{ racerId: "", position: "1", raceTime: "", points: "25" }];
+    return [{ racerId: "", position: "1", qualifyingPosition: "", raceTime: "", points: "25" }];
   });
 
   const addEntry = () => {
     const nextPos = entries.length + 1;
     const defaultPoints = nextPos === 1 ? 25 : nextPos === 2 ? 18 : nextPos === 3 ? 15 : 10;
-    setEntries([...entries, { racerId: "", position: String(nextPos), raceTime: "", points: String(defaultPoints) }]);
+    setEntries([...entries, { racerId: "", position: String(nextPos), qualifyingPosition: "", raceTime: "", points: String(defaultPoints) }]);
   };
 
   const removeEntry = (index: number) => {
@@ -451,6 +457,7 @@ function ResultsEditor({
       .map(e => ({
         racerId: parseInt(e.racerId),
         position: parseInt(e.position),
+        qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
         raceTime: e.raceTime || null,
         points: parseInt(e.points)
       }));
@@ -504,6 +511,14 @@ function ResultsEditor({
                 )}
               </SelectContent>
             </Select>
+            <Input 
+              placeholder="Quali" 
+              type="number"
+              value={entry.qualifyingPosition} 
+              onChange={(e) => updateEntry(i, 'qualifyingPosition', e.target.value)}
+              className="w-16 bg-secondary/30"
+              data-testid={`input-quali-${i}`}
+            />
             <Input 
               placeholder="Race Time" 
               value={entry.raceTime} 

@@ -76,6 +76,7 @@ export const results = pgTable("results", {
   raceId: integer("race_id").references(() => races.id).notNull(),
   racerId: integer("racer_id").references(() => profiles.id).notNull(),
   position: integer("position").notNull(),
+  qualifyingPosition: integer("qualifying_position"),
   points: integer("points").notNull(),
   raceTime: text("race_time"),
 });
