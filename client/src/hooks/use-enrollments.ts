@@ -47,9 +47,17 @@ export function useUnenrollDriver() {
       return apiRequest("DELETE", `/api/competitions/${competitionId}/enrollments/${profileId}`);
     },
     onSuccess: (_, { competitionId, profileId }) => {
+      // Invalidate enrollment-related queries
       queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'enrollments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'enrolled-competitions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions', competitionId, 'standings'] });
+      // Invalidate check-in related queries (since unenrollment may remove check-ins)
+      queryClient.invalidateQueries({ queryKey: ['/api/races'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      // Invalidate dashboard and profile data
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'recent-results'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
       toast({ title: "Driver removed from competition" });
     },
     onError: (error: Error) => {

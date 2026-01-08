@@ -138,15 +138,11 @@ export default function Dashboard() {
     },
   });
 
-  const handleDismissEnrollmentNotification = (notificationId: number, competitionId: number) => {
-    setDismissedEnrollmentIds(prev => new Set([...prev, notificationId]));
-    markEnrollmentReadMutation.mutate(notificationId);
-    setLocation(`/competitions/${competitionId}`);
-  };
-
-  const handleDismissEnrollmentOnly = (notificationId: number) => {
-    setDismissedEnrollmentIds(prev => new Set([...prev, notificationId]));
-    markEnrollmentReadMutation.mutate(notificationId);
+  const handleDismissAllEnrollmentNotifications = () => {
+    const currentIds = (enrollmentNotifications || []).map(n => n.notification.id);
+    setDismissedEnrollmentIds(new Set(currentIds));
+    // Mark all as read
+    currentIds.forEach(id => markEnrollmentReadMutation.mutate(id));
   };
 
   const visibleEnrollmentNotifications = (enrollmentNotifications || []).filter(
@@ -416,49 +412,74 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Enrollment Notifications */}
-        {visibleEnrollmentNotifications.map((item) => {
-          const CompIcon = getIconComponent(item.competition.iconName) || Flag;
-          const iconColor = item.competition.iconColor || "#3b82f6";
-          return (
-            <motion.div
-              key={item.notification.id}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
-              data-testid={`banner-enrollment-notification-${item.notification.id}`}
-              onClick={() => handleDismissEnrollmentNotification(item.notification.id, item.competition.id)}
-            >
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${iconColor}30` }}>
-                    <CompIcon className="w-6 h-6" style={{ color: iconColor }} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-blue-300">You've Been Enrolled!</h3>
-                    <p className="text-sm text-muted-foreground">
-                      You've been added to <span className="font-medium text-foreground">{item.competition.name}</span>. Click to view.
-                    </p>
-                  </div>
+        {/* Enrollment Notifications - Consolidated Banner */}
+        {visibleEnrollmentNotifications.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
+            data-testid="banner-enrollment-notifications"
+            onClick={() => { 
+              handleDismissAllEnrollmentNotifications(); 
+              setLocation(`/competitions/${visibleEnrollmentNotifications[0].competition.id}`); 
+            }}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/20">
+                  <Flag className="w-6 h-6 text-blue-400" />
                 </div>
+                <div>
+                  <h3 className="font-bold text-blue-300">
+                    You've Been Enrolled in {visibleEnrollmentNotifications.length} Competition{visibleEnrollmentNotifications.length > 1 ? 's' : ''}!
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {visibleEnrollmentNotifications.length === 1 
+                      ? `You've been added to ${visibleEnrollmentNotifications[0].competition.name}. Click to view.`
+                      : `Click a competition below to view, or dismiss to close.`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {visibleEnrollmentNotifications.slice(0, 3).map((item) => {
+                  const CompIcon = getIconComponent(item.competition.iconName) || Flag;
+                  const iconColor = item.competition.iconColor || "#3b82f6";
+                  return (
+                    <div
+                      key={item.notification.id}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: `${iconColor}25`, borderColor: `${iconColor}40` }}
+                      data-testid={`enrollment-notification-${item.competition.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismissAllEnrollmentNotifications();
+                        setLocation(`/competitions/${item.competition.id}`);
+                      }}
+                    >
+                      <CompIcon className="w-4 h-4" style={{ color: iconColor }} />
+                      <span className="text-sm font-medium">{item.competition.name}</span>
+                    </div>
+                  );
+                })}
+                {visibleEnrollmentNotifications.length > 3 && (
+                  <span className="text-sm text-blue-300">+{visibleEnrollmentNotifications.length - 3} more</span>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"
                   className="text-blue-300"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleDismissEnrollmentOnly(item.notification.id);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); handleDismissAllEnrollmentNotifications(); }}
                   disabled={markEnrollmentReadMutation.isPending}
-                  data-testid={`button-dismiss-enrollment-${item.notification.id}`}
+                  data-testid="button-dismiss-enrollment-notifications"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-            </motion.div>
-          );
-        })}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* My Competitions - Scrollable Tabs */}
