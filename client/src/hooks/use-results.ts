@@ -47,8 +47,8 @@ export function useSubmitResults() {
         if (!Array.isArray(key)) return false;
         // Invalidate all competition standings queries
         if (key[0] === '/api/competitions' && key[2] === 'standings') return true;
-        // Invalidate profile race histories
-        if (key[0] === '/api/profiles' && (key[2] === 'history' || key[2] === 'history-by-competition')) return true;
+        // Invalidate profile race histories and personal bests
+        if (key[0] === '/api/profiles' && (key[2] === 'history' || key[2] === 'history-by-competition' || key[2] === 'personal-bests')) return true;
         return false;
       }});
       toast({ title: "Results Submitted", description: "Podium decided!" });

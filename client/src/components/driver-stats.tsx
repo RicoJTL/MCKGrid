@@ -121,21 +121,6 @@ export function PersonalBests({ profile }: DriverStatsProps) {
     queryKey: ['/api/profiles', profile.id, 'personal-bests'],
   });
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
-
-  const addMutation = useMutation({
-    mutationFn: (data: { location: string; bestTime: string }) =>
-      apiRequest("POST", `/api/profiles/${profile.id}/personal-bests`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'personal-bests'] });
-      setIsAddOpen(false);
-    },
-  });
-
-  const form = useForm({
-    defaultValues: { location: '', bestTime: '' }
-  });
-
   if (isLoading) {
     return <Skeleton className="h-48 rounded-xl" />;
   }
@@ -146,49 +131,7 @@ export function PersonalBests({ profile }: DriverStatsProps) {
         <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
           <Timer className="w-5 h-5 text-primary" /> Personal Bests
         </h3>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline" data-testid="button-add-pb">
-              <Plus className="w-4 h-4 mr-1" /> Add
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Personal Best</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => addMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Track/Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. TeamSport Manchester" {...field} data-testid="input-pb-location" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bestTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Best Time</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 45.234" {...field} data-testid="input-pb-time" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={addMutation.isPending} data-testid="button-save-pb">
-                  {addMutation.isPending ? 'Saving...' : 'Save'}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <p className="text-xs text-muted-foreground">Auto-updated from race results</p>
       </div>
 
       {bests?.length ? (
@@ -207,7 +150,7 @@ export function PersonalBests({ profile }: DriverStatsProps) {
         <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
           <Timer className="w-12 h-12 mx-auto mb-4 opacity-20" />
           <p>No personal bests recorded yet</p>
-          <p className="text-sm">Add your fastest lap times!</p>
+          <p className="text-sm">Your best lap times will appear here after race results are submitted</p>
         </div>
       )}
     </div>
