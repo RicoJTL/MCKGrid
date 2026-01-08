@@ -9,7 +9,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DateTimePickerProps {
   value?: Date;
@@ -26,25 +32,29 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
 
-  const timeValue = value ? format(value, "HH:mm") : "";
+  const hours = value ? value.getHours() : 12;
+  const minutes = value ? value.getMinutes() : 0;
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (!selectedDate) {
       onChange(undefined);
       return;
     }
-    const hours = value ? value.getHours() : 12;
-    const minutes = value ? value.getMinutes() : 0;
     selectedDate.setHours(hours, minutes, 0, 0);
     onChange(selectedDate);
   };
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const [hours, minutes] = e.target.value.split(":").map(Number);
-    if (isNaN(hours) || isNaN(minutes)) return;
-
+  const handleHourChange = (hourStr: string) => {
+    const newHour = parseInt(hourStr, 10);
     const newDate = value ? new Date(value) : new Date();
-    newDate.setHours(hours, minutes, 0, 0);
+    newDate.setHours(newHour, minutes, 0, 0);
+    onChange(newDate);
+  };
+
+  const handleMinuteChange = (minuteStr: string) => {
+    const newMinute = parseInt(minuteStr, 10);
+    const newDate = value ? new Date(value) : new Date();
+    newDate.setHours(hours, newMinute, 0, 0);
     onChange(newDate);
   };
 
@@ -73,13 +83,31 @@ export function DateTimePicker({
         />
         <div className="border-t p-3 flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Time:</span>
-          <Input
-            type="time"
-            value={timeValue}
-            onChange={handleTimeChange}
-            className="w-auto"
-            data-testid="datetime-time-input"
-          />
+          <Select value={hours.toString().padStart(2, '0')} onValueChange={handleHourChange}>
+            <SelectTrigger className="w-[70px]" data-testid="datetime-hour-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 24 }, (_, i) => (
+                <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                  {i.toString().padStart(2, '0')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground">:</span>
+          <Select value={minutes.toString().padStart(2, '0')} onValueChange={handleMinuteChange}>
+            <SelectTrigger className="w-[70px]" data-testid="datetime-minute-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 60 }, (_, i) => (
+                <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                  {i.toString().padStart(2, '0')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </PopoverContent>
     </Popover>
