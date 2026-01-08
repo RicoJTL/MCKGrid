@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -518,6 +520,35 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
 }
 
 export function CalendarSync() {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  
+  const calendarUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/api/calendar/races.ics`
+    : '/api/calendar/races.ics';
+  
+  const webcalUrl = calendarUrl.replace('https://', 'webcal://').replace('http://', 'webcal://');
+  
+  const googleCalendarUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`;
+  
+  const copyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(calendarUrl);
+      setCopied(true);
+      toast({
+        title: "Calendar URL copied",
+        description: "Paste this URL in your calendar app to subscribe",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4">
       <div className="flex items-center gap-3">
@@ -527,11 +558,38 @@ export function CalendarSync() {
           <p className="text-xs text-muted-foreground">Add race schedule to your calendar app</p>
         </div>
       </div>
-      <Button variant="outline" asChild data-testid="button-download-calendar">
-        <a href="/api/calendar/races.ics" download="mck-grid-races.ics">
-          <Download className="w-4 h-4 mr-2" /> Download iCal
-        </a>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" data-testid="button-calendar-options">
+            <Calendar className="w-4 h-4 mr-2" /> Add to Calendar <ChevronDown className="w-4 h-4 ml-2" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem asChild data-testid="menu-google-calendar">
+            <a href={googleCalendarUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+              <Calendar className="w-4 h-4 mr-2" />
+              Google Calendar
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild data-testid="menu-apple-calendar">
+            <a href={webcalUrl} className="cursor-pointer">
+              <Calendar className="w-4 h-4 mr-2" />
+              Apple Calendar / Outlook
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild data-testid="menu-download-ics">
+            <a href="/api/calendar/races.ics" download="mck-grid-races.ics" className="cursor-pointer">
+              <Download className="w-4 h-4 mr-2" />
+              Download .ics file
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={copyUrl} data-testid="menu-copy-url">
+            {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+            Copy calendar URL
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
