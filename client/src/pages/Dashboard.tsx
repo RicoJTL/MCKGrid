@@ -1,15 +1,16 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Competition } from "@shared/schema";
+import type { Competition, RaceCheckin } from "@shared/schema";
 import { useMemo } from "react";
 import { getIconComponent } from "@/components/icon-picker";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -54,6 +55,24 @@ export default function Dashboard() {
     queryKey: ['/api/profiles', profile?.id, 'recent-results'],
     enabled: !!profile?.id && profile?.role === 'racer',
   });
+
+  // Fetch check-in status for all upcoming races (only for racers)
+  const checkinQueries = useQueries({
+    queries: (upcomingRacesData || []).slice(0, 5).map((race: any) => ({
+      queryKey: ['/api/races', race.id, 'my-checkin'],
+      enabled: !!profile?.id && profile?.role === 'racer',
+    })),
+  });
+
+  // Find races where the driver hasn't checked in yet
+  const racesNeedingCheckin = useMemo(() => {
+    if (!upcomingRacesData || !profile || profile.role !== 'racer') return [];
+    
+    return upcomingRacesData.slice(0, 5).filter((race: any, index: number) => {
+      const checkinData = checkinQueries[index]?.data as RaceCheckin | null | undefined;
+      return !checkinData;
+    });
+  }, [upcomingRacesData, checkinQueries, profile]);
 
   // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
   const sortedEnrolledCompetitions = useMemo(() => {
@@ -135,6 +154,47 @@ export default function Dashboard() {
           </Link>
         )}
       </div>
+
+      {/* Check-in Reminder Banner for Drivers */}
+      {profile?.role === 'racer' && racesNeedingCheckin.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30"
+          data-testid="banner-checkin-reminder"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20">
+                <AlertCircle className="w-6 h-6 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-300">Check-in Required</h3>
+                <p className="text-sm text-muted-foreground">
+                  You have {racesNeedingCheckin.length} upcoming {racesNeedingCheckin.length === 1 ? 'race' : 'races'} that need your attendance confirmation
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {racesNeedingCheckin.slice(0, 2).map((race: any) => (
+                <Link key={race.id} href={`/races/${race.id}`}>
+                  <Button size="sm" variant="outline" className="border-amber-500/30 text-amber-300" data-testid={`button-checkin-race-${race.id}`}>
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    {race.name}
+                  </Button>
+                </Link>
+              ))}
+              {racesNeedingCheckin.length > 2 && (
+                <Link href="/races">
+                  <Button size="sm" variant="ghost" className="text-amber-300">
+                    +{racesNeedingCheckin.length - 2} more
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* My Competitions - Scrollable Tabs */}
       {sortedEnrolledCompetitions.length > 0 && (
