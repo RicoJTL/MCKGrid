@@ -20,8 +20,12 @@ import { useUpload } from "@/hooks/use-upload";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getIconComponent } from "@/components/icon-picker";
+import { PrestigeIconPicker } from "@/components/prestige-icon-picker";
 import type { Badge as BadgeType, Profile, DriverIcon } from "@shared/schema";
 import { DriverIconToken } from "@/components/driver-icon-token";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
@@ -286,12 +290,21 @@ export default function AdminPanel() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { uploadFile, isUploading } = useUpload();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const [showAwardBadge, setShowAwardBadge] = useState(false);
   const [selectedBadgeForAward, setSelectedBadgeForAward] = useState<BadgeType | null>(null);
   
   const [showAwardIcon, setShowAwardIcon] = useState(false);
   const [selectedIconForAward, setSelectedIconForAward] = useState<DriverIcon | null>(null);
+  
+  const [showCreateBadge, setShowCreateBadge] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<BadgeType | null>(null);
+  const [showCreateIcon, setShowCreateIcon] = useState(false);
+  const [editingIcon, setEditingIcon] = useState<DriverIcon | null>(null);
+  
+  const [newBadge, setNewBadge] = useState({ slug: '', name: '', description: '', category: 'milestones' as const, iconName: 'Trophy', iconColor: '#fbbf24', criteria: '' });
+  const [newIcon, setNewIcon] = useState({ slug: '', name: '', description: '', iconName: 'Crown', iconColor: '#fbbf24' });
   
   const { data: badges } = useQuery<BadgeType[]>({
     queryKey: ['/api/badges'],
@@ -357,6 +370,66 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['/api/driver-icons', variables.iconId, 'profiles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/driver-icon-notifications'] });
+    }
+  });
+
+  const createBadgeMutation = useMutation({
+    mutationFn: async (badge: typeof newBadge) => {
+      return apiRequest("POST", `/api/badges`, badge);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+      setShowCreateBadge(false);
+      setNewBadge({ slug: '', name: '', description: '', category: 'milestones', iconName: 'Trophy', iconColor: '#fbbf24', criteria: '' });
+      toast({ title: "Badge created", description: "New badge has been created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create badge", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateBadgeMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: number; name: string; description: string; category: string; iconName: string; iconColor: string; criteria: string }) => {
+      return apiRequest("PATCH", `/api/badges/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+      setEditingBadge(null);
+      toast({ title: "Badge updated", description: "Badge has been updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update badge", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const createIconMutation = useMutation({
+    mutationFn: async (icon: typeof newIcon) => {
+      return apiRequest("POST", `/api/driver-icons`, icon);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
+      setShowCreateIcon(false);
+      setNewIcon({ slug: '', name: '', description: '', iconName: 'Crown', iconColor: '#fbbf24' });
+      toast({ title: "Icon created", description: "New icon has been created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create icon", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateIconMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: number; name: string; description: string; iconName: string; iconColor: string }) => {
+      return apiRequest("PATCH", `/api/driver-icons/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
+      setEditingIcon(null);
+      toast({ title: "Icon updated", description: "Icon has been updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update icon", description: error.message, variant: "destructive" });
     }
   });
 
@@ -612,11 +685,16 @@ export default function AdminPanel() {
 
           <TabsContent value="badges" className="mt-6 space-y-6">
             <Card className="bg-secondary/30 border-white/5">
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle className="font-display italic">Manage Badges</CardTitle>
-                <Button onClick={() => setShowAwardBadge(true)} disabled={!badges?.length} data-testid="button-award-badge">
-                  <Gift className="w-4 h-4 mr-2" /> Award Badge to Driver
-                </Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" onClick={() => setShowCreateBadge(true)} data-testid="button-create-badge">
+                    <Plus className="w-4 h-4 mr-2" /> Create Badge
+                  </Button>
+                  <Button onClick={() => setShowAwardBadge(true)} disabled={!badges?.length} data-testid="button-award-badge">
+                    <Gift className="w-4 h-4 mr-2" /> Award to Driver
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {badges && badges.length > 0 ? (
@@ -662,6 +740,18 @@ export default function AdminPanel() {
                                     <h4 className="font-bold text-sm">{badge.name}</h4>
                                     <p className="text-xs text-muted-foreground line-clamp-2">{badge.description}</p>
                                   </div>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="flex-shrink-0 opacity-50 hover:opacity-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingBadge(badge);
+                                    }}
+                                    data-testid={`button-edit-badge-${badge.id}`}
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
                                 </div>
                               );
                             })}
@@ -673,8 +763,8 @@ export default function AdminPanel() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No badges available</p>
-                    <p className="text-sm mt-1">Badges will be loaded automatically</p>
+                    <p>No badges available yet</p>
+                    <p className="text-sm mt-1">Click "Create Badge" to add your first badge</p>
                   </div>
                 )}
               </CardContent>
@@ -683,11 +773,16 @@ export default function AdminPanel() {
 
           <TabsContent value="icons" className="mt-6 space-y-6">
             <Card className="bg-secondary/30 border-white/5">
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
                 <CardTitle className="font-display italic">Manage Driver Icons</CardTitle>
-                <Button onClick={() => setShowAwardIcon(true)} disabled={!driverIcons?.length} data-testid="button-award-icon">
-                  <Gift className="w-4 h-4 mr-2" /> Award Icon to Driver
-                </Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" onClick={() => setShowCreateIcon(true)} data-testid="button-create-icon">
+                    <Plus className="w-4 h-4 mr-2" /> Create Icon
+                  </Button>
+                  <Button onClick={() => setShowAwardIcon(true)} disabled={!driverIcons?.length} data-testid="button-award-icon">
+                    <Gift className="w-4 h-4 mr-2" /> Award to Driver
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -721,6 +816,18 @@ export default function AdminPanel() {
                             <h4 className="font-bold text-sm">{icon.name}</h4>
                             <p className="text-xs text-muted-foreground line-clamp-2">{icon.description}</p>
                           </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="flex-shrink-0 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingIcon(icon);
+                            }}
+                            data-testid={`button-edit-icon-${icon.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                         </div>
                       );
                     })}
@@ -728,8 +835,8 @@ export default function AdminPanel() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No icons available</p>
-                    <p className="text-sm mt-1">Icons will be loaded automatically</p>
+                    <p>No icons available yet</p>
+                    <p className="text-sm mt-1">Click "Create Icon" to add your first icon</p>
                   </div>
                 )}
               </CardContent>
@@ -1028,6 +1135,257 @@ export default function AdminPanel() {
                 />
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCreateBadge} onOpenChange={setShowCreateBadge}>
+          <DialogContent className="bg-card border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create New Badge</DialogTitle>
+              <DialogDescription>Create a custom badge to award to drivers</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Slug (unique identifier)</Label>
+                <Input
+                  value={newBadge.slug}
+                  onChange={(e) => setNewBadge(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
+                  placeholder="e.g., speed_demon"
+                  data-testid="input-badge-slug"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={newBadge.name}
+                  onChange={(e) => setNewBadge(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Badge name"
+                  data-testid="input-badge-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={newBadge.description}
+                  onChange={(e) => setNewBadge(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="What does this badge represent?"
+                  data-testid="input-badge-description"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={newBadge.category} onValueChange={(v: any) => setNewBadge(prev => ({ ...prev, category: v }))}>
+                  <SelectTrigger data-testid="select-badge-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BADGE_CATEGORY_ORDER.map(cat => (
+                      <SelectItem key={cat} value={cat}>{BADGE_CATEGORY_LABELS[cat] || cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Criteria</Label>
+                <Input
+                  value={newBadge.criteria}
+                  onChange={(e) => setNewBadge(prev => ({ ...prev, criteria: e.target.value }))}
+                  placeholder="How is this badge earned?"
+                  data-testid="input-badge-criteria"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon & Color</Label>
+                <PrestigeIconPicker
+                  value={{ iconName: newBadge.iconName, iconColor: newBadge.iconColor }}
+                  onChange={({ iconName, iconColor }) => setNewBadge(prev => ({ ...prev, iconName, iconColor }))}
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => createBadgeMutation.mutate(newBadge)}
+                disabled={createBadgeMutation.isPending || !newBadge.slug || !newBadge.name}
+                data-testid="button-submit-create-badge"
+              >
+                {createBadgeMutation.isPending ? "Creating..." : "Create Badge"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingBadge} onOpenChange={(open) => !open && setEditingBadge(null)}>
+          <DialogContent className="bg-card border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Badge</DialogTitle>
+              <DialogDescription>Update badge details</DialogDescription>
+            </DialogHeader>
+            {editingBadge && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={editingBadge.name}
+                    onChange={(e) => setEditingBadge(prev => prev ? { ...prev, name: e.target.value } : null)}
+                    data-testid="input-edit-badge-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editingBadge.description}
+                    onChange={(e) => setEditingBadge(prev => prev ? { ...prev, description: e.target.value } : null)}
+                    data-testid="input-edit-badge-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={editingBadge.category} onValueChange={(v: any) => setEditingBadge(prev => prev ? { ...prev, category: v } : null)}>
+                    <SelectTrigger data-testid="select-edit-badge-category">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BADGE_CATEGORY_ORDER.map(cat => (
+                        <SelectItem key={cat} value={cat}>{BADGE_CATEGORY_LABELS[cat] || cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Criteria</Label>
+                  <Input
+                    value={editingBadge.criteria}
+                    onChange={(e) => setEditingBadge(prev => prev ? { ...prev, criteria: e.target.value } : null)}
+                    data-testid="input-edit-badge-criteria"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Icon & Color</Label>
+                  <PrestigeIconPicker
+                    value={{ iconName: editingBadge.iconName, iconColor: editingBadge.iconColor }}
+                    onChange={({ iconName, iconColor }) => setEditingBadge(prev => prev ? { ...prev, iconName, iconColor } : null)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => updateBadgeMutation.mutate({
+                    id: editingBadge.id,
+                    name: editingBadge.name,
+                    description: editingBadge.description,
+                    category: editingBadge.category,
+                    iconName: editingBadge.iconName,
+                    iconColor: editingBadge.iconColor,
+                    criteria: editingBadge.criteria
+                  })}
+                  disabled={updateBadgeMutation.isPending}
+                  data-testid="button-save-badge"
+                >
+                  {updateBadgeMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCreateIcon} onOpenChange={setShowCreateIcon}>
+          <DialogContent className="bg-card border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create New Icon</DialogTitle>
+              <DialogDescription>Create a prestigious icon to award to drivers</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Slug (unique identifier)</Label>
+                <Input
+                  value={newIcon.slug}
+                  onChange={(e) => setNewIcon(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/\s+/g, '_') }))}
+                  placeholder="e.g., champion_crown"
+                  data-testid="input-icon-slug"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={newIcon.name}
+                  onChange={(e) => setNewIcon(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Icon name"
+                  data-testid="input-icon-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={newIcon.description}
+                  onChange={(e) => setNewIcon(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="What does this icon represent?"
+                  data-testid="input-icon-description"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon & Color</Label>
+                <PrestigeIconPicker
+                  value={{ iconName: newIcon.iconName, iconColor: newIcon.iconColor }}
+                  onChange={({ iconName, iconColor }) => setNewIcon(prev => ({ ...prev, iconName, iconColor }))}
+                />
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => createIconMutation.mutate(newIcon)}
+                disabled={createIconMutation.isPending || !newIcon.slug || !newIcon.name}
+                data-testid="button-submit-create-icon"
+              >
+                {createIconMutation.isPending ? "Creating..." : "Create Icon"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingIcon} onOpenChange={(open) => !open && setEditingIcon(null)}>
+          <DialogContent className="bg-card border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Icon</DialogTitle>
+              <DialogDescription>Update icon details</DialogDescription>
+            </DialogHeader>
+            {editingIcon && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={editingIcon.name}
+                    onChange={(e) => setEditingIcon(prev => prev ? { ...prev, name: e.target.value } : null)}
+                    data-testid="input-edit-icon-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editingIcon.description || ''}
+                    onChange={(e) => setEditingIcon(prev => prev ? { ...prev, description: e.target.value } : null)}
+                    data-testid="input-edit-icon-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Icon & Color</Label>
+                  <PrestigeIconPicker
+                    value={{ iconName: editingIcon.iconName, iconColor: editingIcon.iconColor }}
+                    onChange={({ iconName, iconColor }) => setEditingIcon(prev => prev ? { ...prev, iconName, iconColor } : null)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => updateIconMutation.mutate({
+                    id: editingIcon.id,
+                    name: editingIcon.name,
+                    description: editingIcon.description || '',
+                    iconName: editingIcon.iconName,
+                    iconColor: editingIcon.iconColor
+                  })}
+                  disabled={updateIconMutation.isPending}
+                  data-testid="button-save-icon"
+                >
+                  {updateIconMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

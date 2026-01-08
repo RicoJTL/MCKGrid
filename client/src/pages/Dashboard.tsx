@@ -13,6 +13,7 @@ import { useMemo, useState, useEffect } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { getBadgeIcon } from "@/components/badge-icons";
+import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -57,6 +58,8 @@ export default function Dashboard() {
     queryKey: ['/api/profiles', profile?.id, 'recent-results'],
     enabled: !!profile?.id && profile?.role === 'racer',
   });
+
+  const iconsMap = useDriverIconsMap();
 
   // Badge notifications
   const { data: badgeNotifications } = useQuery<{ notification: { id: number; createdAt: string }; badge: BadgeType }[]>({
@@ -541,10 +544,15 @@ export default function Dashboard() {
             <div className="text-xl font-bold font-display italic truncate">
               {leader ? (
                 <span 
-                  className="hover:text-primary cursor-pointer transition-colors"
+                  className="hover:text-primary cursor-pointer transition-colors inline-flex items-center gap-1"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLocation(`/profiles/${leader.racerId}`); }}
                 >
-                  {leader.driverName}
+                  <DriverNameWithIcons 
+                    profileId={leader.racerId} 
+                    name={leader.driverName} 
+                    iconsMap={iconsMap}
+                    iconSize="sm"
+                  />
                 </span>
               ) : 'TBD'}
             </div>
@@ -717,7 +725,14 @@ export default function Dashboard() {
                       {index + 1}
                     </div>
                     <Link href={`/profiles/${driver.racerId}`}>
-                      <span className="font-medium hover:text-primary cursor-pointer transition-colors">{driver.driverName || 'Unknown'}</span>
+                      <span className="font-medium hover:text-primary cursor-pointer transition-colors">
+                        <DriverNameWithIcons 
+                          profileId={driver.racerId} 
+                          name={driver.driverName || 'Unknown'} 
+                          iconsMap={iconsMap}
+                          iconSize="sm"
+                        />
+                      </span>
                     </Link>
                   </div>
                   <div className="flex items-center gap-4">

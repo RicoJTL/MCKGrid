@@ -606,6 +606,28 @@ export async function registerRoutes(
     res.json(badges);
   });
 
+  app.post("/api/badges", requireAdmin, async (req, res) => {
+    const { slug, name, description, category, iconName, iconColor, criteria, threshold } = req.body;
+    const badge = await storage.createBadge({ 
+      slug, name, description, category, iconName, iconColor, criteria, 
+      threshold: threshold || null
+    });
+    res.status(201).json(badge);
+  });
+
+  app.patch("/api/badges/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const { name, description, iconName, iconColor, criteria, threshold } = req.body;
+    const badge = await storage.updateBadge(id, { name, description, iconName, iconColor, criteria, threshold });
+    res.json(badge);
+  });
+
+  app.delete("/api/badges/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteBadge(id);
+    res.sendStatus(204);
+  });
+
   app.get("/api/profiles/:id/badges", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const badges = await storage.getProfileBadges(Number(req.params.id));
@@ -684,6 +706,13 @@ export async function registerRoutes(
       createdByProfileId: profile.id
     });
     res.status(201).json(icon);
+  });
+
+  app.patch("/api/driver-icons/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const { name, description, iconName, iconColor } = req.body;
+    const icon = await storage.updateDriverIcon(id, { name, description, iconName, iconColor });
+    res.json(icon);
   });
 
   app.delete("/api/driver-icons/:id", requireAdmin, async (req, res) => {

@@ -8,6 +8,7 @@ import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarC
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, BadgesSection, DriverIconsSection } from "@/components/driver-stats";
 import { useProfile } from "@/hooks/use-profile";
+import { DriverIconsDisplay } from "@/components/driver-icon-token";
 import type { Profile } from "@shared/schema";
 
 interface PublicProfile {
@@ -110,8 +111,9 @@ export default function PublicProfilePage() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="text-2xl font-bold font-display italic text-white" data-testid="text-profile-name">
+          <h2 className="text-2xl font-bold font-display italic text-white inline-flex items-center gap-2" data-testid="text-profile-name">
             {publicProfile.driverName || publicProfile.fullName || "Unknown Driver"}
+            <DriverIconsDisplay profileId={publicProfile.id} size="md" />
           </h2>
           <div className="flex items-center gap-4 mt-2 flex-wrap">
             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 text-xs font-medium border border-white/10">

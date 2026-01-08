@@ -16,6 +16,7 @@ import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync, DriverIconsSection } from "@/components/driver-stats";
 import { Link, useLocation } from "wouter";
+import { DriverIconsDisplay } from "@/components/driver-icon-token";
 import type { Profile } from "@shared/schema";
 
 const profileFormSchema = z.object({
@@ -175,7 +176,10 @@ export default function ProfilePage() {
           </label>
         </div>
         <div>
-          <h2 className="text-2xl font-bold font-display italic text-white">{profile?.driverName || user?.firstName || "Set up your profile"}</h2>
+          <h2 className="text-2xl font-bold font-display italic text-white inline-flex items-center gap-2">
+            {profile?.driverName || user?.firstName || "Set up your profile"}
+            {profile?.id && <DriverIconsDisplay profileId={profile.id} size="md" />}
+          </h2>
           <p className="text-muted-foreground">{user?.email}</p>
           <div className="flex items-center gap-4 mt-4 flex-wrap">
             {profile?.adminLevel === 'super_admin' && (

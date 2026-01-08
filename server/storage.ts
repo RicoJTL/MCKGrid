@@ -80,6 +80,7 @@ export interface IStorage {
   awardBadge(profileId: number, badgeId: number): Promise<ProfileBadge>;
   revokeBadge(profileId: number, badgeId: number): Promise<void>;
   createBadge(badge: InsertBadge): Promise<Badge>;
+  updateBadge(id: number, data: Partial<InsertBadge>): Promise<Badge>;
   deleteBadge(id: number): Promise<void>;
   seedPredefinedBadges(): Promise<void>;
   getBadgeBySlug(slug: string): Promise<Badge | undefined>;
@@ -93,6 +94,7 @@ export interface IStorage {
   getDriverIconBySlug(slug: string): Promise<DriverIcon | undefined>;
   getDriverIconById(id: number): Promise<DriverIcon | undefined>;
   createDriverIcon(icon: InsertDriverIcon): Promise<DriverIcon>;
+  updateDriverIcon(id: number, data: Partial<InsertDriverIcon>): Promise<DriverIcon>;
   deleteDriverIcon(id: number): Promise<void>;
   seedPredefinedDriverIcons(): Promise<void>;
   
@@ -908,6 +910,11 @@ export class DatabaseStorage implements IStorage {
     return newBadge;
   }
 
+  async updateBadge(id: number, data: Partial<InsertBadge>): Promise<Badge> {
+    const [updated] = await db.update(badges).set(data).where(eq(badges.id, id)).returning();
+    return updated;
+  }
+
   async deleteBadge(id: number): Promise<void> {
     await db.delete(profileBadges).where(eq(profileBadges.badgeId, id));
     await db.delete(badges).where(eq(badges.id, id));
@@ -1105,6 +1112,11 @@ export class DatabaseStorage implements IStorage {
   async createDriverIcon(icon: InsertDriverIcon): Promise<DriverIcon> {
     const [newIcon] = await db.insert(driverIcons).values(icon).returning();
     return newIcon;
+  }
+
+  async updateDriverIcon(id: number, data: Partial<InsertDriverIcon>): Promise<DriverIcon> {
+    const [updated] = await db.update(driverIcons).set(data).where(eq(driverIcons.id, id)).returning();
+    return updated;
   }
 
   async deleteDriverIcon(id: number): Promise<void> {
