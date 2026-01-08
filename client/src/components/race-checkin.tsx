@@ -3,9 +3,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, HelpCircle, Clock } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle } from "lucide-react";
 import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
-import type { Race, Profile, RaceCheckin } from "@shared/schema";
+import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
+import { Link } from "wouter";
 
 interface RaceCheckinProps {
   race: Race;
@@ -15,6 +16,17 @@ interface RaceCheckinProps {
 export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   const { data: myCheckin, isLoading } = useQuery<RaceCheckin | null>({
     queryKey: ['/api/races', race.id, 'my-checkin'],
+    enabled: !!profile && profile.role === 'racer',
+  });
+
+  // Fetch race's competitions and driver's enrolled competitions
+  const { data: raceCompetitions } = useQuery<Competition[]>({
+    queryKey: ['/api/races', race.id, 'competitions'],
+    enabled: !!profile && profile.role === 'racer',
+  });
+
+  const { data: enrolledCompetitions } = useQuery<Competition[]>({
+    queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
     enabled: !!profile && profile.role === 'racer',
   });
 
@@ -30,6 +42,22 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   // Only racers can check in
   if (!profile || profile.role !== 'racer') return null;
   if (isLoading) return <Skeleton className="h-9 w-24" />;
+
+  // Check if driver is enrolled in at least one competition for this race
+  const enrolledCompIds = new Set(enrolledCompetitions?.map(c => c.id) || []);
+  const isEnrolled = raceCompetitions?.some(c => enrolledCompIds.has(c.id)) ?? false;
+
+  if (!isEnrolled && raceCompetitions && enrolledCompetitions) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <AlertCircle className="w-4 h-4 text-yellow-500" />
+        <span>You must be enrolled in a competition to confirm attendance.</span>
+        <Link href="/profile">
+          <span className="text-primary hover:underline cursor-pointer">Enroll now</span>
+        </Link>
+      </div>
+    );
+  }
 
   const statusConfig = {
     confirmed: { icon: CheckCircle, color: 'text-green-400 bg-green-500/20 border-green-500/30', label: 'Going' },

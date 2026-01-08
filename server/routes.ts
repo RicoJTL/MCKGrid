@@ -697,13 +697,25 @@ export async function registerRoutes(
       return res.status(403).json({ error: "Only drivers can check in to races" });
     }
     
+    const raceId = Number(req.params.id);
+    
+    // Verify driver is enrolled in at least one competition this race belongs to
+    const raceCompetitions = await storage.getRaceCompetitions(raceId);
+    const enrolledCompetitions = await storage.getDriverEnrolledCompetitions(profile.id);
+    const enrolledCompIds = new Set(enrolledCompetitions.map(c => c.id));
+    const isEnrolled = raceCompetitions.some(c => enrolledCompIds.has(c.id));
+    
+    if (!isEnrolled) {
+      return res.status(403).json({ error: "You must be enrolled in this competition to confirm attendance" });
+    }
+    
     const { status } = req.body;
     if (!['confirmed', 'maybe', 'not_attending'].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
     
     const checkin = await storage.setCheckin({
-      raceId: Number(req.params.id),
+      raceId,
       profileId: profile.id,
       status,
     });
