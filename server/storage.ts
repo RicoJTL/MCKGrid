@@ -171,8 +171,17 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteCompetition(id: number): Promise<void> {
-    // Delete race_competitions links for this competition
-    await db.delete(raceCompetitions).where(eq(raceCompetitions.competitionId, id));
+    // Find all races linked to this competition
+    const linkedRaces = await db
+      .select({ raceId: raceCompetitions.raceId })
+      .from(raceCompetitions)
+      .where(eq(raceCompetitions.competitionId, id));
+    
+    // Delete each linked race (cascades to results, check-ins, etc.)
+    for (const { raceId } of linkedRaces) {
+      await this.deleteRace(raceId);
+    }
+    
     // Delete enrollments for this competition
     await db.delete(enrollments).where(eq(enrollments.competitionId, id));
     // Delete the competition
@@ -229,8 +238,15 @@ export class DatabaseStorage implements IStorage {
     return links.map(l => l.competition);
   }
   async deleteRace(id: number): Promise<void> {
+    // Delete race results
     await db.delete(results).where(eq(results.raceId, id));
+    // Delete race check-ins
+    await db.delete(raceCheckins).where(eq(raceCheckins.raceId, id));
+    // Clear personal best references to this race (set raceId to null)
+    await db.update(personalBests).set({ raceId: null }).where(eq(personalBests.raceId, id));
+    // Delete race-competition links
     await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, id));
+    // Delete the race
     await db.delete(races).where(eq(races.id, id));
   }
 
