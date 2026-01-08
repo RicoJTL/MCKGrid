@@ -239,7 +239,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async replaceRaceResults(raceId: number, resultsData: Omit<InsertResult, 'raceId'>[]): Promise<Result[]> {
-    return await db.transaction(async (tx) => {
+    // Get the race to find its location
+    const race = await this.getRace(raceId);
+    
+    const insertedResults = await db.transaction(async (tx) => {
       // Always delete existing results first
       await tx.delete(results).where(eq(results.raceId, raceId));
       
@@ -253,6 +256,60 @@ export class DatabaseStorage implements IStorage {
       
       return await tx.insert(results).values(fullResults).returning();
     });
+    
+    // Auto-update personal bests for drivers with race times
+    if (race) {
+      for (const result of insertedResults) {
+        if (result.raceTime && result.racerId) {
+          await this.checkAndUpdatePersonalBest(result.racerId, race.location, result.raceTime, raceId);
+        }
+      }
+    }
+    
+    return insertedResults;
+  }
+  
+  // Helper to parse time strings like "45.234" or "1:23.456" into seconds
+  private parseTimeToSeconds(timeStr: string): number | null {
+    if (!timeStr || timeStr.trim() === '') return null;
+    
+    const trimmed = timeStr.trim();
+    
+    // Format: "1:23.456" (minutes:seconds.milliseconds)
+    if (trimmed.includes(':')) {
+      const [minutes, seconds] = trimmed.split(':');
+      const mins = parseFloat(minutes);
+      const secs = parseFloat(seconds);
+      if (isNaN(mins) || isNaN(secs)) return null;
+      return mins * 60 + secs;
+    }
+    
+    // Format: "45.234" (seconds.milliseconds)
+    const seconds = parseFloat(trimmed);
+    return isNaN(seconds) ? null : seconds;
+  }
+  
+  // Check if new time is better than existing personal best and update if so
+  async checkAndUpdatePersonalBest(profileId: number, location: string, newTime: string, raceId: number): Promise<void> {
+    const newTimeSeconds = this.parseTimeToSeconds(newTime);
+    if (newTimeSeconds === null) return; // Invalid time format
+    
+    const existing = await db.select().from(personalBests)
+      .where(and(eq(personalBests.profileId, profileId), eq(personalBests.location, location)));
+    
+    if (existing.length === 0) {
+      // No existing PB for this location, create one
+      await db.insert(personalBests)
+        .values({ profileId, location, bestTime: newTime, raceId, achievedAt: new Date() });
+    } else {
+      const existingTimeSeconds = this.parseTimeToSeconds(existing[0].bestTime);
+      // Only update if new time is faster (lower is better)
+      if (existingTimeSeconds === null || newTimeSeconds < existingTimeSeconds) {
+        await db.update(personalBests)
+          .set({ bestTime: newTime, raceId, achievedAt: new Date() })
+          .where(eq(personalBests.id, existing[0].id));
+      }
+    }
   }
 
   async getTeams(): Promise<Team[]> {
