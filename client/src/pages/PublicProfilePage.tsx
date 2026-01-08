@@ -174,29 +174,31 @@ export default function PublicProfilePage() {
                     </div>
                     <div className="space-y-2">
                       {group.results.map((result: any, i: number) => (
-                        <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
-                              result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                              result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
-                              result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
-                              'bg-primary/10 text-primary'
-                            }`}>
-                              P{result.position}
-                            </div>
-                            <div>
-                              <h4 className="font-bold">{result.raceName}</h4>
-                              <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
-                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                        <Link key={i} href={`/races/${result.raceId}`} data-testid={`link-history-race-${result.raceId}`}>
+                          <div className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4 hover:bg-secondary/50 transition-colors cursor-pointer">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
+                                result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                                result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                                result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                                'bg-primary/10 text-primary'
+                              }`}>
+                                P{result.position}
+                              </div>
+                              <div>
+                                <h4 className="font-bold">{result.raceName}</h4>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
+                                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                                </div>
                               </div>
                             </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                              {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-primary">{result.points} pts</div>
-                            {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
-                          </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

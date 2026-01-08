@@ -235,8 +235,9 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30"
+            className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 cursor-pointer hover:border-yellow-500/50 transition-colors"
             data-testid="banner-badge-notification"
+            onClick={() => setLocation('/profile#badges')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -246,7 +247,7 @@ export default function Dashboard() {
                 <div>
                   <h3 className="font-bold text-yellow-300">New Badge{visibleBadgeNotifications.length > 1 ? 's' : ''} Unlocked!</h3>
                   <p className="text-sm text-muted-foreground">
-                    You've earned {visibleBadgeNotifications.length} new badge{visibleBadgeNotifications.length > 1 ? 's' : ''}!
+                    You've earned {visibleBadgeNotifications.length} new badge{visibleBadgeNotifications.length > 1 ? 's' : ''}! Click to view.
                   </p>
                 </div>
               </div>
@@ -277,7 +278,7 @@ export default function Dashboard() {
                   size="icon"
                   variant="ghost"
                   className="text-yellow-300"
-                  onClick={handleDismissBadgeNotifications}
+                  onClick={(e) => { e.stopPropagation(); handleDismissBadgeNotifications(); }}
                   disabled={markReadMutation.isPending}
                   data-testid="button-dismiss-badge-notifications"
                 >

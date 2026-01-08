@@ -95,26 +95,28 @@ export function RecentResults({ profile }: DriverStatsProps) {
   return (
     <div className="space-y-2">
       {results.map((result, i) => (
-        <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold font-display ${
-              result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-              result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
-              result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
-              'bg-primary/10 text-primary'
-            }`}>
-              P{result.position}
+        <Link key={i} href={`/races/${result.raceId}`} data-testid={`link-race-result-${result.raceId}`}>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-white/5 hover:bg-secondary/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold font-display ${
+                result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                'bg-primary/10 text-primary'
+              }`}>
+                P{result.position}
+              </div>
+              <div>
+                <p className="font-medium">{result.raceName}</p>
+                <p className="text-xs text-muted-foreground">{format(new Date(result.raceDate), 'MMM d, yyyy')} - {result.location}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium">{result.raceName}</p>
-              <p className="text-xs text-muted-foreground">{format(new Date(result.raceDate), 'MMM d, yyyy')} - {result.location}</p>
+            <div className="text-right">
+              <div className="font-bold text-primary">{result.points} pts</div>
+              {result.raceTime && <div className="text-xs text-muted-foreground">{result.raceTime}</div>}
             </div>
           </div>
-          <div className="text-right">
-            <div className="font-bold text-primary">{result.points} pts</div>
-            {result.raceTime && <div className="text-xs text-muted-foreground">{result.raceTime}</div>}
-          </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
@@ -140,15 +142,24 @@ export function PersonalBests({ profile }: DriverStatsProps) {
 
       {bests?.length ? (
         <div className="grid gap-3 md:grid-cols-2">
-          {bests.map((pb) => (
-            <div key={pb.id} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
-              <div>
-                <p className="font-medium">{pb.location}</p>
-                {pb.achievedAt && <p className="text-xs text-muted-foreground">{format(new Date(pb.achievedAt), 'MMM d, yyyy')}</p>}
+          {bests.map((pb) => {
+            const content = (
+              <div className={`p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between ${pb.raceId ? 'hover:bg-secondary/50 transition-colors cursor-pointer' : ''}`}>
+                <div>
+                  <p className="font-medium">{pb.location}</p>
+                  {pb.achievedAt && <p className="text-xs text-muted-foreground">{format(new Date(pb.achievedAt), 'MMM d, yyyy')}</p>}
+                </div>
+                <div className="text-xl font-bold font-display text-primary">{pb.bestTime}</div>
               </div>
-              <div className="text-xl font-bold font-display text-primary">{pb.bestTime}</div>
-            </div>
-          ))}
+            );
+            return pb.raceId ? (
+              <Link key={pb.id} href={`/races/${pb.raceId}`} data-testid={`link-personal-best-${pb.id}`}>
+                {content}
+              </Link>
+            ) : (
+              <div key={pb.id}>{content}</div>
+            );
+          })}
         </div>
       ) : (
         <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">

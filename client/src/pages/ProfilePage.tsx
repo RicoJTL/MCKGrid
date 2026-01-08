@@ -11,10 +11,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, PersonalBests, BadgesSection, SeasonGoals, HeadToHead, CalendarSync } from "@/components/driver-stats";
+import { Link, useLocation } from "wouter";
 import type { Profile } from "@shared/schema";
 
 const profileFormSchema = z.object({
@@ -38,6 +39,31 @@ export default function ProfilePage() {
   const updateProfile = useUpdateProfile();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { uploadFile, isUploading: isUploadingImage } = useUpload();
+  const [location] = useLocation();
+  
+  const isDriver = profile?.role === 'racer' || (profile?.driverName && profile?.fullName);
+  
+  const [activeTab, setActiveTab] = useState<string>('stats');
+  const [tabInitialized, setTabInitialized] = useState(false);
+  
+  useEffect(() => {
+    if (profile && !tabInitialized) {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'badges' && isDriver) {
+        setActiveTab('badges');
+      } else {
+        setActiveTab(isDriver ? 'stats' : 'settings');
+      }
+      setTabInitialized(true);
+    }
+  }, [profile, isDriver, tabInitialized]);
+  
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'badges' && isDriver && tabInitialized) {
+      setActiveTab('badges');
+    }
+  }, [location, isDriver, tabInitialized]);
 
   const { data: raceHistoryByCompetition } = useQuery<any[]>({
     queryKey: ['/api/profiles', profile?.id, 'history-by-competition'],
@@ -63,8 +89,6 @@ export default function ProfilePage() {
   }, {} as Record<number, { competitionId: number; competitionName: string; results: any[] }>);
 
   const competitionGroups = groupedHistory ? Object.values(groupedHistory) : [];
-
-  const isDriver = profile?.role === 'racer' || (profile?.driverName && profile?.fullName);
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
@@ -172,7 +196,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Tabs defaultValue={isDriver ? "stats" : "settings"} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start bg-secondary/30 p-1 rounded-xl gap-1 flex-wrap h-auto" data-testid="profile-tabs">
           {isDriver && (
             <>
@@ -245,29 +269,31 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-2">
                         {group.results.map((result: any, i: number) => (
-                          <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
-                                result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
-                                result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
-                                'bg-primary/10 text-primary'
-                              }`}>
-                                P{result.position}
-                              </div>
-                              <div>
-                                <h4 className="font-bold">{result.raceName}</h4>
-                                <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
-                                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                          <Link key={i} href={`/races/${result.raceId}`} data-testid={`link-profile-race-${result.raceId}`}>
+                            <div className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4 hover:bg-secondary/50 transition-colors cursor-pointer">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
+                                  result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                                  result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                                  result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                                  'bg-primary/10 text-primary'
+                                }`}>
+                                  P{result.position}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold">{result.raceName}</h4>
+                                  <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
+                                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                                  </div>
                                 </div>
                               </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                                {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-primary">{result.points} pts</div>
-                              {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
-                            </div>
-                          </div>
+                          </Link>
                         ))}
                       </div>
                     </div>

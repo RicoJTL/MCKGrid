@@ -949,6 +949,7 @@ export class DatabaseStorage implements IStorage {
   async getRecentResults(profileId: number, limit: number = 5): Promise<any[]> {
     return await db
       .select({
+        raceId: races.id,
         position: results.position,
         points: results.points,
         raceTime: results.raceTime,
