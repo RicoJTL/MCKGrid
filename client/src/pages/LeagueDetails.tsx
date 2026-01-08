@@ -265,9 +265,30 @@ export default function LeagueDetails() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="series">Series</SelectItem>
-                            <SelectItem value="single_event">Single Event</SelectItem>
-                            <SelectItem value="time_attack">Time Attack</SelectItem>
+                            <SelectItem value="series">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Series</span>
+                                <span className="text-xs text-muted-foreground">Multiple races, points accumulate across the season</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="single_event">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Single Event</span>
+                                <span className="text-xs text-muted-foreground">Standalone race, no championship points</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="head_to_head">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Head to Head</span>
+                                <span className="text-xs text-muted-foreground">Tournament bracket, winner advances</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="time_attack">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Time Attack</span>
+                                <span className="text-xs text-muted-foreground">Fastest individual lap time wins</span>
+                              </div>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -467,9 +488,30 @@ export default function LeagueDetails() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="series">Series</SelectItem>
-                        <SelectItem value="single_event">Single Event</SelectItem>
-                        <SelectItem value="time_attack">Time Attack</SelectItem>
+                        <SelectItem value="series">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Series</span>
+                            <span className="text-xs text-muted-foreground">Multiple races, points accumulate across the season</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="single_event">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Single Event</span>
+                            <span className="text-xs text-muted-foreground">Standalone race, no championship points</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="head_to_head">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Head to Head</span>
+                            <span className="text-xs text-muted-foreground">Tournament bracket, winner advances</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="time_attack">
+                          <div className="flex flex-col">
+                            <span className="font-medium">Time Attack</span>
+                            <span className="text-xs text-muted-foreground">Fastest individual lap time wins</span>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
