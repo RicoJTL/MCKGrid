@@ -355,6 +355,45 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Recent Results (for racers only) */}
+      {profile?.role === 'racer' && recentResults && recentResults.length > 0 && (
+        <div className="p-5 rounded-2xl bg-secondary/30 border border-white/5">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" /> Recent Results
+            </h3>
+            <Link href="/profile">
+              <span className="text-sm text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1">
+                All History <ArrowRight className="w-3 h-3" />
+              </span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {recentResults.slice(0, 4).map((result: any, i: number) => (
+              <Link key={i} href={`/races/${result.raceId}`}>
+                <div className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-transparent hover:border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold font-display italic text-lg ${
+                      result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                      result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                      result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                      'bg-primary/10 text-primary'
+                    }`}>
+                      P{result.position}
+                    </div>
+                    <div className="text-right flex-1">
+                      <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                    </div>
+                  </div>
+                  <h4 className="font-medium text-sm truncate">{result.raceName}</h4>
+                  <p className="text-xs text-muted-foreground truncate">{format(new Date(result.raceDate), "MMM d, yyyy")}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Upcoming Races & Standings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="p-6 rounded-2xl bg-secondary/30 border border-white/5">
