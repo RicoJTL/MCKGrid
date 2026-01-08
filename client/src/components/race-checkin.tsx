@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle } from "lucide-react";
 import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
-import { Link } from "wouter";
 
 interface RaceCheckinProps {
   race: Race;
@@ -51,10 +50,7 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <AlertCircle className="w-4 h-4 text-yellow-500" />
-        <span>You must be enrolled in a competition to confirm attendance.</span>
-        <Link href="/profile">
-          <span className="text-primary hover:underline cursor-pointer">Enroll now</span>
-        </Link>
+        <span>You need to be enrolled in this competition to confirm attendance. Please contact an admin.</span>
       </div>
     );
   }
