@@ -255,12 +255,16 @@ export class DatabaseStorage implements IStorage {
     const affectedResults = await db.select({ racerId: results.racerId }).from(results).where(eq(results.raceId, id));
     const affectedRacerIds = Array.from(new Set(affectedResults.map(r => r.racerId)));
     
+    // Get race info including location for personal best recalculation
+    const raceLocation = race?.location;
+    
+    // Get affected driver IDs and their existing personal bests for this race
+    const pbsToRecalculate = await db.select().from(personalBests).where(eq(personalBests.raceId, id));
+    
     // Delete race results
     await db.delete(results).where(eq(results.raceId, id));
     // Delete race check-ins
     await db.delete(raceCheckins).where(eq(raceCheckins.raceId, id));
-    // Clear personal best references to this race (set raceId to null)
-    await db.update(personalBests).set({ raceId: null }).where(eq(personalBests.raceId, id));
     // Delete race-competition links
     await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, id));
     // Delete the race
@@ -277,6 +281,67 @@ export class DatabaseStorage implements IStorage {
     // Sync season-end badges if this race was in a completed league
     if (race && race.leagueId) {
       await syncSeasonEndBadgesForLeague(race.leagueId);
+    }
+    
+    // Recalculate personal bests for drivers whose PBs referenced this race
+    for (const pb of pbsToRecalculate) {
+      await this.recalculatePersonalBest(pb.profileId, pb.location);
+    }
+  }
+  
+  // Recalculate personal best for a driver at a location from remaining race results
+  private async recalculatePersonalBest(profileId: number, location: string): Promise<void> {
+    // Find all remaining race times for this driver at this location
+    const remainingTimes = await db
+      .select({
+        raceTime: results.raceTime,
+        raceId: results.raceId,
+        raceDate: races.date
+      })
+      .from(results)
+      .innerJoin(races, eq(results.raceId, races.id))
+      .where(and(
+        eq(results.racerId, profileId),
+        eq(races.location, location)
+      ));
+    
+    // Filter to only results with valid race times
+    const validTimes = remainingTimes.filter(t => t.raceTime && t.raceTime.trim() !== '');
+    
+    // Delete the existing personal best for this location
+    await db.delete(personalBests).where(and(
+      eq(personalBests.profileId, profileId),
+      eq(personalBests.location, location)
+    ));
+    
+    if (validTimes.length === 0) {
+      // No remaining times at this location - PB is deleted
+      return;
+    }
+    
+    // Find the fastest time
+    let fastestTime: string | null = null;
+    let fastestRaceId: number | null = null;
+    let fastestSeconds = Infinity;
+    
+    for (const t of validTimes) {
+      const seconds = this.parseTimeToSeconds(t.raceTime!);
+      if (seconds !== null && seconds < fastestSeconds) {
+        fastestSeconds = seconds;
+        fastestTime = t.raceTime;
+        fastestRaceId = t.raceId;
+      }
+    }
+    
+    if (fastestTime && fastestRaceId) {
+      // Create new PB with the fastest remaining time
+      await db.insert(personalBests).values({
+        profileId,
+        location,
+        bestTime: fastestTime,
+        raceId: fastestRaceId,
+        achievedAt: new Date()
+      });
     }
   }
 
@@ -308,17 +373,21 @@ export class DatabaseStorage implements IStorage {
       return await tx.insert(results).values(fullResults).returning();
     });
     
-    // Clean up personal bests for drivers whose results were removed
+    // Recalculate personal bests for drivers whose results were removed
     if (race && race.location) {
       for (const racerId of Array.from(existingRacerIds)) {
         if (!newRacerIds.has(racerId)) {
-          // Driver was removed - clear personal best if it referenced this race
-          await db.update(personalBests)
-            .set({ raceId: null })
+          // Driver was removed - check if their PB referenced this race
+          const existingPB = await db.select().from(personalBests)
             .where(and(
               eq(personalBests.profileId, racerId),
               eq(personalBests.raceId, raceId)
             ));
+          
+          if (existingPB.length > 0) {
+            // Recalculate their PB from remaining results at this location
+            await this.recalculatePersonalBest(racerId, race.location);
+          }
         }
       }
     }

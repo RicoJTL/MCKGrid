@@ -237,7 +237,7 @@ export default function Dashboard() {
             exit={{ opacity: 0, y: -10 }}
             className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 cursor-pointer hover:border-yellow-500/50 transition-colors"
             data-testid="banner-badge-notification"
-            onClick={() => setLocation('/profile#badges')}
+            onClick={() => { handleDismissBadgeNotifications(); setLocation('/profile#badges'); }}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">

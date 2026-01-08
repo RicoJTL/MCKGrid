@@ -423,8 +423,15 @@ async function revokeBadge(profileId: number, slug: string): Promise<boolean> {
   const badge = await getBadgeBySlug(slug);
   if (!badge) return false;
   
+  // Delete the badge assignment
   await db.delete(profileBadges).where(
     and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badge.id))
+  );
+  
+  // Also delete any unread notifications for this badge
+  const { badgeNotifications } = await import("@shared/schema");
+  await db.delete(badgeNotifications).where(
+    and(eq(badgeNotifications.profileId, profileId), eq(badgeNotifications.badgeId, badge.id))
   );
   
   return true;
@@ -485,6 +492,7 @@ export async function syncBadgesForDriver(profileId: number): Promise<{ awarded:
     ));
   
   // Revoke any season-end badges where driver no longer has results in that league
+  const { badgeNotifications } = await import("@shared/schema");
   for (const badge of seasonBadgesHeld) {
     if (badge.leagueId && !completedLeagueIdsWithResults.has(badge.leagueId)) {
       // Driver has badge from a league they no longer have results in - revoke it
@@ -494,6 +502,10 @@ export async function syncBadgesForDriver(profileId: number): Promise<{ awarded:
           eq(profileBadges.badgeId, badge.badgeId),
           eq(profileBadges.leagueId, badge.leagueId)
         )
+      );
+      // Also delete the notification
+      await db.delete(badgeNotifications).where(
+        and(eq(badgeNotifications.profileId, profileId), eq(badgeNotifications.badgeId, badge.badgeId))
       );
       revoked.push(badge.slug);
     }
@@ -862,6 +874,11 @@ export async function syncSeasonEndBadgesForLeague(leagueId: number): Promise<vo
               eq(profileBadges.badgeId, badge.id),
               eq(profileBadges.leagueId, leagueId) // Only revoke if from this league
             )
+          );
+          // Also delete the notification
+          const { badgeNotifications } = await import("@shared/schema");
+          await db.delete(badgeNotifications).where(
+            and(eq(badgeNotifications.profileId, driverId), eq(badgeNotifications.badgeId, badge.id))
           );
         }
       }
