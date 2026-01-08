@@ -6,21 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Upload, Camera } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useUpload } from "@/hooks/use-upload";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { IconPicker, getIconComponent } from "@/components/icon-picker";
+import type { Badge as BadgeType, Profile } from "@shared/schema";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
   fullName: z.string().min(1, "Full name is required"),
   role: z.enum(["racer", "spectator"]),
+});
+
+const badgeSchema = z.object({
+  name: z.string().min(1, "Badge name is required"),
+  description: z.string().min(1, "Description is required"),
+  iconName: z.string().min(1),
+  iconColor: z.string().min(1),
+  criteria: z.string().min(1, "Criteria is required"),
+  threshold: z.number().optional(),
 });
 
 const getRoleDisplay = (role: string) => {
@@ -77,6 +89,14 @@ export default function AdminPanel() {
   const { uploadFile, isUploading } = useUpload();
   const queryClient = useQueryClient();
   
+  const [showCreateBadge, setShowCreateBadge] = useState(false);
+  const [showAwardBadge, setShowAwardBadge] = useState(false);
+  const [selectedBadgeForAward, setSelectedBadgeForAward] = useState<BadgeType | null>(null);
+  
+  const { data: badges } = useQuery<BadgeType[]>({
+    queryKey: ['/api/badges'],
+  });
+  
   const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
   
   const updateProfileImage = useMutation({
@@ -85,6 +105,28 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+    }
+  });
+
+  const createBadgeMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof badgeSchema>) => {
+      return apiRequest("POST", "/api/badges", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+      setShowCreateBadge(false);
+      badgeForm.reset();
+    }
+  });
+
+  const awardBadgeMutation = useMutation({
+    mutationFn: async ({ profileId, badgeId }: { profileId: number; badgeId: number }) => {
+      return apiRequest("POST", `/api/profiles/${profileId}/badges/${badgeId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+      setShowAwardBadge(false);
+      setSelectedBadgeForAward(null);
     }
   });
 
@@ -120,6 +162,18 @@ export default function AdminPanel() {
     },
   });
 
+  const badgeForm = useForm<z.infer<typeof badgeSchema>>({
+    resolver: zodResolver(badgeSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      iconName: "Award",
+      iconColor: "#f59e0b",
+      criteria: "",
+      threshold: undefined,
+    },
+  });
+
   const onEditDriver = (data: z.infer<typeof driverSchema>) => {
     if (!editingProfile) return;
     updateProfile.mutate({ id: editingProfile.id, data }, {
@@ -150,7 +204,6 @@ export default function AdminPanel() {
 
   const admins = profiles?.filter(p => p.adminLevel === 'admin' || p.adminLevel === 'super_admin') || [];
   const drivers = profiles?.filter(p => p.role === 'racer') || [];
-  const spectators = profiles?.filter(p => p.role === 'spectator') || [];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -158,14 +211,11 @@ export default function AdminPanel() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-display font-bold italic">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage Drivers and user roles</p>
+            <p className="text-muted-foreground">Manage Drivers, Badges, and user roles</p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-driver">
-            <Plus className="w-4 h-4 mr-2" /> Create Driver
-          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-secondary/30 border-white/5">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -205,107 +255,193 @@ export default function AdminPanel() {
               </div>
             </CardContent>
           </Card>
+          <Card className="bg-secondary/30 border-white/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-amber-500/20">
+                  <Award className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{badges?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Badges</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card className="bg-secondary/30 border-white/5">
-          <CardHeader>
-            <CardTitle className="font-display italic">All Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
-              </div>
-            ) : profiles && profiles.length > 0 ? (
-              <div className="space-y-3">
-                {profiles.map((profile) => (
-                  <div 
-                    key={profile.id} 
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-                    data-testid={`profile-row-${profile.id}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={profile.profileImage || undefined} />
-                        <AvatarFallback className="bg-primary/20 text-primary">
-                          {(profile.driverName || profile.fullName || "?")[0]?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-bold">{profile.driverName || profile.fullName || "No name set"}</p>
-                        {profile.fullName && (
-                          <p className="text-sm text-muted-foreground">{profile.fullName}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {getAdminLevelDisplay(profile.adminLevel) && (
-                        <Badge 
-                          variant="secondary"
-                          className={getAdminBadgeStyles(profile.adminLevel)}
-                        >
-                          {profile.adminLevel === 'super_admin' ? <Crown className="w-3 h-3 mr-1" /> : <ShieldCheck className="w-3 h-3 mr-1" />}
-                          {getAdminLevelDisplay(profile.adminLevel)}
-                        </Badge>
-                      )}
-                      <Badge 
-                        variant="secondary"
-                        className={getRoleBadgeStyles(profile.role)}
-                      >
-                        {getRoleDisplay(profile.role)}
-                      </Badge>
-                      {isSuperAdmin && profile.id !== currentProfile?.id && profile.adminLevel !== 'super_admin' && (
-                        <Select 
-                          value={profile.adminLevel}
-                          onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" })}
-                        >
-                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Admin</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => {
-                          const roleValue = profile.role === 'admin' ? 'racer' : profile.role;
-                          editForm.reset({
-                            driverName: profile.driverName || "",
-                            fullName: profile.fullName || "",
-                            role: roleValue as "racer" | "spectator",
-                          });
-                          setEditingProfile(profile);
-                        }}
-                        data-testid={`button-edit-${profile.id}`}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-red-400 hover:text-red-300"
-                        onClick={() => setDeleteConfirmProfile(profile)}
-                        data-testid={`button-delete-${profile.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="w-full justify-start bg-secondary/30 p-1 rounded-xl gap-1">
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-users">
+              <Users className="w-4 h-4 mr-2" /> Users
+            </TabsTrigger>
+            <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
+              <Award className="w-4 h-4 mr-2" /> Badges
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users" className="mt-6">
+            <Card className="bg-secondary/30 border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle className="font-display italic">All Users</CardTitle>
+                <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-driver">
+                  <Plus className="w-4 h-4 mr-2" /> Create Driver
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No users found</p>
-                <p className="text-sm mt-1">Users will appear here when they log in</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : profiles && profiles.length > 0 ? (
+                  <div className="space-y-3">
+                    {profiles.map((profile) => (
+                      <div 
+                        key={profile.id} 
+                        className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                        data-testid={`profile-row-${profile.id}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={profile.profileImage || undefined} />
+                            <AvatarFallback className="bg-primary/20 text-primary">
+                              {(profile.driverName || profile.fullName || "?")[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-bold">{profile.driverName || profile.fullName || "No name set"}</p>
+                            {profile.fullName && (
+                              <p className="text-sm text-muted-foreground">{profile.fullName}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {getAdminLevelDisplay(profile.adminLevel) && (
+                            <Badge 
+                              variant="secondary"
+                              className={getAdminBadgeStyles(profile.adminLevel)}
+                            >
+                              {profile.adminLevel === 'super_admin' ? <Crown className="w-3 h-3 mr-1" /> : <ShieldCheck className="w-3 h-3 mr-1" />}
+                              {getAdminLevelDisplay(profile.adminLevel)}
+                            </Badge>
+                          )}
+                          <Badge 
+                            variant="secondary"
+                            className={getRoleBadgeStyles(profile.role)}
+                          >
+                            {getRoleDisplay(profile.role)}
+                          </Badge>
+                          {isSuperAdmin && profile.id !== currentProfile?.id && profile.adminLevel !== 'super_admin' && (
+                            <Select 
+                              value={profile.adminLevel}
+                              onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" })}
+                            >
+                              <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Admin</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => {
+                              const roleValue = profile.role === 'admin' ? 'racer' : profile.role;
+                              editForm.reset({
+                                driverName: profile.driverName || "",
+                                fullName: profile.fullName || "",
+                                role: roleValue as "racer" | "spectator",
+                              });
+                              setEditingProfile(profile);
+                            }}
+                            data-testid={`button-edit-${profile.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-red-400 hover:text-red-300"
+                            onClick={() => setDeleteConfirmProfile(profile)}
+                            data-testid={`button-delete-${profile.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No users found</p>
+                    <p className="text-sm mt-1">Users will appear here when they log in</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="badges" className="mt-6 space-y-6">
+            <Card className="bg-secondary/30 border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle className="font-display italic">Manage Badges</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowAwardBadge(true)} disabled={!badges?.length} data-testid="button-award-badge">
+                    <Gift className="w-4 h-4 mr-2" /> Award Badge
+                  </Button>
+                  <Button onClick={() => setShowCreateBadge(true)} data-testid="button-create-badge">
+                    <Plus className="w-4 h-4 mr-2" /> Create Badge
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {badges && badges.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {badges.map((badge) => {
+                      const Icon = getIconComponent(badge.iconName) || Award;
+                      return (
+                        <div
+                          key={badge.id}
+                          className="p-4 rounded-xl border flex items-start gap-3"
+                          style={{
+                            backgroundColor: `${badge.iconColor}10`,
+                            borderColor: `${badge.iconColor}30`,
+                          }}
+                          data-testid={`badge-card-${badge.id}`}
+                        >
+                          <div 
+                            className="p-2 rounded-lg"
+                            style={{ backgroundColor: `${badge.iconColor}20` }}
+                          >
+                            <Icon className="w-6 h-6" style={{ color: badge.iconColor }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold">{badge.name}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{badge.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Criteria: {badge.criteria}
+                              {badge.threshold && ` (${badge.threshold})`}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No badges created yet</p>
+                    <p className="text-sm mt-1">Create badges to award to drivers for their achievements</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={!!editingProfile} onOpenChange={(open) => {
           if (!open) {
@@ -488,6 +624,159 @@ export default function AdminPanel() {
               >
                 {deleteProfile.isPending ? "Deleting..." : "Delete"}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCreateBadge} onOpenChange={setShowCreateBadge}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle>Create Badge</DialogTitle>
+              <DialogDescription>
+                Create a new badge that can be awarded to drivers for their achievements.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...badgeForm}>
+              <form onSubmit={badgeForm.handleSubmit((data) => createBadgeMutation.mutate(data))} className="space-y-4">
+                <FormField
+                  control={badgeForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Badge Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. First Win" {...field} data-testid="input-badge-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={badgeForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Win your first race" {...field} data-testid="input-badge-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={badgeForm.control}
+                  name="criteria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unlock Criteria</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 1 win" {...field} data-testid="input-badge-criteria" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={badgeForm.control}
+                  name="threshold"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Threshold (optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="e.g. 5" 
+                          {...field} 
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                          data-testid="input-badge-threshold" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="space-y-2">
+                  <FormLabel>Icon & Color</FormLabel>
+                  <IconPicker
+                    value={badgeForm.watch("iconName")}
+                    color={badgeForm.watch("iconColor")}
+                    onChange={(iconName, color) => {
+                      badgeForm.setValue("iconName", iconName);
+                      badgeForm.setValue("iconColor", color);
+                    }}
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-primary" disabled={createBadgeMutation.isPending} data-testid="button-save-badge">
+                  {createBadgeMutation.isPending ? "Creating..." : "Create Badge"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showAwardBadge} onOpenChange={(open) => {
+          if (!open) {
+            setShowAwardBadge(false);
+            setSelectedBadgeForAward(null);
+          }
+        }}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle>Award Badge to Driver</DialogTitle>
+              <DialogDescription>
+                Select a badge and a driver to award it to.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Badge</label>
+                <Select 
+                  value={selectedBadgeForAward?.id?.toString() || ''} 
+                  onValueChange={(v) => setSelectedBadgeForAward(badges?.find(b => b.id === Number(v)) || null)}
+                >
+                  <SelectTrigger data-testid="select-badge-to-award">
+                    <SelectValue placeholder="Choose a badge" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {badges?.map((badge) => (
+                      <SelectItem key={badge.id} value={badge.id.toString()}>
+                        {badge.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedBadgeForAward && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Driver</label>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {drivers.map((driver) => (
+                      <Button
+                        key={driver.id}
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => awardBadgeMutation.mutate({ 
+                          profileId: driver.id, 
+                          badgeId: selectedBadgeForAward.id 
+                        })}
+                        disabled={awardBadgeMutation.isPending}
+                        data-testid={`button-award-to-${driver.id}`}
+                      >
+                        <Avatar className="w-6 h-6 mr-2">
+                          <AvatarImage src={driver.profileImage || undefined} />
+                          <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                            {(driver.driverName || "?")[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {driver.driverName || driver.fullName}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
