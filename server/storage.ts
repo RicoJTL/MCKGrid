@@ -289,7 +289,7 @@ export class DatabaseStorage implements IStorage {
     return isNaN(seconds) ? null : seconds;
   }
   
-  // Check if new time is better than existing personal best and update if so
+  // Check if new time should update personal best
   async checkAndUpdatePersonalBest(profileId: number, location: string, newTime: string, raceId: number): Promise<void> {
     const newTimeSeconds = this.parseTimeToSeconds(newTime);
     if (newTimeSeconds === null) return; // Invalid time format
@@ -302,12 +302,21 @@ export class DatabaseStorage implements IStorage {
       await db.insert(personalBests)
         .values({ profileId, location, bestTime: newTime, raceId, achievedAt: new Date() });
     } else {
-      const existingTimeSeconds = this.parseTimeToSeconds(existing[0].bestTime);
-      // Only update if new time is faster (lower is better)
-      if (existingTimeSeconds === null || newTimeSeconds < existingTimeSeconds) {
+      const existingPB = existing[0];
+      
+      // If the existing PB is from THIS race, always update (admin is correcting the time)
+      if (existingPB.raceId === raceId) {
         await db.update(personalBests)
-          .set({ bestTime: newTime, raceId, achievedAt: new Date() })
-          .where(eq(personalBests.id, existing[0].id));
+          .set({ bestTime: newTime, achievedAt: new Date() })
+          .where(eq(personalBests.id, existingPB.id));
+      } else {
+        // PB is from a different race - only update if new time is faster
+        const existingTimeSeconds = this.parseTimeToSeconds(existingPB.bestTime);
+        if (existingTimeSeconds === null || newTimeSeconds < existingTimeSeconds) {
+          await db.update(personalBests)
+            .set({ bestTime: newTime, raceId, achievedAt: new Date() })
+            .where(eq(personalBests.id, existingPB.id));
+        }
       }
     }
   }
