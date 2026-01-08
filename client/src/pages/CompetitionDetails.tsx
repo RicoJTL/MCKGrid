@@ -200,11 +200,19 @@ export default function CompetitionDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href={competition ? `/leagues/${competition.leagueId}` : "/leagues"}>
-        <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back
-        </div>
-      </Link>
+      <button 
+        onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            setLocation(competition ? `/leagues/${competition.leagueId}` : '/leagues');
+          }
+        }}
+        className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4"
+        data-testid="button-back"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+      </button>
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>

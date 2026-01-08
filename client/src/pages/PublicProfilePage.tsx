@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,7 @@ export default function PublicProfilePage() {
   const { id } = useParams<{ id: string }>();
   const profileId = Number(id);
   const { data: myProfile } = useProfile();
+  const [, setLocation] = useLocation();
   
   const isAdmin = myProfile?.adminLevel === 'admin' || myProfile?.adminLevel === 'super_admin';
 
@@ -96,11 +97,20 @@ export default function PublicProfilePage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-2">
-        <Link href="/">
-          <Button variant="ghost" size="sm" data-testid="button-back-dashboard">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
-          </Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              setLocation('/');
+            }
+          }}
+          data-testid="button-back"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        </Button>
       </div>
 
       <div className="flex items-center gap-6 p-6 rounded-2xl bg-gradient-to-br from-primary/20 via-secondary/30 to-accent/10 border border-white/10">

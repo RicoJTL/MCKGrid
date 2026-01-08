@@ -165,11 +165,19 @@ export default function LeagueDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href="/leagues">
-        <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Leagues
-        </div>
-      </Link>
+      <button 
+        onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            setLocation('/leagues');
+          }
+        }}
+        className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4"
+        data-testid="button-back"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+      </button>
 
       <div className="relative p-8 rounded-2xl bg-secondary border border-white/5 overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />

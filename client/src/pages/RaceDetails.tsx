@@ -115,11 +115,19 @@ export default function RaceDetails() {
 
   return (
     <div className="space-y-8">
-      <Link href={firstCompetitionId ? `/competitions/${firstCompetitionId}` : '/leagues'}>
-        <div className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back
-        </div>
-      </Link>
+      <button 
+        onClick={() => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            setLocation(firstCompetitionId ? `/competitions/${firstCompetitionId}` : '/leagues');
+          }
+        }}
+        className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors cursor-pointer mb-4"
+        data-testid="button-back"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+      </button>
 
       <div className="flex items-center justify-between p-8 rounded-2xl bg-secondary border border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
