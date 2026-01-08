@@ -55,10 +55,11 @@ Located in `shared/schema.ts`, the main entities are:
 
 ### Customizable Icons and Colors
 Admins can customize the icon and color for leagues and competitions:
-- **IconPicker component**: `client/src/components/icon-picker.tsx` - provides 24+ Lucide icons and color selection
-- **Defaults**: Trophy icon with blue (#3b82f6) for leagues, Flag icon for competitions
+- **IconPicker component**: `client/src/components/icon-picker.tsx` - provides 48 Lucide icons organized by category (racing, speed, shapes, navigation, nature, animals) and color selection with 10 preset colors plus custom hex input
+- **Defaults**: Trophy icon with blue (#3b82f6) for leagues, Flag icon with red (#ef4444) for competitions
 - **Storage**: `iconName` and `iconColor` fields in leagues and competitions tables
 - The IconPicker uses controlled state with useEffect to sync internal state with props
+- Both LeaguesPage.tsx and LeagueDetails.tsx include IconPicker in their edit dialogs
 
 ### Authentication Flow
 Authentication is handled entirely through Replit Auth:
