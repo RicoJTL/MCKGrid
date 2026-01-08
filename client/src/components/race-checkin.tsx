@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle, UserPlus } from "
 import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
 import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
 import { Link } from "wouter";
+import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
 
 interface RaceCheckinProps {
   race: Race;
@@ -108,6 +109,7 @@ export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
   const { data: checkins, isLoading } = useQuery<(RaceCheckin & { profile: Profile })[]>({
     queryKey: ['/api/races', raceId, 'checkins'],
   });
+  const iconsMap = useDriverIconsMap();
 
   if (isLoading) return <Skeleton className="h-24 rounded-xl" />;
   if (!checkins?.length) return null;
@@ -125,7 +127,11 @@ export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
             <Link key={c.id} href={`/profiles/${c.profile.id}`}>
               <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30 cursor-pointer hover:bg-green-500/20 transition-colors">
                 <CheckCircle className="w-3 h-3 mr-1" />
-                {c.profile.driverName || c.profile.fullName}
+                <DriverNameWithIcons 
+                  profileId={c.profile.id} 
+                  name={c.profile.driverName || c.profile.fullName || 'Unknown'} 
+                  iconsMap={iconsMap}
+                />
               </Badge>
             </Link>
           ))}
@@ -137,7 +143,11 @@ export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
             <Link key={c.id} href={`/profiles/${c.profile.id}`}>
               <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 cursor-pointer hover:bg-yellow-500/20 transition-colors">
                 <HelpCircle className="w-3 h-3 mr-1" />
-                {c.profile.driverName || c.profile.fullName}
+                <DriverNameWithIcons 
+                  profileId={c.profile.id} 
+                  name={c.profile.driverName || c.profile.fullName || 'Unknown'} 
+                  iconsMap={iconsMap}
+                />
               </Badge>
             </Link>
           ))}
@@ -149,7 +159,11 @@ export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
             <Link key={c.id} href={`/profiles/${c.profile.id}`}>
               <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 cursor-pointer hover:bg-red-500/20 transition-colors">
                 <XCircle className="w-3 h-3 mr-1" />
-                {c.profile.driverName || c.profile.fullName}
+                <DriverNameWithIcons 
+                  profileId={c.profile.id} 
+                  name={c.profile.driverName || c.profile.fullName || 'Unknown'} 
+                  iconsMap={iconsMap}
+                />
               </Badge>
             </Link>
           ))}

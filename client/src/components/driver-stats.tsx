@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles } from "lucide-react";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,8 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { useState } from "react";
 import { getIconComponent } from "@/components/icon-picker";
-import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType } from "@shared/schema";
+import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType, DriverIcon } from "@shared/schema";
+import { DriverIconToken } from "@/components/driver-icon-token";
 
 interface DriverStatsProps {
   profile: Profile;
@@ -688,6 +689,93 @@ export function CalendarSync() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  );
+}
+
+export function DriverIconsSection({ profile, isOwnProfile = false, isAdmin = false }: DriverStatsProps) {
+  const { toast } = useToast();
+  
+  const { data: profileIcons, isLoading } = useQuery<{ icon: DriverIcon; awardedAt: string }[]>({
+    queryKey: ['/api/profiles', profile.id, 'driver-icons'],
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (iconId: number) =>
+      apiRequest("DELETE", `/api/profiles/${profile.id}/driver-icons/${iconId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'driver-icons'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
+      toast({ title: "Icon Revoked", description: "The icon has been removed from this driver." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to revoke icon", variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-32 rounded-xl" />;
+  }
+
+  const icons = profileIcons || [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-yellow-500" /> Driver Icons
+        </h3>
+        <Badge variant="secondary" className="text-sm">
+          {icons.length} icon{icons.length !== 1 ? 's' : ''}
+        </Badge>
+      </div>
+
+      {icons.length === 0 ? (
+        <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
+          <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p>No special icons earned yet</p>
+          {isOwnProfile && <p className="text-sm">Icons are awarded by admins for special achievements!</p>}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {icons.map(({ icon, awardedAt }) => (
+            <div
+              key={icon.id}
+              className="flex items-center gap-4 p-4 rounded-xl border"
+              style={{
+                backgroundColor: `${icon.iconColor}15`,
+                borderColor: `${icon.iconColor}30`,
+              }}
+              data-testid={`driver-icon-card-${icon.slug}`}
+            >
+              <div 
+                className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${icon.iconColor}25` }}
+              >
+                <DriverIconToken icon={icon} size="lg" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold truncate">{icon.name}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{icon.description}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Awarded {format(new Date(awardedAt), "MMM d, yyyy")}
+                </p>
+              </div>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => revokeMutation.mutate(icon.id)}
+                  disabled={revokeMutation.isPending}
+                  data-testid={`button-revoke-icon-${icon.slug}`}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

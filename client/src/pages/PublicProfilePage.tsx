@@ -4,9 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarChart3, Award } from "lucide-react";
+import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarChart3, Award, Sparkles } from "lucide-react";
 import { format } from "date-fns";
-import { DriverStatsDashboard, RecentResults, BadgesSection } from "@/components/driver-stats";
+import { DriverStatsDashboard, RecentResults, BadgesSection, DriverIconsSection } from "@/components/driver-stats";
 import { useProfile } from "@/hooks/use-profile";
 import type { Profile } from "@shared/schema";
 
@@ -135,6 +135,9 @@ export default function PublicProfilePage() {
             <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-badges">
               <Award className="w-4 h-4 mr-2" /> Badges
             </TabsTrigger>
+            <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-icons">
+              <Sparkles className="w-4 h-4 mr-2" /> Icons
+            </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-history">
               <Trophy className="w-4 h-4 mr-2" /> History
             </TabsTrigger>
@@ -151,6 +154,10 @@ export default function PublicProfilePage() {
 
           <TabsContent value="badges" className="mt-6">
             <BadgesSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
+          </TabsContent>
+
+          <TabsContent value="icons" className="mt-6">
+            <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6 mt-6">

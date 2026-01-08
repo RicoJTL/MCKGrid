@@ -44,6 +44,7 @@ import { z } from "zod";
 import { useAllProfiles } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
 
 export default function CompetitionDetails() {
   const [match, params] = useRoute("/competitions/:id");
@@ -100,6 +101,7 @@ export default function CompetitionDetails() {
   }, []);
   
   const updateRaceCompetitions = useUpdateRaceCompetitions();
+  const iconsMap = useDriverIconsMap();
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
@@ -397,7 +399,11 @@ export default function CompetitionDetails() {
                       <td className="p-4">
                         <Link href={`/profiles/${driver.racerId}`}>
                           <span className="font-bold hover:text-primary cursor-pointer transition-colors" data-testid={`link-driver-${driver.racerId}`}>
-                            {driver.driverName || 'Unknown Driver'}
+                            <DriverNameWithIcons 
+                              profileId={driver.racerId} 
+                              name={driver.driverName || 'Unknown Driver'} 
+                              iconsMap={iconsMap}
+                            />
                           </span>
                         </Link>
                       </td>
@@ -605,7 +611,11 @@ export default function CompetitionDetails() {
                           <div className="flex-1 min-w-0">
                             <Link href={`/profiles/${driver.id}`}>
                               <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
-                                {driver.driverName || driver.fullName}
+                                <DriverNameWithIcons 
+                                  profileId={driver.id} 
+                                  name={driver.driverName || driver.fullName || 'Unknown'} 
+                                  iconsMap={iconsMap}
+                                />
                               </p>
                             </Link>
                           </div>
@@ -655,7 +665,11 @@ export default function CompetitionDetails() {
                           <div className="flex-1 min-w-0">
                             <Link href={`/profiles/${driver.id}`}>
                               <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
-                                {driver.driverName || driver.fullName}
+                                <DriverNameWithIcons 
+                                  profileId={driver.id} 
+                                  name={driver.driverName || driver.fullName || 'Unknown'} 
+                                  iconsMap={iconsMap}
+                                />
                               </p>
                             </Link>
                           </div>

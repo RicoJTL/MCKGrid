@@ -663,6 +663,91 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // === Driver Icons ===
+  app.get("/api/driver-icons", async (req, res) => {
+    const icons = await storage.getDriverIcons();
+    res.json(icons);
+  });
+
+  app.post("/api/driver-icons", requireAdmin, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    
+    const { slug, name, description, iconName, iconColor } = req.body;
+    const icon = await storage.createDriverIcon({ 
+      slug, 
+      name, 
+      description, 
+      iconName, 
+      iconColor,
+      createdByProfileId: profile.id
+    });
+    res.status(201).json(icon);
+  });
+
+  app.delete("/api/driver-icons/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteDriverIcon(id);
+    res.sendStatus(204);
+  });
+
+  app.get("/api/driver-icons/:id/profiles", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const iconId = Number(req.params.id);
+    const profiles = await storage.getProfilesWithDriverIcon(iconId);
+    res.json(profiles);
+  });
+
+  app.get("/api/profiles/:id/driver-icons", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const icons = await storage.getProfileDriverIcons(Number(req.params.id));
+    res.json(icons);
+  });
+
+  app.get("/api/driver-icons/all-assignments", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const assignments = await storage.getAllDriversWithIcons();
+    res.json(assignments);
+  });
+
+  app.post("/api/profiles/:id/driver-icons/:iconId", requireAdmin, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const adminProfile = await storage.getProfile(userId);
+    if (!adminProfile) return res.sendStatus(404);
+    
+    const profileId = Number(req.params.id);
+    const iconId = Number(req.params.iconId);
+    const awarded = await storage.awardDriverIcon(profileId, iconId, adminProfile.id);
+    res.json(awarded);
+  });
+
+  app.delete("/api/profiles/:id/driver-icons/:iconId", requireAdmin, async (req: any, res) => {
+    const profileId = Number(req.params.id);
+    const iconId = Number(req.params.iconId);
+    await storage.revokeDriverIcon(profileId, iconId);
+    res.sendStatus(204);
+  });
+
+  // Driver Icon Notifications (for logged-in user)
+  app.get("/api/driver-icon-notifications", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.json([]);
+    const notifications = await storage.getUnreadDriverIconNotifications(profile.id);
+    res.json(notifications);
+  });
+
+  app.post("/api/driver-icon-notifications/mark-read", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    await storage.markDriverIconNotificationsRead(profile.id);
+    res.sendStatus(204);
+  });
+
   // === Season Goals (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/goals", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

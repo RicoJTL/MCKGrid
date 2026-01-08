@@ -83,8 +83,9 @@ httpServer.listen(
   try {
     await registerRoutes(httpServer, app);
     
-    // Seed predefined badges on startup
+    // Seed predefined badges and driver icons on startup
     await storage.seedPredefinedBadges();
+    await storage.seedPredefinedDriverIcons();
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

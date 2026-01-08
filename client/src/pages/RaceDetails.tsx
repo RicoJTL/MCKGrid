@@ -47,6 +47,7 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import type { Profile } from "@shared/schema";
+import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
 
 export default function RaceDetails() {
   const [match, params] = useRoute("/races/:id");
@@ -70,6 +71,7 @@ export default function RaceDetails() {
   const [selectedCompetitions, setSelectedCompetitions] = useState<number[]>([]);
   
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+  const iconsMap = useDriverIconsMap();
 
   const editRaceForm = useForm({
     defaultValues: {
@@ -229,7 +231,11 @@ export default function RaceDetails() {
                     <TableCell className="font-bold">
                       <Link href={`/profiles/${result.racerId}`}>
                         <span className="hover:text-primary cursor-pointer transition-colors" data-testid={`link-driver-${result.racerId}`}>
-                          {getDriverName(result.racerId)}
+                          <DriverNameWithIcons 
+                            profileId={result.racerId} 
+                            name={getDriverName(result.racerId)} 
+                            iconsMap={iconsMap}
+                          />
                         </span>
                       </Link>
                     </TableCell>

@@ -1,14 +1,14 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { Competition, RaceCheckin, Badge as BadgeType } from "@shared/schema";
+import type { Competition, RaceCheckin, Badge as BadgeType, DriverIcon } from "@shared/schema";
 import { useMemo, useState, useEffect } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,32 @@ export default function Dashboard() {
 
   const visibleBadgeNotifications = (badgeNotifications || []).filter(
     n => !dismissedIds.has(n.notification.id)
+  );
+
+  // Driver icon notifications
+  const { data: iconNotifications } = useQuery<{ notification: { id: number; createdAt: string }; icon: DriverIcon }[]>({
+    queryKey: ['/api/driver-icon-notifications'],
+    enabled: !!profile?.id,
+  });
+
+  const [dismissedIconIds, setDismissedIconIds] = useState<Set<number>>(new Set());
+
+  const markIconReadMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/driver-icon-notifications/mark-read"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icon-notifications'] });
+      setDismissedIconIds(new Set());
+    },
+  });
+
+  const handleDismissIconNotifications = () => {
+    const currentIds = new Set(iconNotifications?.map(n => n.notification.id) || []);
+    setDismissedIconIds(currentIds);
+    markIconReadMutation.mutate();
+  };
+
+  const visibleIconNotifications = (iconNotifications || []).filter(
+    n => !dismissedIconIds.has(n.notification.id)
   );
 
   // Fetch check-in status for all upcoming races (only for racers)
@@ -281,6 +307,63 @@ export default function Dashboard() {
                   onClick={(e) => { e.stopPropagation(); handleDismissBadgeNotifications(); }}
                   disabled={markReadMutation.isPending}
                   data-testid="button-dismiss-badge-notifications"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Driver Icon Notification Banner */}
+      <AnimatePresence>
+        {visibleIconNotifications.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 cursor-pointer hover:border-purple-500/50 transition-colors"
+            data-testid="banner-icon-notification"
+            onClick={() => { handleDismissIconNotifications(); setLocation('/profile#icons'); }}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/20">
+                  <Sparkles className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-purple-300">New Icon{visibleIconNotifications.length > 1 ? 's' : ''} Awarded!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You've received {visibleIconNotifications.length} prestigious icon{visibleIconNotifications.length > 1 ? 's' : ''}! Click to view.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {visibleIconNotifications.slice(0, 3).map((item) => {
+                  const IconComponent = getIconComponent(item.icon.iconName) || Sparkles;
+                  return (
+                    <div
+                      key={item.notification.id}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                      style={{ backgroundColor: `${item.icon.iconColor}25`, borderColor: `${item.icon.iconColor}40` }}
+                      data-testid={`icon-notification-${item.icon.id}`}
+                    >
+                      <IconComponent className="w-4 h-4" style={{ color: item.icon.iconColor }} />
+                      <span className="text-sm font-medium">{item.icon.name}</span>
+                    </div>
+                  );
+                })}
+                {visibleIconNotifications.length > 3 && (
+                  <span className="text-sm text-purple-300">+{visibleIconNotifications.length - 3} more</span>
+                )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-purple-300"
+                  onClick={(e) => { e.stopPropagation(); handleDismissIconNotifications(); }}
+                  disabled={markIconReadMutation.isPending}
+                  data-testid="button-dismiss-icon-notifications"
                 >
                   <X className="w-4 h-4" />
                 </Button>

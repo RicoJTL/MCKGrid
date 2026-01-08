@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords } from "lucide-react";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
-import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync } from "@/components/driver-stats";
+import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync, DriverIconsSection } from "@/components/driver-stats";
 import { Link, useLocation } from "wouter";
 import type { Profile } from "@shared/schema";
 
@@ -51,6 +51,8 @@ export default function ProfilePage() {
       const hash = window.location.hash.replace('#', '');
       if (hash === 'badges' && isDriver) {
         setActiveTab('badges');
+      } else if (hash === 'icons' && isDriver) {
+        setActiveTab('icons');
       } else {
         setActiveTab(isDriver ? 'stats' : 'settings');
       }
@@ -206,6 +208,9 @@ export default function ProfilePage() {
               <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
                 <Award className="w-4 h-4 mr-2" /> Badges
               </TabsTrigger>
+              <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-icons">
+                <Sparkles className="w-4 h-4 mr-2" /> Icons
+              </TabsTrigger>
               <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-goals">
                 <Target className="w-4 h-4 mr-2" /> Goals
               </TabsTrigger>
@@ -238,6 +243,10 @@ export default function ProfilePage() {
 
             <TabsContent value="badges" className="mt-6">
               <BadgesSection profile={profile} isOwnProfile={true} />
+            </TabsContent>
+
+            <TabsContent value="icons" className="mt-6">
+              <DriverIconsSection profile={profile} isOwnProfile={true} />
             </TabsContent>
 
             <TabsContent value="goals" className="mt-6">

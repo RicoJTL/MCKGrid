@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift, Check, X } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift, Check, X, Sparkles } from "lucide-react";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,7 +20,8 @@ import { useUpload } from "@/hooks/use-upload";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getIconComponent } from "@/components/icon-picker";
-import type { Badge as BadgeType, Profile } from "@shared/schema";
+import type { Badge as BadgeType, Profile, DriverIcon } from "@shared/schema";
+import { DriverIconToken } from "@/components/driver-icon-token";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
@@ -180,6 +181,98 @@ function BadgeAwardList({
   );
 }
 
+function IconAwardList({ 
+  icon, 
+  drivers, 
+  onAward, 
+  onRevoke, 
+  isAwarding, 
+  isRevoking 
+}: { 
+  icon: DriverIcon;
+  drivers: Profile[];
+  onAward: (profileId: number) => void;
+  onRevoke: (profileId: number) => void;
+  isAwarding: boolean;
+  isRevoking: boolean;
+}) {
+  const { data: allProfileIcons, isLoading } = useQuery<{ profileId: number }[]>({
+    queryKey: ['/api/driver-icons', icon.id, 'profiles'],
+  });
+  
+  const driverIconMap = new Map<number, boolean>();
+  if (allProfileIcons) {
+    allProfileIcons.forEach(pi => driverIconMap.set(pi.profileId, true));
+  }
+  
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Drivers</label>
+      <div className="max-h-72 overflow-y-auto space-y-2 rounded-lg border border-white/10 p-2">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          </div>
+        ) : (
+          drivers.map((driver) => {
+            const hasIcon = driverIconMap.get(driver.id) || false;
+            
+            return (
+              <div
+                key={driver.id}
+                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                  hasIcon ? 'bg-purple-500/10 border border-purple-500/30' : 'bg-secondary/30'
+                }`}
+                data-testid={`driver-icon-row-${driver.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={driver.profileImage || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                      {(driver.driverName || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-sm">{driver.driverName || driver.fullName}</p>
+                    {hasIcon && (
+                      <p className="text-xs text-purple-400 flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Has icon
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  {hasIcon ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-400 border-red-400/30"
+                      onClick={() => onRevoke(driver.id)}
+                      disabled={isRevoking}
+                      data-testid={`button-revoke-icon-from-${driver.id}`}
+                    >
+                      <X className="w-4 h-4 mr-1" /> Revoke
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => onAward(driver.id)}
+                      disabled={isAwarding}
+                      data-testid={`button-award-icon-to-${driver.id}`}
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Award
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const { data: currentProfile } = useProfile();
   const { data: profiles, isLoading } = useAllProfiles();
@@ -197,8 +290,15 @@ export default function AdminPanel() {
   const [showAwardBadge, setShowAwardBadge] = useState(false);
   const [selectedBadgeForAward, setSelectedBadgeForAward] = useState<BadgeType | null>(null);
   
+  const [showAwardIcon, setShowAwardIcon] = useState(false);
+  const [selectedIconForAward, setSelectedIconForAward] = useState<DriverIcon | null>(null);
+  
   const { data: badges } = useQuery<BadgeType[]>({
     queryKey: ['/api/badges'],
+  });
+  
+  const { data: driverIcons } = useQuery<DriverIcon[]>({
+    queryKey: ['/api/driver-icons'],
   });
   
   const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
@@ -231,6 +331,32 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', variables.profileId, 'badges'] });
       queryClient.invalidateQueries({ queryKey: ['/api/badges', variables.badgeId, 'profiles'] });
+    }
+  });
+
+  const awardIconMutation = useMutation({
+    mutationFn: async ({ profileId, iconId }: { profileId: number; iconId: number }) => {
+      return apiRequest("POST", `/api/profiles/${profileId}/driver-icons/${iconId}`);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', variables.profileId, 'driver-icons'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons', variables.iconId, 'profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icon-notifications'] });
+    }
+  });
+
+  const revokeIconMutation = useMutation({
+    mutationFn: async ({ profileId, iconId }: { profileId: number; iconId: number }) => {
+      return apiRequest("DELETE", `/api/profiles/${profileId}/driver-icons/${iconId}`);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', variables.profileId, 'driver-icons'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons', variables.iconId, 'profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icons/all-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/driver-icon-notifications'] });
     }
   });
 
@@ -369,6 +495,9 @@ export default function AdminPanel() {
             </TabsTrigger>
             <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
               <Award className="w-4 h-4 mr-2" /> Badges
+            </TabsTrigger>
+            <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-icons">
+              <Sparkles className="w-4 h-4 mr-2" /> Icons
             </TabsTrigger>
           </TabsList>
 
@@ -546,6 +675,61 @@ export default function AdminPanel() {
                     <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p>No badges available</p>
                     <p className="text-sm mt-1">Badges will be loaded automatically</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="icons" className="mt-6 space-y-6">
+            <Card className="bg-secondary/30 border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle className="font-display italic">Manage Driver Icons</CardTitle>
+                <Button onClick={() => setShowAwardIcon(true)} disabled={!driverIcons?.length} data-testid="button-award-icon">
+                  <Gift className="w-4 h-4 mr-2" /> Award Icon to Driver
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Driver icons are prestigious symbols that appear next to driver names throughout the app. Click an icon to manage assignments.
+                </p>
+                {driverIcons && driverIcons.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {driverIcons.map((icon) => {
+                      const IconComponent = getIconComponent(icon.iconName) || Sparkles;
+                      return (
+                        <div
+                          key={icon.id}
+                          className="p-4 rounded-xl border flex items-start gap-3 cursor-pointer hover-elevate"
+                          style={{
+                            backgroundColor: `${icon.iconColor}10`,
+                            borderColor: `${icon.iconColor}30`,
+                          }}
+                          onClick={() => {
+                            setSelectedIconForAward(icon);
+                            setShowAwardIcon(true);
+                          }}
+                          data-testid={`icon-card-${icon.id}`}
+                        >
+                          <div 
+                            className="p-2 rounded-lg flex-shrink-0"
+                            style={{ backgroundColor: `${icon.iconColor}20` }}
+                          >
+                            <IconComponent className="w-6 h-6" style={{ color: icon.iconColor }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-sm">{icon.name}</h4>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{icon.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No icons available</p>
+                    <p className="text-sm mt-1">Icons will be loaded automatically</p>
                   </div>
                 )}
               </CardContent>
@@ -792,6 +976,55 @@ export default function AdminPanel() {
                   onRevoke={(profileId) => revokeBadgeMutation.mutate({ profileId, badgeId: selectedBadgeForAward.id })}
                   isAwarding={awardBadgeMutation.isPending}
                   isRevoking={revokeBadgeMutation.isPending}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showAwardIcon} onOpenChange={(open) => {
+          if (!open) {
+            setShowAwardIcon(false);
+            setSelectedIconForAward(null);
+          }
+        }}>
+          <DialogContent className="bg-card border-white/10 max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Award Icon to Drivers</DialogTitle>
+              <DialogDescription>
+                {selectedIconForAward 
+                  ? `Manage "${selectedIconForAward.name}" icon assignments`
+                  : "Select an icon first, then award or revoke from drivers"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Icon</label>
+                <Select 
+                  value={selectedIconForAward?.id?.toString() || ''} 
+                  onValueChange={(v) => setSelectedIconForAward(driverIcons?.find(i => i.id === Number(v)) || null)}
+                >
+                  <SelectTrigger data-testid="select-icon-to-award">
+                    <SelectValue placeholder="Choose an icon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driverIcons?.map((icon) => (
+                      <SelectItem key={icon.id} value={icon.id.toString()}>
+                        {icon.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedIconForAward && (
+                <IconAwardList 
+                  icon={selectedIconForAward}
+                  drivers={drivers}
+                  onAward={(profileId) => awardIconMutation.mutate({ profileId, iconId: selectedIconForAward.id })}
+                  onRevoke={(profileId) => revokeIconMutation.mutate({ profileId, iconId: selectedIconForAward.id })}
+                  isAwarding={awardIconMutation.isPending}
+                  isRevoking={revokeIconMutation.isPending}
                 />
               )}
             </div>

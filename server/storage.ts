@@ -2,10 +2,13 @@ import { db } from "./db";
 import { 
   leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
   badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
+  driverIcons, profileDriverIcons, driverIconNotifications,
   type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
+  type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment,
-  type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest
+  type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
+  type InsertDriverIcon, type InsertProfileDriverIcon
 } from "@shared/schema";
 import { eq, desc, and, inArray, sql, gte, or } from "drizzle-orm";
 
@@ -84,6 +87,25 @@ export interface IStorage {
   // Badge Notifications
   getUnreadBadgeNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; badge: Badge }[]>;
   markBadgeNotificationsRead(profileId: number): Promise<void>;
+  
+  // Driver Icons
+  getDriverIcons(): Promise<DriverIcon[]>;
+  getDriverIconBySlug(slug: string): Promise<DriverIcon | undefined>;
+  getDriverIconById(id: number): Promise<DriverIcon | undefined>;
+  createDriverIcon(icon: InsertDriverIcon): Promise<DriverIcon>;
+  deleteDriverIcon(id: number): Promise<void>;
+  seedPredefinedDriverIcons(): Promise<void>;
+  
+  // Profile Driver Icons
+  getProfileDriverIcons(profileId: number): Promise<(ProfileDriverIcon & { icon: DriverIcon })[]>;
+  getProfilesWithDriverIcon(iconId: number): Promise<{ profileId: number }[]>;
+  getAllDriversWithIcons(): Promise<{ profileId: number; icons: DriverIcon[] }[]>;
+  awardDriverIcon(profileId: number, iconId: number, awardedByProfileId: number): Promise<ProfileDriverIcon>;
+  revokeDriverIcon(profileId: number, iconId: number): Promise<void>;
+  
+  // Driver Icon Notifications
+  getUnreadDriverIconNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; icon: DriverIcon }[]>;
+  markDriverIconNotificationsRead(profileId: number): Promise<void>;
   
   // Season Goals
   getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
@@ -1063,6 +1085,133 @@ export class DatabaseStorage implements IStorage {
       .where(eq(results.racerId, profileId))
       .orderBy(desc(races.date))
       .limit(limit);
+  }
+
+  // Driver Icons
+  async getDriverIcons(): Promise<DriverIcon[]> {
+    return await db.select().from(driverIcons).orderBy(driverIcons.name);
+  }
+
+  async getDriverIconBySlug(slug: string): Promise<DriverIcon | undefined> {
+    const [icon] = await db.select().from(driverIcons).where(eq(driverIcons.slug, slug));
+    return icon;
+  }
+
+  async getDriverIconById(id: number): Promise<DriverIcon | undefined> {
+    const [icon] = await db.select().from(driverIcons).where(eq(driverIcons.id, id));
+    return icon;
+  }
+
+  async createDriverIcon(icon: InsertDriverIcon): Promise<DriverIcon> {
+    const [newIcon] = await db.insert(driverIcons).values(icon).returning();
+    return newIcon;
+  }
+
+  async deleteDriverIcon(id: number): Promise<void> {
+    await db.delete(driverIconNotifications).where(eq(driverIconNotifications.iconId, id));
+    await db.delete(profileDriverIcons).where(eq(profileDriverIcons.iconId, id));
+    await db.delete(driverIcons).where(eq(driverIcons.id, id));
+  }
+
+  async seedPredefinedDriverIcons(): Promise<void> {
+    const { PREDEFINED_ICONS } = await import("@shared/predefined-icons");
+    
+    for (const icon of PREDEFINED_ICONS) {
+      const existing = await this.getDriverIconBySlug(icon.slug);
+      if (!existing) {
+        await db.insert(driverIcons).values({
+          slug: icon.slug,
+          name: icon.name,
+          description: icon.description,
+          iconName: icon.iconName,
+          iconColor: icon.iconColor,
+          isPredefined: true,
+        });
+      }
+    }
+  }
+
+  async getProfileDriverIcons(profileId: number): Promise<(ProfileDriverIcon & { icon: DriverIcon })[]> {
+    const result = await db
+      .select()
+      .from(profileDriverIcons)
+      .innerJoin(driverIcons, eq(profileDriverIcons.iconId, driverIcons.id))
+      .where(eq(profileDriverIcons.profileId, profileId))
+      .orderBy(desc(profileDriverIcons.awardedAt));
+    
+    return result.map(r => ({
+      ...r.profile_driver_icons,
+      icon: r.driver_icons,
+    }));
+  }
+
+  async getProfilesWithDriverIcon(iconId: number): Promise<{ profileId: number }[]> {
+    const result = await db
+      .select({ profileId: profileDriverIcons.profileId })
+      .from(profileDriverIcons)
+      .where(eq(profileDriverIcons.iconId, iconId));
+    return result;
+  }
+
+  async getAllDriversWithIcons(): Promise<{ profileId: number; icons: DriverIcon[] }[]> {
+    const result = await db
+      .select({
+        profileId: profileDriverIcons.profileId,
+        icon: driverIcons,
+      })
+      .from(profileDriverIcons)
+      .innerJoin(driverIcons, eq(profileDriverIcons.iconId, driverIcons.id));
+    
+    const grouped = new Map<number, DriverIcon[]>();
+    for (const row of result) {
+      const icons = grouped.get(row.profileId) || [];
+      icons.push(row.icon);
+      grouped.set(row.profileId, icons);
+    }
+    
+    return Array.from(grouped.entries()).map(([profileId, icons]) => ({ profileId, icons }));
+  }
+
+  async awardDriverIcon(profileId: number, iconId: number, awardedByProfileId: number): Promise<ProfileDriverIcon> {
+    const existing = await db.select().from(profileDriverIcons)
+      .where(and(eq(profileDriverIcons.profileId, profileId), eq(profileDriverIcons.iconId, iconId)));
+    if (existing.length > 0) return existing[0];
+    
+    const [assignment] = await db.insert(profileDriverIcons).values({ 
+      profileId, 
+      iconId, 
+      awardedByProfileId 
+    }).returning();
+    
+    await db.insert(driverIconNotifications).values({ profileId, iconId });
+    
+    return assignment;
+  }
+
+  async revokeDriverIcon(profileId: number, iconId: number): Promise<void> {
+    await db.delete(profileDriverIcons)
+      .where(and(eq(profileDriverIcons.profileId, profileId), eq(profileDriverIcons.iconId, iconId)));
+    await db.delete(driverIconNotifications)
+      .where(and(eq(driverIconNotifications.profileId, profileId), eq(driverIconNotifications.iconId, iconId)));
+  }
+
+  async getUnreadDriverIconNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; icon: DriverIcon }[]> {
+    const result = await db
+      .select({
+        notification: { id: driverIconNotifications.id, createdAt: driverIconNotifications.createdAt },
+        icon: driverIcons,
+      })
+      .from(driverIconNotifications)
+      .innerJoin(driverIcons, eq(driverIconNotifications.iconId, driverIcons.id))
+      .where(and(eq(driverIconNotifications.profileId, profileId), eq(driverIconNotifications.isRead, false)))
+      .orderBy(desc(driverIconNotifications.createdAt));
+    return result;
+  }
+
+  async markDriverIconNotificationsRead(profileId: number): Promise<void> {
+    await db.update(driverIconNotifications)
+      .set({ isRead: true })
+      .where(eq(driverIconNotifications.profileId, profileId));
   }
 }
 

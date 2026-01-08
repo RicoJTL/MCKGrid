@@ -152,6 +152,35 @@ export const badgeNotifications = pgTable("badge_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Driver Icons - special symbols awarded by admins that appear next to driver names
+export const driverIcons = pgTable("driver_icons", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").unique().notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  iconName: text("icon_name").notNull(),
+  iconColor: text("icon_color").notNull(),
+  isPredefined: boolean("is_predefined").default(false).notNull(),
+  createdByProfileId: integer("created_by_profile_id").references(() => profiles.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const profileDriverIcons = pgTable("profile_driver_icons", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  iconId: integer("icon_id").references(() => driverIcons.id).notNull(),
+  awardedByProfileId: integer("awarded_by_profile_id").references(() => profiles.id),
+  awardedAt: timestamp("awarded_at").defaultNow().notNull(),
+});
+
+export const driverIconNotifications = pgTable("driver_icon_notifications", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  iconId: integer("icon_id").references(() => driverIcons.id).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
@@ -222,6 +251,22 @@ export const badgeNotificationsRelations = relations(badgeNotifications, ({ one 
   badge: one(badges, { fields: [badgeNotifications.badgeId], references: [badges.id] }),
 }));
 
+export const driverIconsRelations = relations(driverIcons, ({ one, many }) => ({
+  createdBy: one(profiles, { fields: [driverIcons.createdByProfileId], references: [profiles.id] }),
+  profileDriverIcons: many(profileDriverIcons),
+}));
+
+export const profileDriverIconsRelations = relations(profileDriverIcons, ({ one }) => ({
+  profile: one(profiles, { fields: [profileDriverIcons.profileId], references: [profiles.id] }),
+  icon: one(driverIcons, { fields: [profileDriverIcons.iconId], references: [driverIcons.id] }),
+  awardedBy: one(profiles, { fields: [profileDriverIcons.awardedByProfileId], references: [profiles.id] }),
+}));
+
+export const driverIconNotificationsRelations = relations(driverIconNotifications, ({ one }) => ({
+  profile: one(profiles, { fields: [driverIconNotifications.profileId], references: [profiles.id] }),
+  icon: one(driverIcons, { fields: [driverIconNotifications.iconId], references: [driverIcons.id] }),
+}));
+
 // Schemas
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true });
@@ -237,6 +282,9 @@ export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id:
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });
 export const insertPersonalBestSchema = createInsertSchema(personalBests).omit({ id: true, achievedAt: true });
 export const insertBadgeNotificationSchema = createInsertSchema(badgeNotifications).omit({ id: true, isRead: true, createdAt: true });
+export const insertDriverIconSchema = createInsertSchema(driverIcons).omit({ id: true, isPredefined: true, createdAt: true });
+export const insertProfileDriverIconSchema = createInsertSchema(profileDriverIcons).omit({ id: true, awardedAt: true });
+export const insertDriverIconNotificationSchema = createInsertSchema(driverIconNotifications).omit({ id: true, isRead: true, createdAt: true });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -267,3 +315,9 @@ export type RaceCheckin = typeof raceCheckins.$inferSelect;
 export type PersonalBest = typeof personalBests.$inferSelect;
 export type BadgeNotification = typeof badgeNotifications.$inferSelect;
 export type InsertBadgeNotification = z.infer<typeof insertBadgeNotificationSchema>;
+export type DriverIcon = typeof driverIcons.$inferSelect;
+export type ProfileDriverIcon = typeof profileDriverIcons.$inferSelect;
+export type DriverIconNotification = typeof driverIconNotifications.$inferSelect;
+export type InsertDriverIcon = z.infer<typeof insertDriverIconSchema>;
+export type InsertProfileDriverIcon = z.infer<typeof insertProfileDriverIconSchema>;
+export type InsertDriverIconNotification = z.infer<typeof insertDriverIconNotificationSchema>;
