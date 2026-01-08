@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getIconComponent } from "@/components/icon-picker";
 import { Crown, Star, Medal, Trophy, Shield, Gem, Sparkles, Flame, Zap, Rocket, Award, BadgeCheck, Swords, Target, CircleDot, Hexagon, Diamond, Heart, Skull, Ghost, Bird, Cat, Dog, Fish, Bug, Leaf, Snowflake, Sun, Moon, Cloud, Mountain, Waves, Wind, Compass, Anchor, Flag, Clock, Bell, Gift, Key, Lock, Eye, Lightbulb, Music, Camera, Mic, Headphones, Gamepad2, Dice1 } from "lucide-react";
 import type { DriverIcon } from "@shared/schema";
@@ -28,14 +28,16 @@ export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
   const config = sizeConfig[size];
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span 
-          className={`inline-flex items-center justify-center cursor-help ${config.container} relative group`}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button 
+          type="button"
+          className={`inline-flex items-center justify-center cursor-pointer ${config.container} relative group`}
           data-testid={`driver-icon-${icon.slug}`}
           style={{
             perspective: "200px"
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <span
             className="absolute inset-0 rounded-full opacity-60 blur-sm group-hover:opacity-80 transition-opacity duration-300 animate-pulse"
@@ -66,12 +68,12 @@ export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
               }}
             />
           </span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="bg-card/95 backdrop-blur-sm border border-white/10">
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3 bg-card/95 backdrop-blur-sm border border-white/10" sideOffset={5}>
         <div className="flex items-center gap-2">
           <span 
-            className="w-6 h-6 rounded-full flex items-center justify-center"
+            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
             style={{
               background: `linear-gradient(135deg, ${icon.iconColor}40 0%, ${icon.iconColor}20 100%)`,
               boxShadow: `0 2px 8px ${icon.iconColor}40`
@@ -84,8 +86,8 @@ export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
             <p className="text-xs text-muted-foreground">{icon.description}</p>
           </div>
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
