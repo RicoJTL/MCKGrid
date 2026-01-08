@@ -223,7 +223,7 @@ export default function RaceDetails() {
                 <TableRow className="hover:bg-transparent border-white/5">
                   <TableHead className="w-[80px] text-white font-bold">Pos</TableHead>
                   <TableHead className="text-white font-bold">Driver</TableHead>
-                  <TableHead className="text-white font-bold">Quali</TableHead>
+                  <TableHead className="text-white font-bold">Qualified</TableHead>
                   <TableHead className="text-white font-bold">Race Time</TableHead>
                   <TableHead className="text-right text-white font-bold">Points</TableHead>
                 </TableRow>
@@ -534,7 +534,7 @@ function ResultsEditor({
               </SelectContent>
             </Select>
             <Input 
-              placeholder="Quali" 
+              placeholder="Qualified" 
               type="number"
               value={entry.qualifyingPosition} 
               onChange={(e) => updateEntry(i, 'qualifyingPosition', e.target.value)}
