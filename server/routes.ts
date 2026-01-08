@@ -339,6 +339,11 @@ export async function registerRoutes(
 
   app.patch("/api/leagues/:id", requireAdmin, async (req, res) => {
     const { name, description, seasonStart, seasonEnd, status, iconName, iconColor } = req.body;
+    const leagueId = Number(req.params.id);
+    
+    const existingLeague = await storage.getLeague(leagueId);
+    const wasActive = existingLeague?.status === 'active';
+    
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
@@ -352,7 +357,13 @@ export async function registerRoutes(
     }
     if (iconName !== undefined) data.iconName = iconName;
     if (iconColor !== undefined) data.iconColor = iconColor;
-    const updated = await storage.updateLeague(Number(req.params.id), data);
+    const updated = await storage.updateLeague(leagueId, data);
+    
+    if (wasActive && status === 'completed') {
+      const { checkSeasonEndBadges } = await import("./badge-automation");
+      await checkSeasonEndBadges(leagueId);
+    }
+    
     res.json(updated);
   });
 

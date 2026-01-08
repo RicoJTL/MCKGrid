@@ -292,6 +292,14 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    // Auto-check and award badges for all drivers in the race
+    const { checkAndAwardBadges } = await import("./badge-automation");
+    for (const result of insertedResults) {
+      if (result.racerId) {
+        await checkAndAwardBadges(result.racerId);
+      }
+    }
+    
     return insertedResults;
   }
   
