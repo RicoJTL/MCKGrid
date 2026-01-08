@@ -268,6 +268,11 @@ export class DatabaseStorage implements IStorage {
     // Get the race to find its location
     const race = await this.getRace(raceId);
     
+    // Get existing results to track removed drivers
+    const existingResults = await db.select().from(results).where(eq(results.raceId, raceId));
+    const existingRacerIds = new Set(existingResults.map(r => r.racerId));
+    const newRacerIds = new Set(resultsData.map(r => r.racerId));
+    
     const insertedResults = await db.transaction(async (tx) => {
       // Always delete existing results first
       await tx.delete(results).where(eq(results.raceId, raceId));
@@ -282,6 +287,21 @@ export class DatabaseStorage implements IStorage {
       
       return await tx.insert(results).values(fullResults).returning();
     });
+    
+    // Clean up personal bests for drivers whose results were removed
+    if (race && race.location) {
+      for (const racerId of Array.from(existingRacerIds)) {
+        if (!newRacerIds.has(racerId)) {
+          // Driver was removed - clear personal best if it referenced this race
+          await db.update(personalBests)
+            .set({ raceId: null })
+            .where(and(
+              eq(personalBests.profileId, racerId),
+              eq(personalBests.raceId, raceId)
+            ));
+        }
+      }
+    }
     
     // Auto-update personal bests for drivers with race times
     if (race) {

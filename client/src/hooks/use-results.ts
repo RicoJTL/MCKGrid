@@ -47,10 +47,12 @@ export function useSubmitResults() {
         if (!Array.isArray(key)) return false;
         // Invalidate all competition standings queries
         if (key[0] === '/api/competitions' && key[2] === 'standings') return true;
-        // Invalidate profile race histories and personal bests
-        if (key[0] === '/api/profiles' && (key[2] === 'history' || key[2] === 'history-by-competition' || key[2] === 'personal-bests')) return true;
+        // Invalidate all profile-related queries (stats, history, personal bests, recent results)
+        if (key[0] === '/api/profiles') return true;
         return false;
       }});
+      // Also invalidate badge notifications
+      queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
       toast({ title: "Results Submitted", description: "Podium decided!" });
     },
     onError: (err: Error) => {
