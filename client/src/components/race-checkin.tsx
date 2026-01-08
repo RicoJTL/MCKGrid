@@ -1,0 +1,143 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle, XCircle, HelpCircle, Clock } from "lucide-react";
+import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
+import type { Race, Profile, RaceCheckin } from "@shared/schema";
+
+interface RaceCheckinProps {
+  race: Race;
+  profile?: Profile | null;
+}
+
+export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
+  const { data: myCheckin, isLoading } = useQuery<RaceCheckin | null>({
+    queryKey: ['/api/races', race.id, 'my-checkin'],
+    enabled: !!profile,
+  });
+
+  const checkinMutation = useMutation({
+    mutationFn: (status: 'confirmed' | 'maybe' | 'not_attending') =>
+      apiRequest("POST", `/api/races/${race.id}/checkin`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/races', race.id, 'my-checkin'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races', race.id, 'checkins'] });
+    },
+  });
+
+  if (!profile) return null;
+  if (isLoading) return <Skeleton className="h-9 w-24" />;
+
+  const statusConfig = {
+    confirmed: { icon: CheckCircle, color: 'text-green-400 bg-green-500/20 border-green-500/30', label: 'Going' },
+    maybe: { icon: HelpCircle, color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30', label: 'Maybe' },
+    not_attending: { icon: XCircle, color: 'text-red-400 bg-red-500/20 border-red-500/30', label: 'Not Going' },
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {(['confirmed', 'maybe', 'not_attending'] as const).map((status) => {
+        const config = statusConfig[status];
+        const isActive = myCheckin?.status === status;
+        const Icon = config.icon;
+        return (
+          <Button
+            key={status}
+            size="sm"
+            variant={isActive ? "default" : "outline"}
+            className={isActive ? config.color : ''}
+            onClick={() => checkinMutation.mutate(status)}
+            disabled={checkinMutation.isPending}
+            data-testid={`button-checkin-${status}`}
+          >
+            <Icon className="w-4 h-4 mr-1" />
+            {config.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface RaceCheckinListProps {
+  raceId: number;
+}
+
+export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
+  const { data: checkins, isLoading } = useQuery<(RaceCheckin & { profile: Profile })[]>({
+    queryKey: ['/api/races', raceId, 'checkins'],
+  });
+
+  if (isLoading) return <Skeleton className="h-24 rounded-xl" />;
+  if (!checkins?.length) return null;
+
+  const confirmed = checkins.filter(c => c.status === 'confirmed');
+  const maybe = checkins.filter(c => c.status === 'maybe');
+  const notAttending = checkins.filter(c => c.status === 'not_attending');
+
+  return (
+    <div className="space-y-3">
+      <h4 className="font-medium text-sm text-muted-foreground">Attendance</h4>
+      {confirmed.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {confirmed.map(c => (
+            <Badge key={c.id} variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              {c.profile.driverName || c.profile.fullName}
+            </Badge>
+          ))}
+        </div>
+      )}
+      {maybe.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {maybe.map(c => (
+            <Badge key={c.id} variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+              <HelpCircle className="w-3 h-3 mr-1" />
+              {c.profile.driverName || c.profile.fullName}
+            </Badge>
+          ))}
+        </div>
+      )}
+      {notAttending.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {notAttending.map(c => (
+            <Badge key={c.id} variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30">
+              <XCircle className="w-3 h-3 mr-1" />
+              {c.profile.driverName || c.profile.fullName}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface RaceCountdownProps {
+  race: Race;
+}
+
+export function RaceCountdown({ race }: RaceCountdownProps) {
+  const raceDate = new Date(race.date);
+  const now = new Date();
+  const days = differenceInDays(raceDate, now);
+  const hours = differenceInHours(raceDate, now) % 24;
+  const minutes = differenceInMinutes(raceDate, now) % 60;
+
+  if (raceDate < now) return null;
+
+  return (
+    <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+      <Clock className="w-5 h-5 text-primary" />
+      <div>
+        <span className="font-medium text-primary">
+          {days > 0 && `${days}d `}
+          {hours > 0 && `${hours}h `}
+          {days === 0 && `${minutes}m`}
+        </span>
+        <span className="text-muted-foreground text-sm ml-2">until race start</span>
+      </div>
+    </div>
+  );
+}

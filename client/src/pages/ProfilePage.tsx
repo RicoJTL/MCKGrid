@@ -8,11 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
+import { DriverStatsDashboard, RecentResults, PersonalBests, BadgesSection, SeasonGoals, HeadToHead, CalendarSync } from "@/components/driver-stats";
+import type { Profile } from "@shared/schema";
 
 const profileFormSchema = z.object({
   accountType: z.enum(["driver", "spectator"]),
@@ -41,7 +44,11 @@ export default function ProfilePage() {
     enabled: !!profile?.id,
   });
 
-  // Group race history by competition
+  const { data: allProfiles } = useQuery<Profile[]>({
+    queryKey: ['/api/profiles'],
+    enabled: !!profile?.id,
+  });
+
   const groupedHistory = raceHistoryByCompetition?.reduce((acc, result) => {
     const compId = result.competitionId;
     if (!acc[compId]) {
@@ -109,19 +116,19 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) return <div className="max-w-2xl mx-auto space-y-6"><Skeleton className="h-40 w-full" /></div>;
+  if (isLoading) return <div className="max-w-4xl mx-auto space-y-6"><Skeleton className="h-40 w-full" /></div>;
 
   const displayImage = imagePreview || (profile?.profileImage ? profile.profileImage : null);
   const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : "Spectator";
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-display font-bold italic text-white mb-2">My Profile</h1>
-        <p className="text-muted-foreground">Manage your account</p>
+        <p className="text-muted-foreground">Manage your account and view your stats</p>
       </div>
 
-      <div className="p-8 rounded-2xl bg-secondary/50 border border-white/5 flex items-center gap-6">
+      <div className="p-8 rounded-2xl bg-secondary/50 border border-white/5 flex items-center gap-6 flex-wrap">
         <div className="relative">
           <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
             {displayImage ? (
@@ -165,148 +172,209 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="accountType"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Account Type</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <label 
-                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                        field.value === "driver" 
-                          ? "border-primary bg-primary/10" 
-                          : "border-white/10 bg-secondary/30 hover:border-white/20"
-                      }`}
-                    >
-                      <RadioGroupItem value="driver" id="driver" className="sr-only" />
-                      <Car className={`w-5 h-5 ${field.value === "driver" ? "text-primary" : "text-muted-foreground"}`} />
-                      <div>
-                        <p className="font-bold">Driver</p>
-                        <p className="text-xs text-muted-foreground">Participate in races</p>
-                      </div>
-                    </label>
-                    <label 
-                      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                        field.value === "spectator" 
-                          ? "border-primary bg-primary/10" 
-                          : "border-white/10 bg-secondary/30 hover:border-white/20"
-                      }`}
-                    >
-                      <RadioGroupItem value="spectator" id="spectator" className="sr-only" />
-                      <Eye className={`w-5 h-5 ${field.value === "spectator" ? "text-primary" : "text-muted-foreground"}`} />
-                      <div>
-                        <p className="font-bold">Spectator</p>
-                        <p className="text-xs text-muted-foreground">View races and standings</p>
-                      </div>
-                    </label>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {accountType === "driver" && (
+      <Tabs defaultValue={isDriver ? "stats" : "settings"} className="w-full">
+        <TabsList className="w-full justify-start bg-secondary/30 p-1 rounded-xl gap-1 flex-wrap h-auto" data-testid="profile-tabs">
+          {isDriver && (
             <>
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your full name" {...field} className="bg-secondary/30" data-testid="input-fullname" />
-                    </FormControl>
-                    <FormDescription>Your real name (only visible to you and admins)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="driverName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Driver Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your racing name" {...field} className="bg-secondary/30" data-testid="input-drivername" />
-                    </FormControl>
-                    <FormDescription>Your public racing name shown on leaderboards</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-stats">
+                <BarChart3 className="w-4 h-4 mr-2" /> Stats
+              </TabsTrigger>
+              <TabsTrigger value="personal-bests" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-personal-bests">
+                <Timer className="w-4 h-4 mr-2" /> Personal Bests
+              </TabsTrigger>
+              <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-badges">
+                <Award className="w-4 h-4 mr-2" /> Badges
+              </TabsTrigger>
+              <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-goals">
+                <Target className="w-4 h-4 mr-2" /> Goals
+              </TabsTrigger>
+              <TabsTrigger value="h2h" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-h2h">
+                <Swords className="w-4 h-4 mr-2" /> Head-to-Head
+              </TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-history">
+                <Trophy className="w-4 h-4 mr-2" /> History
+              </TabsTrigger>
             </>
           )}
+          <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-settings">
+            <UserCircle className="w-4 h-4 mr-2" /> Settings
+          </TabsTrigger>
+        </TabsList>
 
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending || isUploadingImage} data-testid="button-save-profile">
-            {updateProfile.isPending ? "Saving..." : "Save Changes"}
-          </Button>
-        </form>
-      </Form>
+        {isDriver && profile && (
+          <>
+            <TabsContent value="stats" className="space-y-6 mt-6">
+              <DriverStatsDashboard profile={profile} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold font-display italic">Recent Results</h3>
+                  <RecentResults profile={profile} />
+                </div>
+                <CalendarSync />
+              </div>
+            </TabsContent>
 
-      {accountType === "driver" && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>
-          {competitionGroups.length > 0 ? (
-            <div className="space-y-6">
-              {competitionGroups.map((group: any) => (
-                <div key={group.competitionId} className="space-y-3">
-                  <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-                    <Trophy className="w-4 h-4 text-primary" />
-                    <h3 className="font-bold text-lg">{group.competitionName}</h3>
-                    <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">
-                      {group.results.length} race{group.results.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {group.results.map((result: any, i: number) => (
-                      <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
-                            result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                            result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
-                            result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
-                            'bg-primary/10 text-primary'
-                          }`}>
-                            P{result.position}
-                          </div>
-                          <div>
-                            <h4 className="font-bold">{result.raceName}</h4>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+            <TabsContent value="personal-bests" className="mt-6">
+              <PersonalBests profile={profile} />
+            </TabsContent>
+
+            <TabsContent value="badges" className="mt-6">
+              <BadgesSection profile={profile} />
+            </TabsContent>
+
+            <TabsContent value="goals" className="mt-6">
+              <SeasonGoals profile={profile} />
+            </TabsContent>
+
+            <TabsContent value="h2h" className="mt-6">
+              <HeadToHead profile={profile} allProfiles={allProfiles || []} />
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-6 mt-6">
+              <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>
+              {competitionGroups.length > 0 ? (
+                <div className="space-y-6">
+                  {competitionGroups.map((group: any) => (
+                    <div key={group.competitionId} className="space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                        <Trophy className="w-4 h-4 text-primary" />
+                        <h3 className="font-bold text-lg">{group.competitionName}</h3>
+                        <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">
+                          {group.results.length} race{group.results.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {group.results.map((result: any, i: number) => (
+                          <div key={i} className="p-4 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between flex-wrap gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-xl ${
+                                result.position === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                                result.position === 2 ? 'bg-gray-400/20 text-gray-300' :
+                                result.position === 3 ? 'bg-orange-600/20 text-orange-400' :
+                                'bg-primary/10 text-primary'
+                              }`}>
+                                P{result.position}
+                              </div>
+                              <div>
+                                <h4 className="font-bold">{result.raceName}</h4>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(result.raceDate), "MMM d, yyyy")}</span>
+                                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {result.location}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-primary">{result.points} pts</div>
+                              {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-primary">{result.points} pts</div>
-                          {result.raceTime && <div className="text-sm text-muted-foreground">{result.raceTime}</div>}
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
-              <Trophy className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No race history yet.</p>
-              <p className="text-sm">Complete your first race to see results here!</p>
-            </div>
-          )}
-        </div>
-      )}
+              ) : (
+                <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
+                  <Trophy className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p>No race history yet.</p>
+                  <p className="text-sm">Complete your first race to see results here!</p>
+                </div>
+              )}
+            </TabsContent>
+          </>
+        )}
+
+        <TabsContent value="settings" className="mt-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Account Type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="grid grid-cols-2 gap-4"
+                      >
+                        <label 
+                          className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                            field.value === "driver" 
+                              ? "border-primary bg-primary/10" 
+                              : "border-white/10 bg-secondary/30 hover:border-white/20"
+                          }`}
+                        >
+                          <RadioGroupItem value="driver" id="driver" className="sr-only" />
+                          <Car className={`w-5 h-5 ${field.value === "driver" ? "text-primary" : "text-muted-foreground"}`} />
+                          <div>
+                            <p className="font-bold">Driver</p>
+                            <p className="text-xs text-muted-foreground">Participate in races</p>
+                          </div>
+                        </label>
+                        <label 
+                          className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                            field.value === "spectator" 
+                              ? "border-primary bg-primary/10" 
+                              : "border-white/10 bg-secondary/30 hover:border-white/20"
+                          }`}
+                        >
+                          <RadioGroupItem value="spectator" id="spectator" className="sr-only" />
+                          <Eye className={`w-5 h-5 ${field.value === "spectator" ? "text-primary" : "text-muted-foreground"}`} />
+                          <div>
+                            <p className="font-bold">Spectator</p>
+                            <p className="text-xs text-muted-foreground">View races and standings</p>
+                          </div>
+                        </label>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {accountType === "driver" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your full name" {...field} className="bg-secondary/30" data-testid="input-fullname" />
+                        </FormControl>
+                        <FormDescription>Your real name (only visible to you and admins)</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="driverName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Driver Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your racing name" {...field} className="bg-secondary/30" data-testid="input-drivername" />
+                        </FormControl>
+                        <FormDescription>Your public racing name shown on leaderboards</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 font-bold h-12 text-lg" disabled={updateProfile.isPending || isUploadingImage} data-testid="button-save-profile">
+                {updateProfile.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </Form>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
