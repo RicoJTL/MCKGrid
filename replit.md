@@ -92,6 +92,27 @@ Authenticated users can view any driver's public profile at `/profiles/:id`:
 - **Clickable links**: Driver names in standings, race results, and driver lists link to public profiles
 - **Component**: `client/src/pages/PublicProfilePage.tsx`
 
+### Badge Automation System
+The system automatically awards badges based on driver performance:
+
+**Auto-awarded after race results (server/badge-automation.ts):**
+- Race milestones: first_race, first_podium, first_win, late_bloomer
+- Streaks: back_to_back, podium_run, top_5_regular
+- Season stats: points_scorer, top_half_hero, plum_tomato_champion, the_yo_yo
+- Qualifying (if data exists): pole_position, grid_climber, perfect_weekend
+
+**Auto-awarded when league marked "completed":**
+- Attendance: season_complete, iron_driver, never_quit, last_but_loyal, league_laughs_never_quit
+- Championship positions: mck_champion, runner_up, third_overall, best_of_rest
+- Special awards: dominator (most wins), podium_king (most podiums)
+
+**Cannot be automated (require data not currently tracked):**
+- Qualifying badges: quali_specialist, the_flash, quali_merchant, most_dramatic_swing
+- Tier changes: first_promotion, relegation_fodder
+- Multi-season: league_legend, hall_of_fame, most_improved
+
+**Notifications:** When badges are awarded, notifications appear on the dashboard and can be dismissed by the user.
+
 ## External Dependencies
 
 ### Database
