@@ -671,9 +671,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unenrollDriver(competitionId: number, profileId: number): Promise<void> {
+    // First, remove the enrollment
     await db.delete(enrollments).where(
       and(eq(enrollments.competitionId, competitionId), eq(enrollments.profileId, profileId))
     );
+    
+    // Get all races linked to this competition
+    const competitionRaces = await db
+      .select({ raceId: raceCompetitions.raceId })
+      .from(raceCompetitions)
+      .where(eq(raceCompetitions.competitionId, competitionId));
+    
+    if (competitionRaces.length === 0) return;
+    
+    const raceIds = competitionRaces.map(r => r.raceId);
+    
+    // For each race, check if driver is still enrolled in any other competition that race belongs to
+    for (const raceId of raceIds) {
+      // Get all competitions this race belongs to
+      const raceComps = await db
+        .select({ competitionId: raceCompetitions.competitionId })
+        .from(raceCompetitions)
+        .where(eq(raceCompetitions.raceId, raceId));
+      
+      const compIds = raceComps.map(rc => rc.competitionId);
+      
+      // Check if driver is enrolled in any of these competitions
+      const stillEnrolled = await db
+        .select({ id: enrollments.id })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.profileId, profileId),
+            inArray(enrollments.competitionId, compIds)
+          )
+        )
+        .limit(1);
+      
+      // If driver is not enrolled in any competition this race belongs to, remove their check-in
+      if (stillEnrolled.length === 0) {
+        await db.delete(raceCheckins).where(
+          and(
+            eq(raceCheckins.raceId, raceId),
+            eq(raceCheckins.profileId, profileId)
+          )
+        );
+      }
+    }
   }
 
   async getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]> {
