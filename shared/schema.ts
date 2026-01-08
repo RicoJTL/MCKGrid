@@ -12,6 +12,14 @@ export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "
 export const leagueStatusEnum = pgEnum("league_status", ["active", "completed"]);
 export const checkinStatusEnum = pgEnum("checkin_status", ["confirmed", "maybe", "not_attending"]);
 export const goalTypeEnum = pgEnum("goal_type", ["wins", "podiums", "points", "races", "position"]);
+export const badgeCategoryEnum = pgEnum("badge_category", [
+  "getting_started", 
+  "milestones", 
+  "race_highlights", 
+  "hot_streaks", 
+  "season_heroes", 
+  "legends"
+]);
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -89,12 +97,15 @@ export const enrollments = pgTable("competition_enrollments", {
 
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),
+  slug: text("slug").unique().notNull(),
   name: text("name").notNull(),
   description: text("description").notNull(),
+  category: badgeCategoryEnum("category").notNull(),
   iconName: text("icon_name").notNull(),
   iconColor: text("icon_color").notNull(),
   criteria: text("criteria").notNull(),
   threshold: integer("threshold"),
+  sortOrder: integer("sort_order").default(0).notNull(),
 });
 
 export const profileBadges = pgTable("profile_badges", {
@@ -205,7 +216,7 @@ export const insertRaceSchema = createInsertSchema(races).omit({ id: true });
 export const insertRaceCompetitionSchema = createInsertSchema(raceCompetitions).omit({ id: true });
 export const insertResultSchema = createInsertSchema(results).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true });
-export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
+export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, sortOrder: true });
 export const insertProfileBadgeSchema = createInsertSchema(profileBadges).omit({ id: true });
 export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, createdAt: true });
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });

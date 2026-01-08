@@ -73,9 +73,13 @@ export interface IStorage {
   // Badges
   getBadges(): Promise<Badge[]>;
   getProfileBadges(profileId: number): Promise<(ProfileBadge & { badge: Badge })[]>;
+  getProfilesWithBadge(badgeId: number): Promise<{ profileId: number; badgeId: number }[]>;
   awardBadge(profileId: number, badgeId: number): Promise<ProfileBadge>;
+  revokeBadge(profileId: number, badgeId: number): Promise<void>;
   createBadge(badge: InsertBadge): Promise<Badge>;
   deleteBadge(id: number): Promise<void>;
+  seedPredefinedBadges(): Promise<void>;
+  getBadgeBySlug(slug: string): Promise<Badge | undefined>;
   
   // Season Goals
   getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
@@ -654,7 +658,33 @@ export class DatabaseStorage implements IStorage {
 
   // Badges
   async getBadges(): Promise<Badge[]> {
-    return await db.select().from(badges);
+    return await db.select().from(badges).orderBy(badges.sortOrder);
+  }
+
+  async getBadgeBySlug(slug: string): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.slug, slug));
+    return badge;
+  }
+
+  async seedPredefinedBadges(): Promise<void> {
+    const { PREDEFINED_BADGES } = await import("@shared/predefined-badges");
+    
+    for (const badge of PREDEFINED_BADGES) {
+      const existing = await this.getBadgeBySlug(badge.slug);
+      if (!existing) {
+        await db.insert(badges).values({
+          slug: badge.slug,
+          name: badge.name,
+          description: badge.description,
+          category: badge.category,
+          iconName: badge.iconName,
+          iconColor: badge.iconColor,
+          criteria: badge.criteria,
+          threshold: badge.threshold,
+          sortOrder: badge.sortOrder,
+        });
+      }
+    }
   }
 
   async getProfileBadges(profileId: number): Promise<(ProfileBadge & { badge: Badge })[]> {
@@ -678,6 +708,19 @@ export class DatabaseStorage implements IStorage {
     
     const [badge] = await db.insert(profileBadges).values({ profileId, badgeId }).returning();
     return badge;
+  }
+
+  async revokeBadge(profileId: number, badgeId: number): Promise<void> {
+    await db.delete(profileBadges)
+      .where(and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badgeId)));
+  }
+
+  async getProfilesWithBadge(badgeId: number): Promise<{ profileId: number; badgeId: number }[]> {
+    const result = await db
+      .select({ profileId: profileBadges.profileId, badgeId: profileBadges.badgeId })
+      .from(profileBadges)
+      .where(eq(profileBadges.badgeId, badgeId));
+    return result;
   }
 
   async createBadge(badge: InsertBadge): Promise<Badge> {

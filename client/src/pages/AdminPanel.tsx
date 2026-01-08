@@ -11,29 +11,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift, Check, X } from "lucide-react";
+import { getBadgeIcon } from "@/components/badge-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useUpload } from "@/hooks/use-upload";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { IconPicker, getIconComponent } from "@/components/icon-picker";
+import { getIconComponent } from "@/components/icon-picker";
 import type { Badge as BadgeType, Profile } from "@shared/schema";
 
 const driverSchema = z.object({
   driverName: z.string().min(1, "Driver name is required"),
   fullName: z.string().min(1, "Full name is required"),
   role: z.enum(["racer", "spectator"]),
-});
-
-const badgeSchema = z.object({
-  name: z.string().min(1, "Badge name is required"),
-  description: z.string().min(1, "Description is required"),
-  iconName: z.string().min(1),
-  iconColor: z.string().min(1),
-  criteria: z.string().min(1, "Criteria is required"),
-  threshold: z.number().optional(),
 });
 
 const getRoleDisplay = (role: string) => {
@@ -65,6 +57,24 @@ const getAdminBadgeStyles = (adminLevel: string) => {
   }
 };
 
+const BADGE_CATEGORY_LABELS: Record<string, string> = {
+  getting_started: "Getting Started",
+  milestones: "Milestones",
+  race_highlights: "Race Highlights",
+  hot_streaks: "Hot Streaks",
+  season_heroes: "Season Heroes",
+  legends: "Legends",
+};
+
+const BADGE_CATEGORY_ORDER = [
+  "getting_started",
+  "milestones",
+  "race_highlights",
+  "hot_streaks",
+  "season_heroes",
+  "legends",
+];
+
 const getAdminLevelDisplay = (adminLevel: string) => {
   switch (adminLevel) {
     case 'super_admin':
@@ -75,6 +85,98 @@ const getAdminLevelDisplay = (adminLevel: string) => {
       return null;
   }
 };
+
+function BadgeAwardList({ 
+  badge, 
+  drivers, 
+  onAward, 
+  onRevoke, 
+  isAwarding, 
+  isRevoking 
+}: { 
+  badge: BadgeType;
+  drivers: Profile[];
+  onAward: (profileId: number) => void;
+  onRevoke: (profileId: number) => void;
+  isAwarding: boolean;
+  isRevoking: boolean;
+}) {
+  const { data: allProfileBadges, isLoading } = useQuery<{ profileId: number; badgeId: number }[]>({
+    queryKey: ['/api/badges', badge.id, 'profiles'],
+  });
+  
+  const driverBadgeMap = new Map<number, boolean>();
+  if (allProfileBadges) {
+    allProfileBadges.forEach(pb => driverBadgeMap.set(pb.profileId, true));
+  }
+  
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Drivers</label>
+      <div className="max-h-72 overflow-y-auto space-y-2 rounded-lg border border-white/10 p-2">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+          </div>
+        ) : (
+          drivers.map((driver) => {
+            const hasBadge = driverBadgeMap.get(driver.id) || false;
+            
+            return (
+              <div
+                key={driver.id}
+                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                  hasBadge ? 'bg-green-500/10 border border-green-500/30' : 'bg-secondary/30'
+                }`}
+                data-testid={`driver-badge-row-${driver.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={driver.profileImage || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                      {(driver.driverName || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-sm">{driver.driverName || driver.fullName}</p>
+                    {hasBadge && (
+                      <p className="text-xs text-green-400 flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Has badge
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  {hasBadge ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-400 border-red-400/30"
+                      onClick={() => onRevoke(driver.id)}
+                      disabled={isRevoking}
+                      data-testid={`button-revoke-from-${driver.id}`}
+                    >
+                      <X className="w-4 h-4 mr-1" /> Revoke
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => onAward(driver.id)}
+                      disabled={isAwarding}
+                      data-testid={`button-award-to-${driver.id}`}
+                    >
+                      <Check className="w-4 h-4 mr-1" /> Award
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const { data: currentProfile } = useProfile();
@@ -90,10 +192,8 @@ export default function AdminPanel() {
   const { uploadFile, isUploading } = useUpload();
   const queryClient = useQueryClient();
   
-  const [showCreateBadge, setShowCreateBadge] = useState(false);
   const [showAwardBadge, setShowAwardBadge] = useState(false);
   const [selectedBadgeForAward, setSelectedBadgeForAward] = useState<BadgeType | null>(null);
-  const [deleteBadgeConfirm, setDeleteBadgeConfirm] = useState<BadgeType | null>(null);
   
   const { data: badges } = useQuery<BadgeType[]>({
     queryKey: ['/api/badges'],
@@ -110,36 +210,25 @@ export default function AdminPanel() {
     }
   });
 
-  const createBadgeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof badgeSchema>) => {
-      return apiRequest("POST", "/api/badges", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
-      setShowCreateBadge(false);
-      badgeForm.reset();
-    }
-  });
-
   const awardBadgeMutation = useMutation({
     mutationFn: async ({ profileId, badgeId }: { profileId: number; badgeId: number }) => {
       return apiRequest("POST", `/api/profiles/${profileId}/badges/${badgeId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
-      setShowAwardBadge(false);
-      setSelectedBadgeForAward(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', variables.profileId, 'badges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/badges', variables.badgeId, 'profiles'] });
     }
   });
 
-  const deleteBadgeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/badges/${id}`);
+  const revokeBadgeMutation = useMutation({
+    mutationFn: async ({ profileId, badgeId }: { profileId: number; badgeId: number }) => {
+      return apiRequest("DELETE", `/api/profiles/${profileId}/badges/${badgeId}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
-      setDeleteBadgeConfirm(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', variables.profileId, 'badges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/badges', variables.badgeId, 'profiles'] });
     }
   });
 
@@ -172,18 +261,6 @@ export default function AdminPanel() {
       driverName: "",
       fullName: "",
       role: "racer",
-    },
-  });
-
-  const badgeForm = useForm<z.infer<typeof badgeSchema>>({
-    resolver: zodResolver(badgeSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      iconName: "Award",
-      iconColor: "#f59e0b",
-      criteria: "",
-      threshold: undefined,
     },
   });
 
@@ -406,52 +483,57 @@ export default function AdminPanel() {
             <Card className="bg-secondary/30 border-white/5">
               <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <CardTitle className="font-display italic">Manage Badges</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setShowAwardBadge(true)} disabled={!badges?.length} data-testid="button-award-badge">
-                    <Gift className="w-4 h-4 mr-2" /> Award Badge
-                  </Button>
-                  <Button onClick={() => setShowCreateBadge(true)} data-testid="button-create-badge">
-                    <Plus className="w-4 h-4 mr-2" /> Create Badge
-                  </Button>
-                </div>
+                <Button onClick={() => setShowAwardBadge(true)} disabled={!badges?.length} data-testid="button-award-badge">
+                  <Gift className="w-4 h-4 mr-2" /> Award Badge to Driver
+                </Button>
               </CardHeader>
               <CardContent>
                 {badges && badges.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {badges.map((badge) => {
-                      const Icon = getIconComponent(badge.iconName) || Award;
+                  <div className="space-y-8">
+                    {BADGE_CATEGORY_ORDER.map(category => {
+                      const categoryBadges = badges.filter(b => b.category === category);
+                      if (categoryBadges.length === 0) return null;
+                      
                       return (
-                        <div
-                          key={badge.id}
-                          className="p-4 rounded-xl border flex items-start gap-3 relative group"
-                          style={{
-                            backgroundColor: `${badge.iconColor}10`,
-                            borderColor: `${badge.iconColor}30`,
-                          }}
-                          data-testid={`badge-card-${badge.id}`}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => setDeleteBadgeConfirm(badge)}
-                            data-testid={`button-delete-badge-${badge.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <div 
-                            className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${badge.iconColor}20` }}
-                          >
-                            <Icon className="w-6 h-6" style={{ color: badge.iconColor }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold">{badge.name}</h4>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{badge.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Criteria: {badge.criteria}
-                              {badge.threshold && ` (${badge.threshold})`}
-                            </p>
+                        <div key={category} className="space-y-4">
+                          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider border-b border-white/10 pb-2">
+                            {BADGE_CATEGORY_LABELS[category] || category}
+                          </h4>
+                          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                            {categoryBadges.map((badge) => {
+                              const CustomIcon = getBadgeIcon(badge.iconName);
+                              const FallbackIcon = getIconComponent(badge.iconName) || Award;
+                              return (
+                                <div
+                                  key={badge.id}
+                                  className="p-4 rounded-xl border flex items-start gap-3 cursor-pointer hover-elevate"
+                                  style={{
+                                    backgroundColor: `${badge.iconColor}10`,
+                                    borderColor: `${badge.iconColor}30`,
+                                  }}
+                                  onClick={() => {
+                                    setSelectedBadgeForAward(badge);
+                                    setShowAwardBadge(true);
+                                  }}
+                                  data-testid={`badge-card-${badge.id}`}
+                                >
+                                  <div 
+                                    className="p-2 rounded-lg flex-shrink-0"
+                                    style={{ backgroundColor: `${badge.iconColor}20` }}
+                                  >
+                                    {CustomIcon ? (
+                                      <CustomIcon className="w-6 h-6" style={{ color: badge.iconColor }} />
+                                    ) : (
+                                      <FallbackIcon className="w-6 h-6" style={{ color: badge.iconColor }} />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-sm">{badge.name}</h4>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">{badge.description}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -460,8 +542,8 @@ export default function AdminPanel() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <Award className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No badges created yet</p>
-                    <p className="text-sm mt-1">Create badges to award to drivers for their achievements</p>
+                    <p>No badges available</p>
+                    <p className="text-sm mt-1">Badges will be loaded automatically</p>
                   </div>
                 )}
               </CardContent>
@@ -654,105 +736,19 @@ export default function AdminPanel() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showCreateBadge} onOpenChange={setShowCreateBadge}>
-          <DialogContent className="bg-card border-white/10">
-            <DialogHeader>
-              <DialogTitle>Create Badge</DialogTitle>
-              <DialogDescription>
-                Create a new badge that can be awarded to drivers for their achievements.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...badgeForm}>
-              <form onSubmit={badgeForm.handleSubmit((data) => createBadgeMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={badgeForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Badge Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. First Win" {...field} data-testid="input-badge-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={badgeForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Win your first race" {...field} data-testid="input-badge-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={badgeForm.control}
-                  name="criteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unlock Criteria</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 1 win" {...field} data-testid="input-badge-criteria" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={badgeForm.control}
-                  name="threshold"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Threshold (optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="e.g. 5" 
-                          {...field} 
-                          value={field.value || ''}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                          data-testid="input-badge-threshold" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-2">
-                  <FormLabel>Icon & Color</FormLabel>
-                  <IconPicker
-                    value={badgeForm.watch("iconName")}
-                    color={badgeForm.watch("iconColor")}
-                    onChange={(iconName, color) => {
-                      badgeForm.setValue("iconName", iconName);
-                      badgeForm.setValue("iconColor", color);
-                    }}
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-primary" disabled={createBadgeMutation.isPending} data-testid="button-save-badge">
-                  {createBadgeMutation.isPending ? "Creating..." : "Create Badge"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
         <Dialog open={showAwardBadge} onOpenChange={(open) => {
           if (!open) {
             setShowAwardBadge(false);
             setSelectedBadgeForAward(null);
           }
         }}>
-          <DialogContent className="bg-card border-white/10">
+          <DialogContent className="bg-card border-white/10 max-w-lg">
             <DialogHeader>
-              <DialogTitle>Award Badge to Driver</DialogTitle>
+              <DialogTitle>Award Badge to Drivers</DialogTitle>
               <DialogDescription>
-                Select a badge and a driver to award it to.
+                {selectedBadgeForAward 
+                  ? `Manage "${selectedBadgeForAward.name}" badge assignments`
+                  : "Select a badge first, then award or revoke from drivers"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -766,67 +762,36 @@ export default function AdminPanel() {
                     <SelectValue placeholder="Choose a badge" />
                   </SelectTrigger>
                   <SelectContent>
-                    {badges?.map((badge) => (
-                      <SelectItem key={badge.id} value={badge.id.toString()}>
-                        {badge.name}
-                      </SelectItem>
-                    ))}
+                    {BADGE_CATEGORY_ORDER.map(category => {
+                      const categoryBadges = badges?.filter(b => b.category === category) || [];
+                      if (categoryBadges.length === 0) return null;
+                      return (
+                        <div key={category}>
+                          <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
+                            {BADGE_CATEGORY_LABELS[category]}
+                          </div>
+                          {categoryBadges.map((badge) => (
+                            <SelectItem key={badge.id} value={badge.id.toString()}>
+                              {badge.name}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
               {selectedBadgeForAward && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Select Driver</label>
-                  <div className="max-h-60 overflow-y-auto space-y-2">
-                    {drivers.map((driver) => (
-                      <Button
-                        key={driver.id}
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => awardBadgeMutation.mutate({ 
-                          profileId: driver.id, 
-                          badgeId: selectedBadgeForAward.id 
-                        })}
-                        disabled={awardBadgeMutation.isPending}
-                        data-testid={`button-award-to-${driver.id}`}
-                      >
-                        <Avatar className="w-6 h-6 mr-2">
-                          <AvatarImage src={driver.profileImage || undefined} />
-                          <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                            {(driver.driverName || "?")[0]?.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {driver.driverName || driver.fullName}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                <BadgeAwardList 
+                  badge={selectedBadgeForAward}
+                  drivers={drivers}
+                  onAward={(profileId) => awardBadgeMutation.mutate({ profileId, badgeId: selectedBadgeForAward.id })}
+                  onRevoke={(profileId) => revokeBadgeMutation.mutate({ profileId, badgeId: selectedBadgeForAward.id })}
+                  isAwarding={awardBadgeMutation.isPending}
+                  isRevoking={revokeBadgeMutation.isPending}
+                />
               )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={!!deleteBadgeConfirm} onOpenChange={(open) => !open && setDeleteBadgeConfirm(null)}>
-          <DialogContent className="bg-card border-white/10">
-            <DialogHeader>
-              <DialogTitle>Delete Badge</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete the "{deleteBadgeConfirm?.name}" badge? This will also remove it from all drivers who have earned it.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setDeleteBadgeConfirm(null)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => deleteBadgeConfirm && deleteBadgeMutation.mutate(deleteBadgeConfirm.id)}
-                disabled={deleteBadgeMutation.isPending}
-                data-testid="button-confirm-delete-badge"
-              >
-                {deleteBadgeMutation.isPending ? "Deleting..." : "Delete Badge"}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>

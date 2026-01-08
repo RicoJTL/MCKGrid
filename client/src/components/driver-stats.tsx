@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock } from "lucide-react";
+import { getBadgeIcon } from "@/components/badge-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -23,6 +24,7 @@ import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType } fr
 
 interface DriverStatsProps {
   profile: Profile;
+  isOwnProfile?: boolean;
 }
 
 export function DriverStatsDashboard({ profile }: DriverStatsProps) {
@@ -158,48 +160,155 @@ export function PersonalBests({ profile }: DriverStatsProps) {
   );
 }
 
-export function BadgesSection({ profile }: DriverStatsProps) {
-  const { data: badges, isLoading } = useQuery<{ badge: BadgeType }[]>({
+const BADGE_CATEGORY_LABELS: Record<string, string> = {
+  getting_started: "Getting Started",
+  milestones: "Milestones",
+  race_highlights: "Race Highlights",
+  hot_streaks: "Hot Streaks",
+  season_heroes: "Season Heroes",
+  legends: "Legends",
+};
+
+const BADGE_CATEGORY_ORDER = [
+  "getting_started",
+  "milestones",
+  "race_highlights",
+  "hot_streaks",
+  "season_heroes",
+  "legends",
+];
+
+export function BadgesSection({ profile, isOwnProfile = false }: DriverStatsProps) {
+  const { data: allBadges, isLoading: loadingAll } = useQuery<BadgeType[]>({
+    queryKey: ['/api/badges'],
+  });
+
+  const { data: earnedBadges, isLoading: loadingEarned } = useQuery<{ badge: BadgeType; earnedAt: string }[]>({
     queryKey: ['/api/profiles', profile.id, 'badges'],
   });
 
-  if (isLoading) {
+  if (loadingAll || loadingEarned) {
     return <Skeleton className="h-32 rounded-xl" />;
   }
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
-        <Award className="w-5 h-5 text-yellow-500" /> Badges & Achievements
-      </h3>
+  const earnedBadgeIds = new Set(earnedBadges?.map(eb => eb.badge.id) || []);
 
-      {badges?.length ? (
-        <div className="flex flex-wrap gap-3">
-          {badges.map((pb) => {
-            const Icon = getIconComponent(pb.badge.iconName) || Award;
+  const badgesByCategory = BADGE_CATEGORY_ORDER.reduce((acc, category) => {
+    const categoryBadges = allBadges?.filter(b => b.category === category) || [];
+    if (categoryBadges.length > 0) {
+      acc[category] = categoryBadges;
+    }
+    return acc;
+  }, {} as Record<string, BadgeType[]>);
+
+  const displayBadges = isOwnProfile 
+    ? allBadges || []
+    : (allBadges || []).filter(b => earnedBadgeIds.has(b.id));
+
+  const displayCategories = isOwnProfile 
+    ? BADGE_CATEGORY_ORDER.filter(cat => badgesByCategory[cat]?.length > 0)
+    : BADGE_CATEGORY_ORDER.filter(cat => 
+        badgesByCategory[cat]?.some(b => earnedBadgeIds.has(b.id))
+      );
+
+  const earnedCount = earnedBadgeIds.size;
+  const totalCount = allBadges?.length || 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
+          <Award className="w-5 h-5 text-yellow-500" /> Badges & Achievements
+        </h3>
+        {isOwnProfile && (
+          <Badge variant="secondary" className="text-sm">
+            {earnedCount} / {totalCount} unlocked
+          </Badge>
+        )}
+      </div>
+
+      {displayCategories.length === 0 ? (
+        <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
+          <Award className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p>No badges earned yet</p>
+          {isOwnProfile && <p className="text-sm">Keep racing to unlock achievements!</p>}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {displayCategories.map(category => {
+            const categoryBadges = badgesByCategory[category] || [];
+            const displayCategoryBadges = isOwnProfile 
+              ? categoryBadges 
+              : categoryBadges.filter(b => earnedBadgeIds.has(b.id));
+
+            if (displayCategoryBadges.length === 0) return null;
+
             return (
-              <div
-                key={pb.badge.id}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border"
-                style={{
-                  backgroundColor: `${pb.badge.iconColor}20`,
-                  borderColor: `${pb.badge.iconColor}40`,
-                }}
-              >
-                <Icon className="w-5 h-5" style={{ color: pb.badge.iconColor }} />
-                <div>
-                  <p className="font-medium text-sm">{pb.badge.name}</p>
-                  {pb.badge.description && <p className="text-xs text-muted-foreground">{pb.badge.description}</p>}
+              <div key={category} className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                  {BADGE_CATEGORY_LABELS[category] || category}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {displayCategoryBadges.map(badge => {
+                    const isUnlocked = earnedBadgeIds.has(badge.id);
+                    const CustomIcon = getBadgeIcon(badge.iconName);
+                    const FallbackIcon = getIconComponent(badge.iconName) || Award;
+
+                    return (
+                      <div
+                        key={badge.id}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                          isUnlocked 
+                            ? '' 
+                            : 'opacity-40 grayscale'
+                        }`}
+                        style={isUnlocked ? {
+                          backgroundColor: `${badge.iconColor}15`,
+                          borderColor: `${badge.iconColor}30`,
+                        } : {
+                          backgroundColor: 'hsl(var(--secondary) / 0.3)',
+                          borderColor: 'hsl(var(--border))',
+                        }}
+                        data-testid={`badge-${badge.slug}-${isUnlocked ? 'unlocked' : 'locked'}`}
+                      >
+                        <div 
+                          className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center relative ${
+                            isUnlocked ? '' : 'bg-muted'
+                          }`}
+                          style={isUnlocked ? { backgroundColor: `${badge.iconColor}25` } : {}}
+                        >
+                          {CustomIcon ? (
+                            <CustomIcon 
+                              className="w-6 h-6" 
+                              style={{ color: isUnlocked ? badge.iconColor : 'hsl(var(--muted-foreground))' }} 
+                            />
+                          ) : (
+                            <FallbackIcon 
+                              className="w-6 h-6" 
+                              style={{ color: isUnlocked ? badge.iconColor : 'hsl(var(--muted-foreground))' }} 
+                            />
+                          )}
+                          {!isUnlocked && (
+                            <div className="absolute -bottom-1 -right-1 bg-muted rounded-full p-0.5">
+                              <Lock className="w-3 h-3 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium text-sm truncate ${isUnlocked ? '' : 'text-muted-foreground'}`}>
+                            {badge.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {badge.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
-        </div>
-      ) : (
-        <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
-          <Award className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p>No badges earned yet</p>
-          <p className="text-sm">Keep racing to unlock achievements!</p>
         </div>
       )}
     </div>

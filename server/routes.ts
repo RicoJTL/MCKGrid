@@ -602,8 +602,8 @@ export async function registerRoutes(
   });
 
   app.post("/api/badges", requireAdmin, async (req, res) => {
-    const { name, description, iconName, iconColor, criteria, threshold } = req.body;
-    const badge = await storage.createBadge({ name, description, iconName, iconColor, criteria, threshold });
+    const { slug, name, description, category, iconName, iconColor, criteria, threshold } = req.body;
+    const badge = await storage.createBadge({ slug, name, description, category, iconName, iconColor, criteria, threshold });
     res.status(201).json(badge);
   });
 
@@ -613,11 +613,24 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  app.get("/api/badges/:id/profiles", requireAdmin, async (req: any, res) => {
+    const badgeId = Number(req.params.id);
+    const profiles = await storage.getProfilesWithBadge(badgeId);
+    res.json(profiles);
+  });
+
   app.post("/api/profiles/:id/badges/:badgeId", requireAdmin, async (req: any, res) => {
     const profileId = Number(req.params.id);
     const badgeId = Number(req.params.badgeId);
     const awarded = await storage.awardBadge(profileId, badgeId);
     res.json(awarded);
+  });
+
+  app.delete("/api/profiles/:id/badges/:badgeId", requireAdmin, async (req: any, res) => {
+    const profileId = Number(req.params.id);
+    const badgeId = Number(req.params.badgeId);
+    await storage.revokeBadge(profileId, badgeId);
+    res.sendStatus(204);
   });
 
   // === Season Goals (only accessible to profile owner or admins) ===

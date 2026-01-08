@@ -152,7 +152,7 @@ export default function PublicProfilePage() {
           </TabsContent>
 
           <TabsContent value="badges" className="mt-6">
-            <BadgesSection profile={mockProfile} />
+            <BadgesSection profile={mockProfile} isOwnProfile={false} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6 mt-6">

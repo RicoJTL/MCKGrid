@@ -219,7 +219,7 @@ export default function ProfilePage() {
             </TabsContent>
 
             <TabsContent value="badges" className="mt-6">
-              <BadgesSection profile={profile} />
+              <BadgesSection profile={profile} isOwnProfile={true} />
             </TabsContent>
 
             <TabsContent value="goals" className="mt-6">
