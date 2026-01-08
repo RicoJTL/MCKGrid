@@ -113,6 +113,11 @@ The system automatically awards badges based on driver performance:
 
 **Notifications:** When badges are awarded, notifications appear on the dashboard and can be dismissed by the user.
 
+**Multi-league badge support:** Season-end badges are tracked with a `leagueId` in the `profileBadges` table. This allows:
+- Drivers to earn the same badge (e.g., "mck_champion") from multiple leagues
+- Badge revocation to be scoped to specific leagues (syncing League A won't affect badges from League B)
+- Each badge instance tracks which league awarded it
+
 ## External Dependencies
 
 ### Database
