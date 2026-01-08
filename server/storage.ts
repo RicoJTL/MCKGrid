@@ -676,6 +676,14 @@ export class DatabaseStorage implements IStorage {
       and(eq(enrollments.competitionId, competitionId), eq(enrollments.profileId, profileId))
     );
     
+    // Delete any pending enrollment notifications for this competition/profile
+    await db.delete(enrollmentNotifications).where(
+      and(
+        eq(enrollmentNotifications.competitionId, competitionId),
+        eq(enrollmentNotifications.profileId, profileId)
+      )
+    );
+    
     // Get all races linked to this competition
     const competitionRaces = await db
       .select({ raceId: raceCompetitions.raceId })

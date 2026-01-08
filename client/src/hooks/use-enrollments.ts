@@ -58,6 +58,8 @@ export function useUnenrollDriver() {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'recent-results'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
+      // Invalidate enrollment notifications (cleaned up on unenroll)
+      queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
       toast({ title: "Driver removed from competition" });
     },
     onError: (error: Error) => {
