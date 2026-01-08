@@ -467,5 +467,177 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // === Driver Stats ===
+  app.get("/api/profiles/:id/stats", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const stats = await storage.getDriverStats(Number(req.params.id));
+    res.json(stats);
+  });
+
+  app.get("/api/profiles/:id/recent-results", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const limit = req.query.limit ? Number(req.query.limit) : 5;
+    const results = await storage.getRecentResults(Number(req.params.id), limit);
+    res.json(results);
+  });
+
+  // === Head-to-Head ===
+  app.get("/api/head-to-head/:id1/:id2", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const stats = await storage.getHeadToHeadStats(Number(req.params.id1), Number(req.params.id2));
+    res.json(stats);
+  });
+
+  // === Personal Bests ===
+  app.get("/api/profiles/:id/personal-bests", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const bests = await storage.getPersonalBests(Number(req.params.id));
+    res.json(bests);
+  });
+
+  app.post("/api/profiles/:id/personal-bests", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile || profile.id !== Number(req.params.id)) {
+      return res.status(403).json({ error: "Can only update your own personal bests" });
+    }
+    const { location, bestTime, raceId } = req.body;
+    const pb = await storage.updatePersonalBest(profile.id, location, bestTime, raceId);
+    res.json(pb);
+  });
+
+  // === Badges ===
+  app.get("/api/badges", async (req, res) => {
+    const badges = await storage.getBadges();
+    res.json(badges);
+  });
+
+  app.get("/api/profiles/:id/badges", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const badges = await storage.getProfileBadges(Number(req.params.id));
+    res.json(badges);
+  });
+
+  app.post("/api/badges", requireAdmin, async (req, res) => {
+    const { name, description, iconName, iconColor, criteria, threshold } = req.body;
+    const badge = await storage.createBadge({ name, description, iconName, iconColor, criteria, threshold });
+    res.status(201).json(badge);
+  });
+
+  app.post("/api/profiles/:id/badges/:badgeId", requireAdmin, async (req: any, res) => {
+    const profileId = Number(req.params.id);
+    const badgeId = Number(req.params.badgeId);
+    const awarded = await storage.awardBadge(profileId, badgeId);
+    res.json(awarded);
+  });
+
+  // === Season Goals ===
+  app.get("/api/profiles/:id/goals", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const leagueId = req.query.leagueId ? Number(req.query.leagueId) : undefined;
+    const goals = await storage.getSeasonGoals(Number(req.params.id), leagueId);
+    res.json(goals);
+  });
+
+  app.post("/api/profiles/:id/goals", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile || profile.id !== Number(req.params.id)) {
+      return res.status(403).json({ error: "Can only create your own goals" });
+    }
+    const { leagueId, goalType, targetValue } = req.body;
+    const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue });
+    res.status(201).json(goal);
+  });
+
+  app.patch("/api/goals/:id", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { targetValue, currentValue } = req.body;
+    const data: any = {};
+    if (targetValue !== undefined) data.targetValue = targetValue;
+    if (currentValue !== undefined) data.currentValue = currentValue;
+    const updated = await storage.updateSeasonGoal(Number(req.params.id), data);
+    res.json(updated);
+  });
+
+  app.delete("/api/goals/:id", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    await storage.deleteSeasonGoal(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
+  // === Race Check-ins ===
+  app.get("/api/races/:id/checkins", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const checkins = await storage.getRaceCheckins(Number(req.params.id));
+    res.json(checkins);
+  });
+
+  app.get("/api/races/:id/my-checkin", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    const checkin = await storage.getProfileCheckin(Number(req.params.id), profile.id);
+    res.json(checkin || null);
+  });
+
+  app.post("/api/races/:id/checkin", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.status(404).json({ error: "Profile not found" });
+    
+    const { status } = req.body;
+    if (!['confirmed', 'maybe', 'not_attending'].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+    
+    const checkin = await storage.setCheckin({
+      raceId: Number(req.params.id),
+      profileId: profile.id,
+      status,
+    });
+    res.json(checkin);
+  });
+
+  // === Calendar Export (iCal) ===
+  app.get("/api/calendar/races.ics", async (req: any, res) => {
+    const upcomingRaces = await storage.getAllUpcomingRaces();
+    
+    let ical = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MCK Grid//Race Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:MCK Grid Races
+`;
+    
+    for (const race of upcomingRaces) {
+      const startDate = new Date(race.date);
+      const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hour duration
+      const formatDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      
+      ical += `BEGIN:VEVENT
+UID:race-${race.id}@mckgrid
+DTSTAMP:${formatDate(new Date())}
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${race.name}
+LOCATION:${race.location}
+DESCRIPTION:${race.competitionName || 'MCK Grid Race'}
+END:VEVENT
+`;
+    }
+    
+    ical += 'END:VCALENDAR';
+    
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="mck-grid-races.ics"');
+    res.send(ical);
+  });
+
   return httpServer;
 }

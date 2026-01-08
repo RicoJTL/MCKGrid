@@ -1,10 +1,13 @@
 import { db } from "./db";
 import { 
   leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
+  badges, profileBadges, seasonGoals, raceCheckins, personalBests,
   type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
-  type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment
+  type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest,
+  type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment,
+  type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest
 } from "@shared/schema";
-import { eq, desc, and, inArray, sql } from "drizzle-orm";
+import { eq, desc, and, inArray, sql, gte, or } from "drizzle-orm";
 
 export interface IStorage {
   // Leagues
@@ -65,6 +68,48 @@ export interface IStorage {
   setMainCompetition(competitionId: number): Promise<void>;
   getMainLeague(): Promise<League | null>;
   setMainLeague(leagueId: number): Promise<void>;
+  
+  // Badges
+  getBadges(): Promise<Badge[]>;
+  getProfileBadges(profileId: number): Promise<(ProfileBadge & { badge: Badge })[]>;
+  awardBadge(profileId: number, badgeId: number): Promise<ProfileBadge>;
+  createBadge(badge: InsertBadge): Promise<Badge>;
+  
+  // Season Goals
+  getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
+  createSeasonGoal(goal: InsertSeasonGoal): Promise<SeasonGoal>;
+  updateSeasonGoal(id: number, data: Partial<SeasonGoal>): Promise<SeasonGoal>;
+  deleteSeasonGoal(id: number): Promise<void>;
+  
+  // Race Check-ins
+  getRaceCheckins(raceId: number): Promise<(RaceCheckin & { profile: Profile })[]>;
+  getProfileCheckin(raceId: number, profileId: number): Promise<RaceCheckin | undefined>;
+  setCheckin(data: InsertRaceCheckin): Promise<RaceCheckin>;
+  
+  // Personal Bests
+  getPersonalBests(profileId: number): Promise<PersonalBest[]>;
+  updatePersonalBest(profileId: number, location: string, bestTime: string, raceId?: number): Promise<PersonalBest>;
+  
+  // Driver Stats
+  getDriverStats(profileId: number): Promise<{
+    totalRaces: number;
+    totalPoints: number;
+    avgPosition: number;
+    wins: number;
+    podiums: number;
+    bestPosition: number;
+  }>;
+  
+  // Head-to-Head
+  getHeadToHeadStats(profileId1: number, profileId2: number): Promise<{
+    driver1Wins: number;
+    driver2Wins: number;
+    draws: number;
+    races: any[];
+  }>;
+  
+  // Quick Results
+  getRecentResults(profileId: number, limit?: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -515,6 +560,207 @@ export class DatabaseStorage implements IStorage {
       await tx.update(leagues).set({ isMain: false });
       await tx.update(leagues).set({ isMain: true }).where(eq(leagues.id, leagueId));
     });
+  }
+
+  // Badges
+  async getBadges(): Promise<Badge[]> {
+    return await db.select().from(badges);
+  }
+
+  async getProfileBadges(profileId: number): Promise<(ProfileBadge & { badge: Badge })[]> {
+    const result = await db
+      .select()
+      .from(profileBadges)
+      .innerJoin(badges, eq(profileBadges.badgeId, badges.id))
+      .where(eq(profileBadges.profileId, profileId))
+      .orderBy(desc(profileBadges.earnedAt));
+    
+    return result.map(r => ({
+      ...r.profile_badges,
+      badge: r.badges,
+    }));
+  }
+
+  async awardBadge(profileId: number, badgeId: number): Promise<ProfileBadge> {
+    const existing = await db.select().from(profileBadges)
+      .where(and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badgeId)));
+    if (existing.length > 0) return existing[0];
+    
+    const [badge] = await db.insert(profileBadges).values({ profileId, badgeId }).returning();
+    return badge;
+  }
+
+  async createBadge(badge: InsertBadge): Promise<Badge> {
+    const [newBadge] = await db.insert(badges).values(badge).returning();
+    return newBadge;
+  }
+
+  // Season Goals
+  async getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]> {
+    if (leagueId) {
+      return await db.select().from(seasonGoals)
+        .where(and(eq(seasonGoals.profileId, profileId), eq(seasonGoals.leagueId, leagueId)));
+    }
+    return await db.select().from(seasonGoals).where(eq(seasonGoals.profileId, profileId));
+  }
+
+  async createSeasonGoal(goal: InsertSeasonGoal): Promise<SeasonGoal> {
+    const [newGoal] = await db.insert(seasonGoals).values(goal).returning();
+    return newGoal;
+  }
+
+  async updateSeasonGoal(id: number, data: Partial<SeasonGoal>): Promise<SeasonGoal> {
+    const [updated] = await db.update(seasonGoals).set(data).where(eq(seasonGoals.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSeasonGoal(id: number): Promise<void> {
+    await db.delete(seasonGoals).where(eq(seasonGoals.id, id));
+  }
+
+  // Race Check-ins
+  async getRaceCheckins(raceId: number): Promise<(RaceCheckin & { profile: Profile })[]> {
+    const result = await db
+      .select()
+      .from(raceCheckins)
+      .innerJoin(profiles, eq(raceCheckins.profileId, profiles.id))
+      .where(eq(raceCheckins.raceId, raceId));
+    
+    return result.map(r => ({
+      ...r.race_checkins,
+      profile: r.profiles,
+    }));
+  }
+
+  async getProfileCheckin(raceId: number, profileId: number): Promise<RaceCheckin | undefined> {
+    const [checkin] = await db.select().from(raceCheckins)
+      .where(and(eq(raceCheckins.raceId, raceId), eq(raceCheckins.profileId, profileId)));
+    return checkin;
+  }
+
+  async setCheckin(data: InsertRaceCheckin): Promise<RaceCheckin> {
+    const existing = await this.getProfileCheckin(data.raceId, data.profileId);
+    if (existing) {
+      const [updated] = await db.update(raceCheckins)
+        .set({ status: data.status, checkedInAt: new Date() })
+        .where(eq(raceCheckins.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [newCheckin] = await db.insert(raceCheckins).values(data).returning();
+    return newCheckin;
+  }
+
+  // Personal Bests
+  async getPersonalBests(profileId: number): Promise<PersonalBest[]> {
+    return await db.select().from(personalBests)
+      .where(eq(personalBests.profileId, profileId))
+      .orderBy(personalBests.location);
+  }
+
+  async updatePersonalBest(profileId: number, location: string, bestTime: string, raceId?: number): Promise<PersonalBest> {
+    const existing = await db.select().from(personalBests)
+      .where(and(eq(personalBests.profileId, profileId), eq(personalBests.location, location)));
+    
+    if (existing.length > 0) {
+      const [updated] = await db.update(personalBests)
+        .set({ bestTime, raceId, achievedAt: new Date() })
+        .where(eq(personalBests.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+    
+    const [newPB] = await db.insert(personalBests)
+      .values({ profileId, location, bestTime, raceId })
+      .returning();
+    return newPB;
+  }
+
+  // Driver Stats
+  async getDriverStats(profileId: number): Promise<{
+    totalRaces: number;
+    totalPoints: number;
+    avgPosition: number;
+    wins: number;
+    podiums: number;
+    bestPosition: number;
+  }> {
+    const allResults = await db.select().from(results).where(eq(results.racerId, profileId));
+    
+    if (allResults.length === 0) {
+      return { totalRaces: 0, totalPoints: 0, avgPosition: 0, wins: 0, podiums: 0, bestPosition: 0 };
+    }
+    
+    const totalRaces = allResults.length;
+    const totalPoints = allResults.reduce((sum, r) => sum + r.points, 0);
+    const avgPosition = allResults.reduce((sum, r) => sum + r.position, 0) / totalRaces;
+    const wins = allResults.filter(r => r.position === 1).length;
+    const podiums = allResults.filter(r => r.position <= 3).length;
+    const bestPosition = Math.min(...allResults.map(r => r.position));
+    
+    return { totalRaces, totalPoints, avgPosition: Math.round(avgPosition * 10) / 10, wins, podiums, bestPosition };
+  }
+
+  // Head-to-Head
+  async getHeadToHeadStats(profileId1: number, profileId2: number): Promise<{
+    driver1Wins: number;
+    driver2Wins: number;
+    draws: number;
+    races: any[];
+  }> {
+    const driver1Results = await db
+      .select({ raceId: results.raceId, position: results.position })
+      .from(results)
+      .where(eq(results.racerId, profileId1));
+    
+    const driver2Results = await db
+      .select({ raceId: results.raceId, position: results.position })
+      .from(results)
+      .where(eq(results.racerId, profileId2));
+    
+    const driver2Map = new Map(driver2Results.map(r => [r.raceId, r.position]));
+    
+    let driver1Wins = 0;
+    let driver2Wins = 0;
+    let draws = 0;
+    const sharedRaces: any[] = [];
+    
+    for (const r1 of driver1Results) {
+      const d2Pos = driver2Map.get(r1.raceId);
+      if (d2Pos !== undefined) {
+        const race = await this.getRace(r1.raceId);
+        if (r1.position < d2Pos) {
+          driver1Wins++;
+          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 1 });
+        } else if (d2Pos < r1.position) {
+          driver2Wins++;
+          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 2 });
+        } else {
+          draws++;
+          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 0 });
+        }
+      }
+    }
+    
+    return { driver1Wins, driver2Wins, draws, races: sharedRaces };
+  }
+
+  // Quick Results
+  async getRecentResults(profileId: number, limit: number = 5): Promise<any[]> {
+    return await db
+      .select({
+        position: results.position,
+        points: results.points,
+        raceTime: results.raceTime,
+        raceName: races.name,
+        raceDate: races.date,
+        location: races.location,
+      })
+      .from(results)
+      .innerJoin(races, eq(results.raceId, races.id))
+      .where(eq(results.racerId, profileId))
+      .orderBy(desc(races.date))
+      .limit(limit);
   }
 }
 
