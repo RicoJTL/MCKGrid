@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType, DriverIcon } from "@shared/schema";
 import { DriverIconToken } from "@/components/driver-icon-token";
@@ -29,7 +29,7 @@ interface DriverStatsProps {
   isAdmin?: boolean;
 }
 
-export function DriverStatsDashboard({ profile }: DriverStatsProps) {
+export const DriverStatsDashboard = memo(function DriverStatsDashboard({ profile }: DriverStatsProps) {
   const { data: stats, isLoading } = useQuery<{
     totalRaces: number;
     totalPoints: number;
@@ -51,14 +51,14 @@ export function DriverStatsDashboard({ profile }: DriverStatsProps) {
     );
   }
 
-  const statCards = [
+  const statCards = useMemo(() => [
     { label: "Total Races", value: stats?.totalRaces || 0, icon: Trophy, color: "text-blue-400" },
     { label: "Total Points", value: stats?.totalPoints || 0, icon: TrendingUp, color: "text-green-400" },
     { label: "Wins", value: stats?.wins || 0, icon: Medal, color: "text-yellow-400" },
     { label: "Podiums", value: stats?.podiums || 0, icon: Award, color: "text-orange-400" },
     { label: "Avg Position", value: stats?.avgPosition || "--", icon: Target, color: "text-purple-400" },
     { label: "Best Finish", value: stats?.bestPosition ? `P${stats.bestPosition}` : "--", icon: Timer, color: "text-primary" },
-  ];
+  ], [stats]);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -73,9 +73,9 @@ export function DriverStatsDashboard({ profile }: DriverStatsProps) {
       ))}
     </div>
   );
-}
+});
 
-export function RecentResults({ profile }: DriverStatsProps) {
+export const RecentResults = memo(function RecentResults({ profile }: DriverStatsProps) {
   const { data: results, isLoading } = useQuery<any[]>({
     queryKey: ['/api/profiles', profile.id, 'recent-results'],
   });

@@ -1,4 +1,5 @@
 import { Switch, Route, Redirect } from "wouter";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,16 +7,30 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Eager load frequently accessed pages
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
-import LeaguesPage from "@/pages/LeaguesPage";
-import LeagueDetails from "@/pages/LeagueDetails";
-import CompetitionDetails from "@/pages/CompetitionDetails";
-import RaceDetails from "@/pages/RaceDetails";
-import ProfilePage from "@/pages/ProfilePage";
-import PublicProfilePage from "@/pages/PublicProfilePage";
-import AdminPanel from "@/pages/AdminPanel";
+
+// Lazy load less frequently accessed pages
+const LeaguesPage = lazy(() => import("@/pages/LeaguesPage"));
+const LeagueDetails = lazy(() => import("@/pages/LeagueDetails"));
+const CompetitionDetails = lazy(() => import("@/pages/CompetitionDetails"));
+const RaceDetails = lazy(() => import("@/pages/RaceDetails"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const PublicProfilePage = lazy(() => import("@/pages/PublicProfilePage"));
+const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
+
+function PageLoader() {
+  return (
+    <div className="p-6 space-y-4">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-32 w-full" />
+      <Skeleton className="h-32 w-full" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,7 +40,9 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   return (
     <Layout>
-      <Component />
+      <Suspense fallback={<PageLoader />}>
+        <Component />
+      </Suspense>
     </Layout>
   );
 }

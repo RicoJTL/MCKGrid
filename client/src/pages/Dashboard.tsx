@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, CACHE_TIMES } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { Competition, RaceCheckin, Badge as BadgeType, DriverIcon } from "@shared/schema";
 import { useMemo, useState, useEffect } from "react";
@@ -23,23 +23,28 @@ export default function Dashboard() {
   const { data: enrolledCompetitions } = useQuery<Competition[]>({
     queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
     enabled: !!profile?.id,
+    staleTime: CACHE_TIMES.USER_DATA,
   });
 
   const { data: allCompetitions } = useQuery<any[]>({
     queryKey: ['/api/competitions/active'],
+    staleTime: CACHE_TIMES.STABLE,
   });
 
   const { data: upcomingRacesData } = useQuery<any[]>({
     queryKey: ['/api/races/upcoming'],
+    staleTime: CACHE_TIMES.DYNAMIC,
   });
 
   const { data: mainCompetition } = useQuery<Competition | null>({
     queryKey: ['/api/competitions/main'],
+    staleTime: CACHE_TIMES.STABLE,
   });
 
   const { data: mainStandings } = useQuery<any[]>({
     queryKey: ['/api/competitions', mainCompetition?.id, 'standings'],
     enabled: !!mainCompetition?.id,
+    staleTime: CACHE_TIMES.DYNAMIC,
   });
 
   const { data: driverStats } = useQuery<{
@@ -52,11 +57,13 @@ export default function Dashboard() {
   }>({
     queryKey: ['/api/profiles', profile?.id, 'stats'],
     enabled: !!profile?.id && profile?.role === 'racer',
+    staleTime: CACHE_TIMES.USER_DATA,
   });
 
   const { data: recentResults } = useQuery<any[]>({
     queryKey: ['/api/profiles', profile?.id, 'recent-results'],
     enabled: !!profile?.id && profile?.role === 'racer',
+    staleTime: CACHE_TIMES.USER_DATA,
   });
 
   const iconsMap = useDriverIconsMap();
@@ -65,6 +72,7 @@ export default function Dashboard() {
   const { data: badgeNotifications } = useQuery<{ notification: { id: number; createdAt: string }; badge: BadgeType }[]>({
     queryKey: ['/api/badge-notifications'],
     enabled: !!profile?.id,
+    staleTime: CACHE_TIMES.NOTIFICATIONS,
   });
 
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
@@ -91,6 +99,7 @@ export default function Dashboard() {
   const { data: iconNotifications } = useQuery<{ notification: { id: number; createdAt: string }; icon: DriverIcon }[]>({
     queryKey: ['/api/driver-icon-notifications'],
     enabled: !!profile?.id,
+    staleTime: CACHE_TIMES.NOTIFICATIONS,
   });
 
   const [dismissedIconIds, setDismissedIconIds] = useState<Set<number>>(new Set());
@@ -118,6 +127,7 @@ export default function Dashboard() {
     queries: (upcomingRacesData || []).slice(0, 5).map((race: any) => ({
       queryKey: ['/api/races', race.id, 'my-checkin'],
       enabled: !!profile?.id && profile?.role === 'racer',
+      staleTime: CACHE_TIMES.DYNAMIC,
     })),
   });
 

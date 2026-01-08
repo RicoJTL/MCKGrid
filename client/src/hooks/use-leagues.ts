@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { type League, type Competition, type Race } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { CACHE_TIMES } from "@/lib/queryClient";
 
 export function useLeagues() {
   return useQuery({
@@ -11,6 +12,7 @@ export function useLeagues() {
       if (!res.ok) throw new Error("Failed to fetch leagues");
       return api.leagues.list.responses[200].parse(await res.json());
     },
+    staleTime: CACHE_TIMES.STABLE,
   });
 }
 
@@ -24,6 +26,7 @@ export function useLeague(id: number) {
       return api.leagues.get.responses[200].parse(await res.json());
     },
     enabled: !!id,
+    staleTime: CACHE_TIMES.STABLE,
   });
 }
 
@@ -64,6 +67,7 @@ export function useCompetitions(leagueId: number) {
       return api.competitions.list.responses[200].parse(await res.json());
     },
     enabled: !!leagueId,
+    staleTime: CACHE_TIMES.STABLE,
   });
 }
 
@@ -101,6 +105,7 @@ export function useRaces(competitionId: number) {
       return api.races.list.responses[200].parse(await res.json());
     },
     enabled: !!competitionId,
+    staleTime: CACHE_TIMES.STABLE,
   });
 }
 
@@ -114,6 +119,7 @@ export function useRace(id: number) {
       return api.races.get.responses[200].parse(await res.json());
     },
     enabled: !!id,
+    staleTime: CACHE_TIMES.STABLE,
   });
 }
 

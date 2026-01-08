@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { type Result } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { CACHE_TIMES } from "@/lib/queryClient";
 
 export function useResults(raceId: number) {
   return useQuery({
@@ -13,6 +14,7 @@ export function useResults(raceId: number) {
       return api.results.list.responses[200].parse(await res.json());
     },
     enabled: !!raceId,
+    staleTime: CACHE_TIMES.DYNAMIC,
   });
 }
 
