@@ -248,6 +248,10 @@ export class DatabaseStorage implements IStorage {
     return links.map(l => l.competition);
   }
   async deleteRace(id: number): Promise<void> {
+    // Get affected drivers before deleting results
+    const affectedResults = await db.select({ racerId: results.racerId }).from(results).where(eq(results.raceId, id));
+    const affectedRacerIds = Array.from(new Set(affectedResults.map(r => r.racerId)));
+    
     // Delete race results
     await db.delete(results).where(eq(results.raceId, id));
     // Delete race check-ins
@@ -258,6 +262,14 @@ export class DatabaseStorage implements IStorage {
     await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, id));
     // Delete the race
     await db.delete(races).where(eq(races.id, id));
+    
+    // Sync badges for all affected drivers (may revoke badges they no longer qualify for)
+    if (affectedRacerIds.length > 0) {
+      const { syncBadgesForDriver } = await import("./badge-automation");
+      for (const racerId of affectedRacerIds) {
+        await syncBadgesForDriver(racerId);
+      }
+    }
   }
 
   async getResults(raceId: number): Promise<Result[]> {
@@ -312,12 +324,19 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Auto-check and award badges for all drivers in the race
-    if (insertedResults.length > 0) {
-      const { checkAndAwardBadges } = await import("./badge-automation");
-      const uniqueRacerIds = Array.from(new Set(insertedResults.map(r => r.racerId).filter(Boolean)));
-      for (const racerId of uniqueRacerIds) {
-        await checkAndAwardBadges(racerId);
+    // Sync badges for all affected drivers (both new and removed)
+    const { syncBadgesForDriver } = await import("./badge-automation");
+    
+    // Sync for drivers in the new results (may award new badges)
+    const uniqueNewRacerIds = Array.from(new Set(insertedResults.map(r => r.racerId).filter(Boolean)));
+    for (const racerId of uniqueNewRacerIds) {
+      await syncBadgesForDriver(racerId);
+    }
+    
+    // Sync for drivers who were removed (may revoke badges they no longer qualify for)
+    for (const racerId of Array.from(existingRacerIds)) {
+      if (!newRacerIds.has(racerId)) {
+        await syncBadgesForDriver(racerId);
       }
     }
     
