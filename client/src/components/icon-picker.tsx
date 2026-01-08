@@ -5,7 +5,15 @@ import {
   Lightbulb, Heart, Diamond, Hexagon, Triangle, Square, Circle, Dice1,
   Bolt, Compass, Crosshair, Globe, Mountain, Anchor, Map, Navigation,
   Wind, Tornado, Sun, Moon, CloudRain, Snowflake, TreePine, Leaf,
-  Bird, Fish, Bug, Cat, Dog, Rabbit, Skull, Ghost
+  Bird, Fish, Bug, Cat, Dog, Rabbit, Skull, Ghost,
+  Swords, Gem, Crown as CrownIcon, Bomb, Axe, Sword, Wand2, Scroll,
+  Music, Headphones, Camera, Film, Tv, Radio, Gamepad2, Joystick,
+  Dumbbell, Bike, Footprints, Ticket, Gift, PartyPopper, Cake, Coffee,
+  Pizza, Apple, Cherry, Grape, Banana, Carrot, Cookie, IceCream,
+  Palette, Brush, PenTool, Pencil, Eraser, Ruler, Scissors, Paperclip,
+  Book, Bookmark, Library, GraduationCap, School, Building, Building2, Castle,
+  Factory, Landmark, Church, Home, Warehouse, Store, Hotel, Hospital,
+  Plane, Ship, Train, Bus, Truck, Tractor, Ambulance, Bike as Bicycle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const AVAILABLE_ICONS = [
-  // Racing & Competition
+  // Racing & Competition (12)
   { name: "Trophy", icon: Trophy },
   { name: "Flag", icon: Flag },
   { name: "Medal", icon: Medal },
@@ -27,8 +35,12 @@ export const AVAILABLE_ICONS = [
   { name: "Star", icon: Star },
   { name: "Target", icon: Target },
   { name: "Crosshair", icon: Crosshair },
+  { name: "Ticket", icon: Ticket },
+  { name: "Gift", icon: Gift },
+  { name: "PartyPopper", icon: PartyPopper },
+  { name: "Gem", icon: Gem },
   
-  // Speed & Energy
+  // Speed & Vehicles (14)
   { name: "Car", icon: Car },
   { name: "Gauge", icon: Gauge },
   { name: "Timer", icon: Timer },
@@ -38,8 +50,13 @@ export const AVAILABLE_ICONS = [
   { name: "Rocket", icon: Rocket },
   { name: "Wind", icon: Wind },
   { name: "Tornado", icon: Tornado },
+  { name: "Plane", icon: Plane },
+  { name: "Ship", icon: Ship },
+  { name: "Train", icon: Train },
+  { name: "Bus", icon: Bus },
+  { name: "Truck", icon: Truck },
   
-  // Shapes & Symbols
+  // Shapes & Symbols (14)
   { name: "Shield", icon: Shield },
   { name: "CircleDot", icon: CircleDot },
   { name: "Sparkles", icon: Sparkles },
@@ -53,30 +70,81 @@ export const AVAILABLE_ICONS = [
   { name: "Dice1", icon: Dice1 },
   { name: "Skull", icon: Skull },
   { name: "Ghost", icon: Ghost },
+  { name: "Bomb", icon: Bomb },
   
-  // Navigation & Exploration
+  // Fantasy & Gaming (10)
+  { name: "Swords", icon: Swords },
+  { name: "Sword", icon: Sword },
+  { name: "Axe", icon: Axe },
+  { name: "Wand2", icon: Wand2 },
+  { name: "Scroll", icon: Scroll },
+  { name: "Gamepad2", icon: Gamepad2 },
+  { name: "Joystick", icon: Joystick },
+  { name: "Dumbbell", icon: Dumbbell },
+  { name: "Bike", icon: Bike },
+  { name: "Footprints", icon: Footprints },
+  
+  // Navigation & Exploration (8)
   { name: "Compass", icon: Compass },
   { name: "Globe", icon: Globe },
   { name: "Mountain", icon: Mountain },
   { name: "Anchor", icon: Anchor },
   { name: "Map", icon: Map },
   { name: "Navigation", icon: Navigation },
+  { name: "Tractor", icon: Tractor },
+  { name: "Ambulance", icon: Ambulance },
   
-  // Nature & Weather
+  // Nature & Weather (10)
   { name: "Sun", icon: Sun },
   { name: "Moon", icon: Moon },
   { name: "CloudRain", icon: CloudRain },
   { name: "Snowflake", icon: Snowflake },
   { name: "TreePine", icon: TreePine },
   { name: "Leaf", icon: Leaf },
+  { name: "Apple", icon: Apple },
+  { name: "Cherry", icon: Cherry },
+  { name: "Grape", icon: Grape },
+  { name: "Carrot", icon: Carrot },
   
-  // Animals
+  // Animals (6)
   { name: "Bird", icon: Bird },
   { name: "Fish", icon: Fish },
   { name: "Bug", icon: Bug },
   { name: "Cat", icon: Cat },
   { name: "Dog", icon: Dog },
   { name: "Rabbit", icon: Rabbit },
+  
+  // Media & Entertainment (8)
+  { name: "Music", icon: Music },
+  { name: "Headphones", icon: Headphones },
+  { name: "Camera", icon: Camera },
+  { name: "Film", icon: Film },
+  { name: "Tv", icon: Tv },
+  { name: "Radio", icon: Radio },
+  { name: "Cake", icon: Cake },
+  { name: "Coffee", icon: Coffee },
+  
+  // Tools & Creative (10)
+  { name: "Palette", icon: Palette },
+  { name: "Brush", icon: Brush },
+  { name: "PenTool", icon: PenTool },
+  { name: "Pencil", icon: Pencil },
+  { name: "Eraser", icon: Eraser },
+  { name: "Ruler", icon: Ruler },
+  { name: "Scissors", icon: Scissors },
+  { name: "Paperclip", icon: Paperclip },
+  { name: "Pizza", icon: Pizza },
+  { name: "Cookie", icon: Cookie },
+  
+  // Buildings & Places (8)
+  { name: "Book", icon: Book },
+  { name: "Bookmark", icon: Bookmark },
+  { name: "GraduationCap", icon: GraduationCap },
+  { name: "Building", icon: Building },
+  { name: "Castle", icon: Castle },
+  { name: "Factory", icon: Factory },
+  { name: "Landmark", icon: Landmark },
+  { name: "Home", icon: Home },
 ] as const;
 
 export const DEFAULT_COLORS = [
@@ -109,7 +177,6 @@ export function IconPicker({ value, color, onChange }: IconPickerProps) {
   const [selectedIcon, setSelectedIcon] = useState(value || "Trophy");
   const [selectedColor, setSelectedColor] = useState(color || "#3b82f6");
 
-  // Sync internal state with props when they change
   useEffect(() => {
     setSelectedIcon(value || "Trophy");
   }, [value]);
@@ -146,7 +213,7 @@ export function IconPicker({ value, color, onChange }: IconPickerProps) {
         <div className="space-y-4">
           <div>
             <Label className="text-sm font-medium mb-2 block">Select Icon ({AVAILABLE_ICONS.length} available)</Label>
-            <ScrollArea className="h-48">
+            <ScrollArea className="h-56">
               <div className="grid grid-cols-8 gap-2 pr-3">
                 {AVAILABLE_ICONS.map(({ name, icon: Icon }) => (
                   <button
