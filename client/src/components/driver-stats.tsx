@@ -121,7 +121,7 @@ export const RecentResults = memo(function RecentResults({ profile }: DriverStat
       ))}
     </div>
   );
-}
+});
 
 export function PersonalBests({ profile }: DriverStatsProps) {
   const { data: bests, isLoading } = useQuery<PersonalBest[]>({
