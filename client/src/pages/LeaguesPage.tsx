@@ -1,5 +1,6 @@
 import { useLeagues, useCreateLeague, useUpdateLeague, useDeleteLeague } from "@/hooks/use-leagues";
 import { Plus, Trophy, Calendar, ArrowRight, MoreVertical, Pencil, Trash2, Star, CheckCircle2, Circle } from "lucide-react";
+import { IconPicker, getIconComponent } from "@/components/icon-picker";
 import { Link } from "wouter";
 import {
   Dialog,
@@ -45,6 +46,8 @@ export default function LeaguesPage() {
   const [open, setOpen] = useState(false);
   const [editingLeague, setEditingLeague] = useState<any>(null);
   const [deletingLeague, setDeletingLeague] = useState<any>(null);
+  const [editIconName, setEditIconName] = useState<string>("Trophy");
+  const [editIconColor, setEditIconColor] = useState<string>("#3b82f6");
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
@@ -75,7 +78,10 @@ export default function LeaguesPage() {
 
   const onUpdate = (data: any) => {
     if (!editingLeague) return;
-    updateLeague.mutate({ id: editingLeague.id, data }, {
+    updateLeague.mutate({ 
+      id: editingLeague.id, 
+      data: { ...data, iconName: editIconName, iconColor: editIconColor } 
+    }, {
       onSuccess: () => setEditingLeague(null)
     });
   };
@@ -148,10 +154,13 @@ export default function LeaguesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {leagues?.map((league) => (
+        {leagues?.map((league) => {
+          const LeagueIcon = getIconComponent(league.iconName) || Trophy;
+          const iconColor = league.iconColor || "#3b82f6";
+          return (
           <div key={league.id} className="group relative p-6 rounded-2xl bg-secondary/30 border border-white/5 hover:border-primary/50 transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Trophy className="w-24 h-24 rotate-12" />
+              <LeagueIcon className="w-24 h-24 rotate-12" style={{ color: iconColor }} />
             </div>
             
             {isAdmin && (
@@ -166,6 +175,8 @@ export default function LeaguesPage() {
                     <DropdownMenuItem onClick={(e) => {
                       e.stopPropagation();
                       editForm.reset({ name: league.name, description: league.description || "" });
+                      setEditIconName(league.iconName || "Trophy");
+                      setEditIconColor(league.iconColor || "#3b82f6");
                       setEditingLeague(league);
                     }}>
                       <Pencil className="w-4 h-4 mr-2" /> Edit
@@ -195,8 +206,11 @@ export default function LeaguesPage() {
             
             <Link href={`/leagues/${league.id}`}>
               <div className="relative z-10 cursor-pointer">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-                  <Trophy className="w-6 h-6 text-primary group-hover:text-white" />
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors"
+                  style={{ backgroundColor: `${iconColor}20` }}
+                >
+                  <LeagueIcon className="w-6 h-6" style={{ color: iconColor }} />
                 </div>
                 
                 <h3 className="text-xl font-bold font-display italic mb-2 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap">
@@ -227,7 +241,8 @@ export default function LeaguesPage() {
               </div>
             </Link>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Edit League Dialog */}
@@ -264,6 +279,17 @@ export default function LeaguesPage() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <FormLabel>Icon & Color</FormLabel>
+                <IconPicker
+                  value={editIconName}
+                  color={editIconColor}
+                  onChange={(iconName, color) => {
+                    setEditIconName(iconName);
+                    setEditIconColor(color);
+                  }}
+                />
+              </div>
               <Button type="submit" className="w-full bg-primary font-bold" disabled={updateLeague.isPending}>
                 Save Changes
               </Button>

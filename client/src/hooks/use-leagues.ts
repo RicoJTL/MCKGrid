@@ -220,12 +220,17 @@ export function useUpdateCompetition() {
       return await res.json();
     },
     onSuccess: (result) => {
+      // Invalidate all competition-related queries for immediate UI updates
       queryClient.invalidateQueries({ queryKey: ['competitions', result.leagueId] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['competition', result.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
+      queryClient.invalidateQueries({ queryKey: [api.leagues.get.path, result.leagueId] });
+      queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
       toast({ title: "Competition Updated" });
     },
   });

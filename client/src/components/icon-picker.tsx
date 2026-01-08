@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import {
   Trophy, Flag, Zap, Star, Crown, Target, Award, Flame,
   Rocket, Shield, Medal, Timer, Gauge, Car, CircleDot, Sparkles,
-  Lightbulb, Heart, Diamond, Hexagon, Triangle, Square, Circle, Dice1
+  Lightbulb, Heart, Diamond, Hexagon, Triangle, Square, Circle, Dice1,
+  Bolt, Compass, Crosshair, Globe, Mountain, Anchor, Map, Navigation,
+  Wind, Tornado, Sun, Moon, CloudRain, Snowflake, TreePine, Leaf,
+  Bird, Fish, Bug, Cat, Dog, Rabbit, Skull, Ghost
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,22 +15,32 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const AVAILABLE_ICONS = [
+  // Racing & Competition
   { name: "Trophy", icon: Trophy },
   { name: "Flag", icon: Flag },
-  { name: "Zap", icon: Zap },
-  { name: "Star", icon: Star },
-  { name: "Crown", icon: Crown },
-  { name: "Target", icon: Target },
+  { name: "Medal", icon: Medal },
   { name: "Award", icon: Award },
+  { name: "Crown", icon: Crown },
+  { name: "Star", icon: Star },
+  { name: "Target", icon: Target },
+  { name: "Crosshair", icon: Crosshair },
+  
+  // Speed & Energy
+  { name: "Car", icon: Car },
+  { name: "Gauge", icon: Gauge },
+  { name: "Timer", icon: Timer },
+  { name: "Zap", icon: Zap },
+  { name: "Bolt", icon: Bolt },
   { name: "Flame", icon: Flame },
   { name: "Rocket", icon: Rocket },
+  { name: "Wind", icon: Wind },
+  { name: "Tornado", icon: Tornado },
+  
+  // Shapes & Symbols
   { name: "Shield", icon: Shield },
-  { name: "Medal", icon: Medal },
-  { name: "Timer", icon: Timer },
-  { name: "Gauge", icon: Gauge },
-  { name: "Car", icon: Car },
   { name: "CircleDot", icon: CircleDot },
   { name: "Sparkles", icon: Sparkles },
   { name: "Lightbulb", icon: Lightbulb },
@@ -38,6 +51,32 @@ export const AVAILABLE_ICONS = [
   { name: "Square", icon: Square },
   { name: "Circle", icon: Circle },
   { name: "Dice1", icon: Dice1 },
+  { name: "Skull", icon: Skull },
+  { name: "Ghost", icon: Ghost },
+  
+  // Navigation & Exploration
+  { name: "Compass", icon: Compass },
+  { name: "Globe", icon: Globe },
+  { name: "Mountain", icon: Mountain },
+  { name: "Anchor", icon: Anchor },
+  { name: "Map", icon: Map },
+  { name: "Navigation", icon: Navigation },
+  
+  // Nature & Weather
+  { name: "Sun", icon: Sun },
+  { name: "Moon", icon: Moon },
+  { name: "CloudRain", icon: CloudRain },
+  { name: "Snowflake", icon: Snowflake },
+  { name: "TreePine", icon: TreePine },
+  { name: "Leaf", icon: Leaf },
+  
+  // Animals
+  { name: "Bird", icon: Bird },
+  { name: "Fish", icon: Fish },
+  { name: "Bug", icon: Bug },
+  { name: "Cat", icon: Cat },
+  { name: "Dog", icon: Dog },
+  { name: "Rabbit", icon: Rabbit },
 ] as const;
 
 export const DEFAULT_COLORS = [
@@ -103,27 +142,30 @@ export function IconPicker({ value, color, onChange }: IconPickerProps) {
           <span>Change Icon & Color</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80" align="start">
+      <PopoverContent className="w-96" align="start">
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium mb-2 block">Select Icon</Label>
-            <div className="grid grid-cols-6 gap-2">
-              {AVAILABLE_ICONS.map(({ name, icon: Icon }) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setSelectedIcon(name)}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all hover-elevate ${
-                    selectedIcon === name
-                      ? "bg-primary/20 ring-2 ring-primary"
-                      : "bg-secondary/50"
-                  }`}
-                  data-testid={`icon-option-${name}`}
-                >
-                  <Icon className="w-5 h-5" style={{ color: selectedColor }} />
-                </button>
-              ))}
-            </div>
+            <Label className="text-sm font-medium mb-2 block">Select Icon ({AVAILABLE_ICONS.length} available)</Label>
+            <ScrollArea className="h-48">
+              <div className="grid grid-cols-8 gap-2 pr-3">
+                {AVAILABLE_ICONS.map(({ name, icon: Icon }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setSelectedIcon(name)}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all hover-elevate ${
+                      selectedIcon === name
+                        ? "bg-primary/20 ring-2 ring-primary"
+                        : "bg-secondary/50"
+                    }`}
+                    data-testid={`icon-option-${name}`}
+                    title={name}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: selectedColor }} />
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
 
           <div>
