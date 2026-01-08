@@ -592,83 +592,85 @@ export default function AdminPanel() {
                     {profiles.map((profile) => (
                       <div 
                         key={profile.id} 
-                        className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                        className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
                         data-testid={`profile-row-${profile.id}`}
                       >
-                        <div className="flex items-center gap-4">
-                          <Avatar className="w-10 h-10">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="w-10 h-10 shrink-0">
                             <AvatarImage src={profile.profileImage || undefined} />
                             <AvatarFallback className="bg-primary/20 text-primary">
                               {(profile.driverName || profile.fullName || "?")[0]?.toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <Link href={`/profiles/${profile.id}`}>
-                              <p className="font-bold hover:text-primary cursor-pointer transition-colors inline-flex items-center gap-1">
-                                {profile.driverName || profile.fullName || "No name set"}
-                                <DriverIconsDisplay profileId={profile.id} size="sm" />
-                              </p>
-                            </Link>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link href={`/profiles/${profile.id}`}>
+                                <p className="font-bold hover:text-primary cursor-pointer transition-colors inline-flex items-center gap-1">
+                                  {profile.driverName || profile.fullName || "No name set"}
+                                  <DriverIconsDisplay profileId={profile.id} size="sm" />
+                                </p>
+                              </Link>
+                              {getAdminLevelDisplay(profile.adminLevel) && (
+                                <Badge 
+                                  variant="secondary"
+                                  className={getAdminBadgeStyles(profile.adminLevel)}
+                                >
+                                  {profile.adminLevel === 'super_admin' ? <Crown className="w-3 h-3 mr-1" /> : <ShieldCheck className="w-3 h-3 mr-1" />}
+                                  {getAdminLevelDisplay(profile.adminLevel)}
+                                </Badge>
+                              )}
+                              <Badge 
+                                variant="secondary"
+                                className={getRoleBadgeStyles(profile.role)}
+                              >
+                                {getRoleDisplay(profile.role)}
+                              </Badge>
+                            </div>
                             {profile.fullName && (
-                              <p className="text-sm text-muted-foreground">{profile.fullName}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">{profile.fullName}</p>
                             )}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {isSuperAdmin && profile.id !== currentProfile?.id && profile.adminLevel !== 'super_admin' && (
+                                <Select 
+                                  value={profile.adminLevel}
+                                  onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" })}
+                                >
+                                  <SelectTrigger className="w-28 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">No Admin</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  const roleValue = profile.role === 'admin' ? 'racer' : profile.role;
+                                  editForm.reset({
+                                    driverName: profile.driverName || "",
+                                    fullName: profile.fullName || "",
+                                    role: roleValue as "racer" | "spectator",
+                                  });
+                                  setEditingProfile(profile);
+                                }}
+                                data-testid={`button-edit-${profile.id}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="text-red-400 hover:text-red-300"
+                                onClick={() => setDeleteConfirmProfile(profile)}
+                                data-testid={`button-delete-${profile.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {getAdminLevelDisplay(profile.adminLevel) && (
-                            <Badge 
-                              variant="secondary"
-                              className={getAdminBadgeStyles(profile.adminLevel)}
-                            >
-                              {profile.adminLevel === 'super_admin' ? <Crown className="w-3 h-3 mr-1" /> : <ShieldCheck className="w-3 h-3 mr-1" />}
-                              {getAdminLevelDisplay(profile.adminLevel)}
-                            </Badge>
-                          )}
-                          <Badge 
-                            variant="secondary"
-                            className={getRoleBadgeStyles(profile.role)}
-                          >
-                            {getRoleDisplay(profile.role)}
-                          </Badge>
-                          {isSuperAdmin && profile.id !== currentProfile?.id && profile.adminLevel !== 'super_admin' && (
-                            <Select 
-                              value={profile.adminLevel}
-                              onValueChange={(value) => updateAdminLevel.mutate({ id: profile.id, adminLevel: value as "none" | "admin" })}
-                            >
-                              <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-admin-level-${profile.id}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">No Admin</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => {
-                              const roleValue = profile.role === 'admin' ? 'racer' : profile.role;
-                              editForm.reset({
-                                driverName: profile.driverName || "",
-                                fullName: profile.fullName || "",
-                                role: roleValue as "racer" | "spectator",
-                              });
-                              setEditingProfile(profile);
-                            }}
-                            data-testid={`button-edit-${profile.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-red-400 hover:text-red-300"
-                            onClick={() => setDeleteConfirmProfile(profile)}
-                            data-testid={`button-delete-${profile.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
                     ))}
