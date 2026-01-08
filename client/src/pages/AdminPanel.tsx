@@ -22,7 +22,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getIconComponent } from "@/components/icon-picker";
 import { PrestigeIconPicker } from "@/components/prestige-icon-picker";
 import type { Badge as BadgeType, Profile, DriverIcon } from "@shared/schema";
-import { DriverIconToken } from "@/components/driver-icon-token";
+import { DriverIconToken, DriverIconsDisplay } from "@/components/driver-icon-token";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -604,8 +604,9 @@ export default function AdminPanel() {
                           </Avatar>
                           <div>
                             <Link href={`/profiles/${profile.id}`}>
-                              <p className="font-bold hover:text-primary cursor-pointer transition-colors">
+                              <p className="font-bold hover:text-primary cursor-pointer transition-colors inline-flex items-center gap-1">
                                 {profile.driverName || profile.fullName || "No name set"}
+                                <DriverIconsDisplay profileId={profile.id} size="sm" />
                               </p>
                             </Link>
                             {profile.fullName && (
