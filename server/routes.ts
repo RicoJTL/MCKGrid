@@ -286,7 +286,7 @@ export async function registerRoutes(
   });
 
   app.patch("/api/leagues/:id", requireAdmin, async (req, res) => {
-    const { name, description, seasonStart, seasonEnd, status } = req.body;
+    const { name, description, seasonStart, seasonEnd, status, iconName, iconColor } = req.body;
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
@@ -298,6 +298,8 @@ export async function registerRoutes(
       }
       data.status = status;
     }
+    if (iconName !== undefined) data.iconName = iconName;
+    if (iconColor !== undefined) data.iconColor = iconColor;
     const updated = await storage.updateLeague(Number(req.params.id), data);
     res.json(updated);
   });
@@ -338,11 +340,13 @@ export async function registerRoutes(
   });
 
   app.patch("/api/competitions/:id", requireAdmin, async (req, res) => {
-    const { name, type, rules } = req.body;
+    const { name, type, rules, iconName, iconColor } = req.body;
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (type !== undefined) data.type = type;
     if (rules !== undefined) data.rules = rules;
+    if (iconName !== undefined) data.iconName = iconName;
+    if (iconColor !== undefined) data.iconColor = iconColor;
     const updated = await storage.updateCompetition(Number(req.params.id), data);
     res.json(updated);
   });
