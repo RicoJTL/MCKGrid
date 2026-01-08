@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -430,7 +431,11 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
             </div>
             <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
               <div className="text-2xl font-bold text-red-400">{h2h.driver2Wins}</div>
-              <div className="text-xs text-muted-foreground">{opponent.driverName || 'Opponent'}</div>
+              <Link href={`/profiles/${opponent.id}`}>
+                <div className="text-xs text-muted-foreground hover:text-primary cursor-pointer transition-colors">
+                  {opponent.driverName || 'Opponent'}
+                </div>
+              </Link>
             </div>
           </div>
 

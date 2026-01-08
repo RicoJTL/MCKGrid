@@ -122,30 +122,36 @@ export function RaceCheckinList({ raceId }: RaceCheckinListProps) {
       {confirmed.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {confirmed.map(c => (
-            <Badge key={c.id} variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              {c.profile.driverName || c.profile.fullName}
-            </Badge>
+            <Link key={c.id} href={`/profiles/${c.profile.id}`}>
+              <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/30 cursor-pointer hover:bg-green-500/20 transition-colors">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                {c.profile.driverName || c.profile.fullName}
+              </Badge>
+            </Link>
           ))}
         </div>
       )}
       {maybe.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {maybe.map(c => (
-            <Badge key={c.id} variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
-              <HelpCircle className="w-3 h-3 mr-1" />
-              {c.profile.driverName || c.profile.fullName}
-            </Badge>
+            <Link key={c.id} href={`/profiles/${c.profile.id}`}>
+              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30 cursor-pointer hover:bg-yellow-500/20 transition-colors">
+                <HelpCircle className="w-3 h-3 mr-1" />
+                {c.profile.driverName || c.profile.fullName}
+              </Badge>
+            </Link>
           ))}
         </div>
       )}
       {notAttending.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {notAttending.map(c => (
-            <Badge key={c.id} variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30">
-              <XCircle className="w-3 h-3 mr-1" />
-              {c.profile.driverName || c.profile.fullName}
-            </Badge>
+            <Link key={c.id} href={`/profiles/${c.profile.id}`}>
+              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 cursor-pointer hover:bg-red-500/20 transition-colors">
+                <XCircle className="w-3 h-3 mr-1" />
+                {c.profile.driverName || c.profile.fullName}
+              </Badge>
+            </Link>
           ))}
         </div>
       )}

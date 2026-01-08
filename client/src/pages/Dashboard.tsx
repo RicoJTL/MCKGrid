@@ -366,7 +366,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="text-xl font-bold font-display italic truncate">
-              {leader?.driverName || 'TBD'}
+              {leader ? (
+                <span 
+                  className="hover:text-primary cursor-pointer transition-colors"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLocation(`/profiles/${leader.racerId}`); }}
+                >
+                  {leader.driverName}
+                </span>
+              ) : 'TBD'}
             </div>
             {leader && (
               <div className="text-sm text-muted-foreground mt-1">
@@ -536,7 +543,9 @@ export default function Dashboard() {
                     }`}>
                       {index + 1}
                     </div>
-                    <span className="font-medium">{driver.driverName || 'Unknown'}</span>
+                    <Link href={`/profiles/${driver.racerId}`}>
+                      <span className="font-medium hover:text-primary cursor-pointer transition-colors">{driver.driverName || 'Unknown'}</span>
+                    </Link>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">

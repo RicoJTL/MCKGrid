@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useProfile, useAllProfiles, useAdminUpdateProfile, useCreateDriver, useDeleteProfile, useUpdateAdminLevel } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -321,7 +322,11 @@ export default function AdminPanel() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-bold">{profile.driverName || profile.fullName || "No name set"}</p>
+                            <Link href={`/profiles/${profile.id}`}>
+                              <p className="font-bold hover:text-primary cursor-pointer transition-colors">
+                                {profile.driverName || profile.fullName || "No name set"}
+                              </p>
+                            </Link>
                             {profile.fullName && (
                               <p className="text-sm text-muted-foreground">{profile.fullName}</p>
                             )}
