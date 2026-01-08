@@ -2,10 +2,10 @@ import { db } from "./db";
 import { 
   leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
   badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
-  driverIcons, profileDriverIcons, driverIconNotifications,
+  driverIcons, profileDriverIcons, driverIconNotifications, enrollmentNotifications,
   type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
-  type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
+  type DriverIcon, type ProfileDriverIcon, type DriverIconNotification, type EnrollmentNotification,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
   type InsertDriverIcon, type InsertProfileDriverIcon
@@ -88,6 +88,11 @@ export interface IStorage {
   // Badge Notifications
   getUnreadBadgeNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; badge: Badge }[]>;
   markBadgeNotificationsRead(profileId: number): Promise<void>;
+  
+  // Enrollment Notifications
+  getUnreadEnrollmentNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; competition: Competition }[]>;
+  markEnrollmentNotificationRead(notificationId: number): Promise<void>;
+  createEnrollmentNotification(profileId: number, competitionId: number): Promise<void>;
   
   // Driver Icons
   getDriverIcons(): Promise<DriverIcon[]>;
@@ -658,6 +663,10 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) return existing[0];
     
     const [enrollment] = await db.insert(enrollments).values({ competitionId, profileId }).returning();
+    
+    // Create enrollment notification for the driver
+    await db.insert(enrollmentNotifications).values({ profileId, competitionId });
+    
     return enrollment;
   }
 
@@ -895,6 +904,29 @@ export class DatabaseStorage implements IStorage {
     await db.update(badgeNotifications)
       .set({ isRead: true })
       .where(eq(badgeNotifications.profileId, profileId));
+  }
+
+  async getUnreadEnrollmentNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; competition: Competition }[]> {
+    const result = await db
+      .select({
+        notification: { id: enrollmentNotifications.id, createdAt: enrollmentNotifications.createdAt },
+        competition: competitions,
+      })
+      .from(enrollmentNotifications)
+      .innerJoin(competitions, eq(enrollmentNotifications.competitionId, competitions.id))
+      .where(and(eq(enrollmentNotifications.profileId, profileId), eq(enrollmentNotifications.isRead, false)))
+      .orderBy(desc(enrollmentNotifications.createdAt));
+    return result;
+  }
+
+  async markEnrollmentNotificationRead(notificationId: number): Promise<void> {
+    await db.update(enrollmentNotifications)
+      .set({ isRead: true })
+      .where(eq(enrollmentNotifications.id, notificationId));
+  }
+
+  async createEnrollmentNotification(profileId: number, competitionId: number): Promise<void> {
+    await db.insert(enrollmentNotifications).values({ profileId, competitionId });
   }
 
   async getProfilesWithBadge(badgeId: number): Promise<{ profileId: number; badgeId: number }[]> {

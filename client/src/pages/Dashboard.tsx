@@ -122,6 +122,20 @@ export default function Dashboard() {
     n => !dismissedIconIds.has(n.notification.id)
   );
 
+  // Enrollment notifications
+  const { data: enrollmentNotifications } = useQuery<{ notification: { id: number; createdAt: string }; competition: Competition }[]>({
+    queryKey: ['/api/enrollment-notifications'],
+    enabled: !!profile?.id,
+    staleTime: CACHE_TIMES.NOTIFICATIONS,
+  });
+
+  const handleDismissEnrollmentNotification = (notificationId: number, competitionId: number) => {
+    apiRequest("POST", `/api/enrollment-notifications/${notificationId}/mark-read`).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
+    });
+    setLocation(`/competitions/${competitionId}`);
+  };
+
   // Fetch check-in status for all upcoming races (only for racers)
   const checkinQueries = useQueries({
     queries: (upcomingRacesData || []).slice(0, 5).map((race: any) => ({
@@ -384,6 +398,51 @@ export default function Dashboard() {
             </div>
           </motion.div>
         )}
+
+        {/* Enrollment Notifications */}
+        {(enrollmentNotifications || []).map((item) => {
+          const CompIcon = getIconComponent(item.competition.iconName) || Flag;
+          const iconColor = item.competition.iconColor || "#3b82f6";
+          return (
+            <motion.div
+              key={item.notification.id}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
+              data-testid={`banner-enrollment-notification-${item.notification.id}`}
+              onClick={() => handleDismissEnrollmentNotification(item.notification.id, item.competition.id)}
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${iconColor}30` }}>
+                    <CompIcon className="w-6 h-6" style={{ color: iconColor }} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-blue-300">You've Been Enrolled!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      You've been added to <span className="font-medium text-foreground">{item.competition.name}</span>. Click to view.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-blue-300"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    apiRequest("POST", `/api/enrollment-notifications/${item.notification.id}/mark-read`).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
+                    });
+                  }}
+                  data-testid={`button-dismiss-enrollment-${item.notification.id}`}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
 
       {/* My Competitions - Scrollable Tabs */}

@@ -685,6 +685,23 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // Enrollment Notifications
+  app.get("/api/enrollment-notifications", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.json([]);
+    const notifications = await storage.getUnreadEnrollmentNotifications(profile.id);
+    res.json(notifications);
+  });
+
+  app.post("/api/enrollment-notifications/:id/mark-read", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const notificationId = Number(req.params.id);
+    await storage.markEnrollmentNotificationRead(notificationId);
+    res.sendStatus(204);
+  });
+
   // === Driver Icons ===
   app.get("/api/driver-icons", async (req, res) => {
     const icons = await storage.getDriverIcons();

@@ -152,6 +152,14 @@ export const badgeNotifications = pgTable("badge_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const enrollmentNotifications = pgTable("enrollment_notifications", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Driver Icons - special symbols awarded by admins that appear next to driver names
 export const driverIcons = pgTable("driver_icons", {
   id: serial("id").primaryKey(),
@@ -282,6 +290,7 @@ export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id:
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });
 export const insertPersonalBestSchema = createInsertSchema(personalBests).omit({ id: true, achievedAt: true });
 export const insertBadgeNotificationSchema = createInsertSchema(badgeNotifications).omit({ id: true, isRead: true, createdAt: true });
+export const insertEnrollmentNotificationSchema = createInsertSchema(enrollmentNotifications).omit({ id: true, isRead: true, createdAt: true });
 export const insertDriverIconSchema = createInsertSchema(driverIcons).omit({ id: true, isPredefined: true, createdAt: true });
 export const insertProfileDriverIconSchema = createInsertSchema(profileDriverIcons).omit({ id: true, awardedAt: true });
 export const insertDriverIconNotificationSchema = createInsertSchema(driverIconNotifications).omit({ id: true, isRead: true, createdAt: true });
@@ -315,6 +324,8 @@ export type RaceCheckin = typeof raceCheckins.$inferSelect;
 export type PersonalBest = typeof personalBests.$inferSelect;
 export type BadgeNotification = typeof badgeNotifications.$inferSelect;
 export type InsertBadgeNotification = z.infer<typeof insertBadgeNotificationSchema>;
+export type EnrollmentNotification = typeof enrollmentNotifications.$inferSelect;
+export type InsertEnrollmentNotification = z.infer<typeof insertEnrollmentNotificationSchema>;
 export type DriverIcon = typeof driverIcons.$inferSelect;
 export type ProfileDriverIcon = typeof profileDriverIcons.$inferSelect;
 export type DriverIconNotification = typeof driverIconNotifications.$inferSelect;
