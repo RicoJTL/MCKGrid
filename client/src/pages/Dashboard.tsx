@@ -129,12 +129,29 @@ export default function Dashboard() {
     staleTime: CACHE_TIMES.NOTIFICATIONS,
   });
 
-  const handleDismissEnrollmentNotification = (notificationId: number, competitionId: number) => {
-    apiRequest("POST", `/api/enrollment-notifications/${notificationId}/mark-read`).then(() => {
+  const [dismissedEnrollmentIds, setDismissedEnrollmentIds] = useState<Set<number>>(new Set());
+
+  const markEnrollmentReadMutation = useMutation({
+    mutationFn: (notificationId: number) => apiRequest("POST", `/api/enrollment-notifications/${notificationId}/mark-read`),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
-    });
+    },
+  });
+
+  const handleDismissEnrollmentNotification = (notificationId: number, competitionId: number) => {
+    setDismissedEnrollmentIds(prev => new Set([...prev, notificationId]));
+    markEnrollmentReadMutation.mutate(notificationId);
     setLocation(`/competitions/${competitionId}`);
   };
+
+  const handleDismissEnrollmentOnly = (notificationId: number) => {
+    setDismissedEnrollmentIds(prev => new Set([...prev, notificationId]));
+    markEnrollmentReadMutation.mutate(notificationId);
+  };
+
+  const visibleEnrollmentNotifications = (enrollmentNotifications || []).filter(
+    n => !dismissedEnrollmentIds.has(n.notification.id)
+  );
 
   // Fetch check-in status for all upcoming races (only for racers)
   const checkinQueries = useQueries({
@@ -400,7 +417,7 @@ export default function Dashboard() {
         )}
 
         {/* Enrollment Notifications */}
-        {(enrollmentNotifications || []).map((item) => {
+        {visibleEnrollmentNotifications.map((item) => {
           const CompIcon = getIconComponent(item.competition.iconName) || Flag;
           const iconColor = item.competition.iconColor || "#3b82f6";
           return (
@@ -431,10 +448,9 @@ export default function Dashboard() {
                   className="text-blue-300"
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    apiRequest("POST", `/api/enrollment-notifications/${item.notification.id}/mark-read`).then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
-                    });
+                    handleDismissEnrollmentOnly(item.notification.id);
                   }}
+                  disabled={markEnrollmentReadMutation.isPending}
                   data-testid={`button-dismiss-enrollment-${item.notification.id}`}
                 >
                   <X className="w-4 h-4" />
