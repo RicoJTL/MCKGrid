@@ -92,6 +92,7 @@ export default function AdminPanel() {
   const [showCreateBadge, setShowCreateBadge] = useState(false);
   const [showAwardBadge, setShowAwardBadge] = useState(false);
   const [selectedBadgeForAward, setSelectedBadgeForAward] = useState<BadgeType | null>(null);
+  const [deleteBadgeConfirm, setDeleteBadgeConfirm] = useState<BadgeType | null>(null);
   
   const { data: badges } = useQuery<BadgeType[]>({
     queryKey: ['/api/badges'],
@@ -127,6 +128,17 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
       setShowAwardBadge(false);
       setSelectedBadgeForAward(null);
+    }
+  });
+
+  const deleteBadgeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/badges/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/badges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'] });
+      setDeleteBadgeConfirm(null);
     }
   });
 
@@ -406,13 +418,22 @@ export default function AdminPanel() {
                       return (
                         <div
                           key={badge.id}
-                          className="p-4 rounded-xl border flex items-start gap-3"
+                          className="p-4 rounded-xl border flex items-start gap-3 relative group"
                           style={{
                             backgroundColor: `${badge.iconColor}10`,
                             borderColor: `${badge.iconColor}30`,
                           }}
                           data-testid={`badge-card-${badge.id}`}
                         >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => setDeleteBadgeConfirm(badge)}
+                            data-testid={`button-delete-badge-${badge.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                           <div 
                             className="p-2 rounded-lg"
                             style={{ backgroundColor: `${badge.iconColor}20` }}
@@ -777,6 +798,30 @@ export default function AdminPanel() {
                   </div>
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteBadgeConfirm} onOpenChange={(open) => !open && setDeleteBadgeConfirm(null)}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle>Delete Badge</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete the "{deleteBadgeConfirm?.name}" badge? This will also remove it from all drivers who have earned it.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setDeleteBadgeConfirm(null)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => deleteBadgeConfirm && deleteBadgeMutation.mutate(deleteBadgeConfirm.id)}
+                disabled={deleteBadgeMutation.isPending}
+                data-testid="button-confirm-delete-badge"
+              >
+                {deleteBadgeMutation.isPending ? "Deleting..." : "Delete Badge"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

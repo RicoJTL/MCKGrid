@@ -74,6 +74,7 @@ export interface IStorage {
   getProfileBadges(profileId: number): Promise<(ProfileBadge & { badge: Badge })[]>;
   awardBadge(profileId: number, badgeId: number): Promise<ProfileBadge>;
   createBadge(badge: InsertBadge): Promise<Badge>;
+  deleteBadge(id: number): Promise<void>;
   
   // Season Goals
   getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]>;
@@ -594,6 +595,11 @@ export class DatabaseStorage implements IStorage {
   async createBadge(badge: InsertBadge): Promise<Badge> {
     const [newBadge] = await db.insert(badges).values(badge).returning();
     return newBadge;
+  }
+
+  async deleteBadge(id: number): Promise<void> {
+    await db.delete(profileBadges).where(eq(profileBadges.badgeId, id));
+    await db.delete(badges).where(eq(badges.id, id));
   }
 
   // Season Goals

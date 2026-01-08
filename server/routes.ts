@@ -591,6 +591,12 @@ export async function registerRoutes(
     res.status(201).json(badge);
   });
 
+  app.delete("/api/badges/:id", requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.deleteBadge(id);
+    res.sendStatus(204);
+  });
+
   app.post("/api/profiles/:id/badges/:badgeId", requireAdmin, async (req: any, res) => {
     const profileId = Number(req.params.id);
     const badgeId = Number(req.params.badgeId);
