@@ -167,6 +167,7 @@ const BADGE_CATEGORY_LABELS: Record<string, string> = {
   hot_streaks: "Hot Streaks",
   season_heroes: "Season Heroes",
   legends: "Legends",
+  league_laughs: "League Laughs",
 };
 
 const BADGE_CATEGORY_ORDER = [
@@ -176,6 +177,7 @@ const BADGE_CATEGORY_ORDER = [
   "hot_streaks",
   "season_heroes",
   "legends",
+  "league_laughs",
 ];
 
 export function BadgesSection({ profile, isOwnProfile = false }: DriverStatsProps) {

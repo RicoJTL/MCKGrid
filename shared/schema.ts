@@ -18,7 +18,8 @@ export const badgeCategoryEnum = pgEnum("badge_category", [
   "race_highlights", 
   "hot_streaks", 
   "season_heroes", 
-  "legends"
+  "legends",
+  "league_laughs"
 ]);
 
 export const teams = pgTable("teams", {

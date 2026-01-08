@@ -220,6 +220,78 @@ export const BadgeIcons: Record<string, React.FC<BadgeIconProps>> = {
       <polygon points="12 9 13.5 11 12 10.5 10.5 11 12 9"/>
     </svg>
   ),
+  // League Laughs icons
+  badge_tomato: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="14" r="8"/>
+      <path d="M12 6c-1 0-2-.5-2-2s1-2 2-2 2 .5 2 2-1 2-2 2z"/>
+      <path d="M8 6c-2 1-3 0-4-1"/>
+      <path d="M16 6c2 1 3 0 4-1"/>
+      <path d="M9 11c1 1 2 1 3 0"/>
+      <path d="M15 11c-1 1-2 1-3 0"/>
+      <path d="M10 16h4"/>
+    </svg>
+  ),
+  badge_chart_down: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="2"/>
+      <polyline points="6 8 10 12 14 10 18 16"/>
+      <polyline points="14 16 18 16 18 12"/>
+      <path d="M6 6l2-2"/>
+      <circle cx="6" cy="6" r="1"/>
+    </svg>
+  ),
+  badge_yo_yo: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="16" r="6"/>
+      <circle cx="12" cy="16" r="2"/>
+      <path d="M12 2v8"/>
+      <path d="M8 4l4 2 4-2"/>
+      <path d="M10 16h4"/>
+    </svg>
+  ),
+  badge_heart_loyal: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      <path d="M12 8v6"/>
+      <path d="M9 11h6"/>
+    </svg>
+  ),
+  badge_arrow_down: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 8v8"/>
+      <path d="M8 12l4 4 4-4"/>
+      <path d="M8 16l4 4 4-4"/>
+    </svg>
+  ),
+  badge_drama: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="9" r="5"/>
+      <circle cx="16" cy="9" r="5"/>
+      <path d="M6 8c.5-.5 1-.8 2-.8s1.5.3 2 .8"/>
+      <path d="M7 11h2"/>
+      <path d="M14 7c.5.5 1 .8 2 .8s1.5-.3 2-.8"/>
+      <path d="M15 11h2"/>
+      <path d="M4 18c2-2 4-3 8-3s6 1 8 3"/>
+      <polygon points="12 14 10 18 14 18"/>
+    </svg>
+  ),
+  badge_persistent: ({ className, style }) => (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v4"/>
+      <path d="M12 18v4"/>
+      <path d="M4.93 4.93l2.83 2.83"/>
+      <path d="M16.24 16.24l2.83 2.83"/>
+      <path d="M2 12h4"/>
+      <path d="M18 12h4"/>
+      <path d="M4.93 19.07l2.83-2.83"/>
+      <path d="M16.24 7.76l2.83-2.83"/>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 10v4"/>
+      <path d="M10 12h4"/>
+    </svg>
+  ),
 };
 
 export function getBadgeIcon(iconName: string): React.FC<BadgeIconProps> | null {

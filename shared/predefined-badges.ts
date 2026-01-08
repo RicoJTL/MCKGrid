@@ -1,4 +1,4 @@
-export type BadgeCategory = "getting_started" | "milestones" | "race_highlights" | "hot_streaks" | "season_heroes" | "legends";
+export type BadgeCategory = "getting_started" | "milestones" | "race_highlights" | "hot_streaks" | "season_heroes" | "legends" | "league_laughs";
 
 export interface PredefinedBadge {
   slug: string;
@@ -19,6 +19,7 @@ export const BADGE_CATEGORIES: { value: BadgeCategory; label: string }[] = [
   { value: "hot_streaks", label: "Hot Streaks" },
   { value: "season_heroes", label: "Season Heroes" },
   { value: "legends", label: "Legends" },
+  { value: "league_laughs", label: "League Laughs" },
 ];
 
 export const PREDEFINED_BADGES: PredefinedBadge[] = [
@@ -316,5 +317,79 @@ export const PREDEFINED_BADGES: PredefinedBadge[] = [
     criteria: "hall_of_fame",
     threshold: 2,
     sortOrder: 27,
+  },
+
+  // League Laughs (7 badges)
+  {
+    slug: "plum_tomato_champion",
+    name: "Plum Tomato Champion",
+    description: "Finish last in 3 races",
+    category: "league_laughs",
+    iconName: "badge_tomato",
+    iconColor: "#dc2626",
+    criteria: "plum_tomato_champion",
+    threshold: 3,
+    sortOrder: 28,
+  },
+  {
+    slug: "quali_merchant",
+    name: "Quali Merchant",
+    description: "Most times qualifying higher than finishing",
+    category: "league_laughs",
+    iconName: "badge_chart_down",
+    iconColor: "#f97316",
+    criteria: "quali_merchant",
+    sortOrder: 29,
+  },
+  {
+    slug: "the_yo_yo",
+    name: "The Yo-Yo",
+    description: "Biggest swing between best and worst finish",
+    category: "league_laughs",
+    iconName: "badge_yo_yo",
+    iconColor: "#8b5cf6",
+    criteria: "the_yo_yo",
+    sortOrder: 30,
+  },
+  {
+    slug: "last_but_loyal",
+    name: "Last But Loyal",
+    description: "Finished last overall but attended every race",
+    category: "league_laughs",
+    iconName: "badge_heart_loyal",
+    iconColor: "#ec4899",
+    criteria: "last_but_loyal",
+    sortOrder: 31,
+  },
+  {
+    slug: "relegation_fodder",
+    name: "Relegation Fodder",
+    description: "Get relegated to the tier below twice",
+    category: "league_laughs",
+    iconName: "badge_arrow_down",
+    iconColor: "#ef4444",
+    criteria: "relegation_fodder",
+    threshold: 2,
+    sortOrder: 32,
+  },
+  {
+    slug: "most_dramatic_swing",
+    name: "Most Dramatic Swing",
+    description: "Biggest single-race finish improvement from worst grid spot",
+    category: "league_laughs",
+    iconName: "badge_drama",
+    iconColor: "#eab308",
+    criteria: "most_dramatic_swing",
+    sortOrder: 33,
+  },
+  {
+    slug: "league_laughs_never_quit",
+    name: "Never Quit",
+    description: "Participate in all races despite finishing bottom half",
+    category: "league_laughs",
+    iconName: "badge_persistent",
+    iconColor: "#22c55e",
+    criteria: "league_laughs_never_quit",
+    sortOrder: 34,
   },
 ];
