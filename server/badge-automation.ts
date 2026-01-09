@@ -4,15 +4,27 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { PREDEFINED_BADGES } from "@shared/predefined-badges";
 
 async function getCompletedGoalsCount(profileId: number): Promise<number> {
-  const goals = await db
-    .select()
+  // Get all goals with their league status
+  const goalsWithLeagues = await db
+    .select({
+      id: seasonGoals.id,
+      goalType: seasonGoals.goalType,
+      targetValue: seasonGoals.targetValue,
+      currentValue: seasonGoals.currentValue,
+      leagueId: seasonGoals.leagueId,
+      leagueStatus: leagues.status,
+    })
     .from(seasonGoals)
+    .innerJoin(leagues, eq(seasonGoals.leagueId, leagues.id))
     .where(eq(seasonGoals.profileId, profileId));
   
-  return goals.filter(goal => {
+  return goalsWithLeagues.filter(goal => {
     if (goal.goalType === 'position') {
-      return goal.currentValue > 0 && goal.currentValue <= goal.targetValue;
+      // Position goals only count as completed when league is finished
+      const meetsTarget = goal.currentValue > 0 && goal.currentValue <= goal.targetValue;
+      return meetsTarget && goal.leagueStatus === 'completed';
     }
+    // Other goals count as completed when target is met (can't be undone)
     return goal.currentValue >= goal.targetValue;
   }).length;
 }
