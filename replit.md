@@ -91,6 +91,13 @@ The tiered league system allows competitions to organize drivers into tiers (e.g
 - Prevents duplicate shuffles on race result edits
 - Creates tier movement notifications for affected drivers
 
+**Manual Admin Promotion/Relegation**:
+- Admins can manually promote/relegate drivers via Manage Drivers dialog
+- Uses dropdown menu on each driver badge with promote/relegate options
+- Creates movement notifications with 'admin_promotion' or 'admin_relegation' type
+- Independent from automatic shuffle system - does not affect race counters
+- API endpoint: POST `/api/tiered-leagues/:id/move-driver`
+
 **Frontend Hooks** (`client/src/hooks/use-tiered-leagues.ts`):
 - 15+ hooks for managing tiered leagues, tier names, assignments, and notifications
 - All mutations invalidate related queries for real-time UI updates
