@@ -292,6 +292,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-display font-bold italic text-white mb-2">
+            Welcome back, <span className="text-primary">{profile?.driverName || user?.firstName || 'Driver'}</span>
+          </h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <User className="w-4 h-4" />
+            {roleDisplay} Account
+          </p>
+        </div>
+        
+        {profile?.role === 'admin' && (
+          <Link href="/leagues">
+            <button className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+              Manage Leagues
+            </button>
+          </Link>
+        )}
+      </div>
+
       {/* Race Countdown Banner */}
       <AnimatePresence>
         {isRaceDay && nextRace && (
@@ -355,26 +375,6 @@ export default function Dashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-display font-bold italic text-white mb-2">
-            Welcome back, <span className="text-primary">{profile?.driverName || user?.firstName || 'Driver'}</span>
-          </h1>
-          <p className="text-muted-foreground flex items-center gap-2">
-            <User className="w-4 h-4" />
-            {roleDisplay} Account
-          </p>
-        </div>
-        
-        {profile?.role === 'admin' && (
-          <Link href="/leagues">
-            <button className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-              Manage Leagues
-            </button>
-          </Link>
-        )}
-      </div>
 
       {/* Check-in Reminder Banner for Drivers */}
       {profile?.role === 'racer' && racesNeedingCheckin.length > 0 && (
