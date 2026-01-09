@@ -561,15 +561,14 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
             const league = leagues?.find(l => l.id === goal.leagueId);
             const isPositionGoal = goal.goalType === 'position';
             const isLeagueCompleted = league?.status === 'completed';
-            // For position goals: only mark as truly completed when league is finished
-            // During season, show "On Track" status instead
+            // Position goals can ONLY be achieved when the league is completed
+            // Other goals are achieved immediately when target is met
             const meetsTarget = isPositionGoal 
               ? (goal.currentValue > 0 && goal.currentValue <= goal.targetValue)
               : goal.currentValue >= goal.targetValue;
             const isCompleted = isPositionGoal 
-              ? (meetsTarget && isLeagueCompleted)  // Position goals require league completion
+              ? (meetsTarget && isLeagueCompleted)  // Position goals REQUIRE league completion
               : meetsTarget;  // Other goals are complete once target is met
-            const isOnTrack = isPositionGoal && meetsTarget && !isLeagueCompleted;
             const isCountGoal = ['wins', 'podiums', 'races', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend'].includes(goal.goalType);
             const progress = isPositionGoal 
               ? (goal.currentValue > 0 ? Math.min(100, (goal.targetValue / goal.currentValue) * 100) : 0)
@@ -581,8 +580,6 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                 className={`p-4 rounded-xl border transition-all ${
                   isCompleted 
                     ? 'bg-green-500/10 border-green-500/30' 
-                    : isOnTrack
-                    ? 'bg-blue-500/10 border-blue-500/30'
                     : 'bg-secondary/30 border-white/5'
                 }`}
                 data-testid={`goal-card-${goal.id}`}
@@ -594,16 +591,10 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                         <CheckCircle className="w-4 h-4 text-green-500" />
                       </div>
                     )}
-                    {isOnTrack && (
-                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center" data-testid={`goal-ontrack-${goal.id}`}>
-                        <Target className="w-4 h-4 text-blue-400" />
-                      </div>
-                    )}
                     <div>
-                      <p className={`font-medium ${isCompleted ? 'text-green-400' : isOnTrack ? 'text-blue-400' : ''}`}>
+                      <p className={`font-medium ${isCompleted ? 'text-green-400' : ''}`}>
                         {goalLabels[goal.goalType] || goal.goalType}
                         {isCompleted && <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Achieved!</span>}
-                        {isOnTrack && <span className="ml-2 text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">On Track!</span>}
                       </p>
                       {league && <p className="text-xs text-muted-foreground">{league.name}</p>}
                     </div>
@@ -634,8 +625,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                           goal.currentValue === 2 ? 'bg-gray-400/20 text-gray-300' :
                           goal.currentValue === 3 ? 'bg-orange-600/20 text-orange-400' :
                           isCompleted ? 'bg-green-500/20 text-green-400' :
-                          isOnTrack ? 'bg-blue-500/20 text-blue-400' :
-                          goal.currentValue <= goal.targetValue ? 'bg-blue-500/20 text-blue-400' :
+                          goal.currentValue <= goal.targetValue ? 'bg-primary/20 text-primary' :
                           'bg-red-500/20 text-red-400'
                         }`}>
                           {goal.currentValue > 0 ? `P${goal.currentValue}` : '—'}
@@ -654,8 +644,10 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                         <span className="text-sm text-muted-foreground">Season not started</span>
                       ) : isCompleted ? (
                         <span className="text-sm text-green-400 font-medium">Goal achieved!</span>
-                      ) : isOnTrack ? (
-                        <span className="text-sm text-blue-400 font-medium">On track! Keep it up</span>
+                      ) : goal.currentValue <= goal.targetValue ? (
+                        <span className="text-sm text-muted-foreground">
+                          {isLeagueCompleted ? 'Goal achieved!' : `Currently P${goal.currentValue} (Target: P${goal.targetValue})`}
+                        </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">
                           {goal.currentValue - goal.targetValue} position{goal.currentValue - goal.targetValue !== 1 ? 's' : ''} to go

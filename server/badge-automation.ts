@@ -4,7 +4,7 @@ import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { PREDEFINED_BADGES } from "@shared/predefined-badges";
 
 async function getCompletedGoalsCount(profileId: number): Promise<number> {
-  // Get all goals with their league status
+  // Get all goals with their league status using leftJoin to include goals even if league is missing
   const goalsWithLeagues = await db
     .select({
       id: seasonGoals.id,
@@ -15,18 +15,24 @@ async function getCompletedGoalsCount(profileId: number): Promise<number> {
       leagueStatus: leagues.status,
     })
     .from(seasonGoals)
-    .innerJoin(leagues, eq(seasonGoals.leagueId, leagues.id))
+    .leftJoin(leagues, eq(seasonGoals.leagueId, leagues.id))
     .where(eq(seasonGoals.profileId, profileId));
   
-  return goalsWithLeagues.filter(goal => {
+  const completedGoals = goalsWithLeagues.filter(goal => {
     if (goal.goalType === 'position') {
-      // Position goals only count as completed when league is finished
+      // Position goals ONLY count as completed when league is finished
       const meetsTarget = goal.currentValue > 0 && goal.currentValue <= goal.targetValue;
-      return meetsTarget && goal.leagueStatus === 'completed';
+      const isLeagueCompleted = goal.leagueStatus === 'completed';
+      return meetsTarget && isLeagueCompleted;
     }
-    // Other goals count as completed when target is met (can't be undone)
+    // Other goals (wins, podiums, points, races, etc.) count as completed immediately when target is met
     return goal.currentValue >= goal.targetValue;
-  }).length;
+  });
+  
+  console.log(`[Badge] getCompletedGoalsCount for profile ${profileId}: ${completedGoals.length} completed goals`, 
+    goalsWithLeagues.map(g => ({ type: g.goalType, current: g.currentValue, target: g.targetValue, leagueStatus: g.leagueStatus })));
+  
+  return completedGoals.length;
 }
 
 interface DriverStats {
@@ -473,14 +479,19 @@ async function revokeBadge(profileId: number, slug: string): Promise<boolean> {
 }
 
 export async function syncBadgesForDriver(profileId: number): Promise<{ awarded: string[]; revoked: string[] }> {
+  console.log(`[Badge] syncBadgesForDriver called for profile ${profileId}`);
+  
   const stats = await getDriverStatsForBadges(profileId);
   const existingBadges = await getExistingBadges(profileId);
   const eligibleBadges = calculateEligibleBadges(stats);
   
   // Add goal_getter to eligible set if driver has 3+ completed goals
   const completedGoals = await getCompletedGoalsCount(profileId);
+  console.log(`[Badge] Profile ${profileId} has ${completedGoals} completed goals. Need 3 for goal_getter badge.`);
+  
   if (completedGoals >= 3) {
     eligibleBadges.add("goal_getter");
+    console.log(`[Badge] Profile ${profileId} is eligible for goal_getter badge!`);
   }
   
   const awarded: string[] = [];
