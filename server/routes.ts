@@ -822,9 +822,9 @@ export async function registerRoutes(
     const { leagueId, goalType, targetValue } = req.body;
     const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue });
     
-    // Sync badges after goal creation (for Goal Getter badge)
-    const { syncBadgesForDriver } = await import("./badge-automation");
-    await syncBadgesForDriver(profile.id);
+    // Fast sync for Goal Getter badge only (no need to recalculate race stats)
+    const { syncGoalBadges } = await import("./badge-automation");
+    await syncGoalBadges(profile.id);
     
     res.status(201).json(goal);
   });
@@ -847,9 +847,9 @@ export async function registerRoutes(
     if (currentValue !== undefined) data.currentValue = currentValue;
     const updated = await storage.updateSeasonGoal(Number(req.params.id), data);
     
-    // Sync badges after goal update (for Goal Getter badge)
-    const { syncBadgesForDriver } = await import("./badge-automation");
-    await syncBadgesForDriver(profile.id);
+    // Fast sync for Goal Getter badge only (no need to recalculate race stats)
+    const { syncGoalBadges } = await import("./badge-automation");
+    await syncGoalBadges(profile.id);
     
     res.json(updated);
   });
@@ -868,9 +868,9 @@ export async function registerRoutes(
     
     await storage.deleteSeasonGoal(Number(req.params.id));
     
-    // Sync badges after goal deletion (may revoke Goal Getter badge)
-    const { syncBadgesForDriver } = await import("./badge-automation");
-    await syncBadgesForDriver(profile.id);
+    // Fast sync for Goal Getter badge - will revoke if now below 3 completed goals
+    const { syncGoalBadges } = await import("./badge-automation");
+    await syncGoalBadges(profile.id);
     
     res.sendStatus(204);
   });
