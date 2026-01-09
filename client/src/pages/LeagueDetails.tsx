@@ -717,7 +717,7 @@ export default function LeagueDetails() {
               <Layers className="w-5 h-5" />
               {managingTieredLeague?.name} - Driver Assignments
             </DialogTitle>
-            <DialogDescription>Assign drivers to tiers. Drag or use buttons to move drivers between tiers.</DialogDescription>
+            <DialogDescription>Click on a driver to assign them to a tier. Click on assigned drivers for options to promote, relegate, or remove.</DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Available Drivers */}
@@ -729,31 +729,27 @@ export default function LeagueDetails() {
               <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-secondary/30 border border-white/5 min-h-[60px]">
                 {availableDrivers.length > 0 ? (
                   availableDrivers.map(driver => (
-                    <DropdownMenu key={driver.id}>
-                      <DropdownMenuTrigger asChild>
-                        <Badge 
-                          variant="outline" 
-                          className="cursor-pointer hover:bg-primary/20 transition-colors"
-                          data-testid={`driver-${driver.id}`}
-                        >
-                          {driver.driverName || driver.fullName}
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
+                    <div key={driver.id} className="flex items-center gap-1 bg-background/50 rounded-md p-1 pr-2 border border-white/10">
+                      <span className="text-sm font-medium px-2">{driver.driverName || driver.fullName}</span>
+                      <div className="flex gap-1">
                         {managingTieredLeague?.tierNames?.sort((a, b) => a.tierNumber - b.tierNumber).map(tn => (
-                          <DropdownMenuItem 
+                          <Button
                             key={tn.tierNumber}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs hover:bg-primary/20"
                             onClick={() => assignDriverToTier.mutate({
                               tieredLeagueId: managingTieredLeague.id,
                               profileId: driver.id,
                               tierNumber: tn.tierNumber
                             })}
+                            data-testid={`button-assign-${driver.id}-tier-${tn.tierNumber}`}
                           >
-                            Assign to {tn.name}
-                          </DropdownMenuItem>
+                            {tn.name}
+                          </Button>
                         ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">All drivers are assigned to tiers</p>
