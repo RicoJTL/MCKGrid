@@ -1,8 +1,9 @@
 import { useLeague, useCompetitions, useCreateCompetition, useUpdateLeague, useDeleteLeague, useUpdateCompetition, useDeleteCompetition } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle, UserCheck } from "lucide-react";
-import { useProfile } from "@/hooks/use-profile";
+import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle, UserCheck, Layers, ChevronUp, ChevronDown, Users, X } from "lucide-react";
+import { useProfile, useAllProfiles } from "@/hooks/use-profile";
+import { useTieredLeagues, useCreateTieredLeague, useUpdateTieredLeague, useDeleteTieredLeague, useTierAssignments, useAssignDriverToTier, useRemoveDriverFromTier, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
@@ -79,6 +80,34 @@ export default function LeagueDetails() {
   const [leagueIconColor, setLeagueIconColor] = useState(league?.iconColor || "#3b82f6");
   const [compIconName, setCompIconName] = useState("Flag");
   const [compIconColor, setCompIconColor] = useState("#3b82f6");
+  
+  // Tiered league state
+  const [openCreateTieredLeague, setOpenCreateTieredLeague] = useState(false);
+  const [editingTieredLeague, setEditingTieredLeague] = useState<TieredLeagueWithTiers | null>(null);
+  const [deletingTieredLeague, setDeletingTieredLeague] = useState<TieredLeagueWithTiers | null>(null);
+  const [managingTieredLeague, setManagingTieredLeague] = useState<TieredLeagueWithTiers | null>(null);
+  
+  // Tiered league form state
+  const [tieredLeagueName, setTieredLeagueName] = useState("");
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<number | null>(null);
+  const [numberOfTiers, setNumberOfTiers] = useState(4);
+  const [driversPerTier, setDriversPerTier] = useState(4);
+  const [racesBeforeShuffle, setRacesBeforeShuffle] = useState(3);
+  const [promotionSpots, setPromotionSpots] = useState(1);
+  const [relegationSpots, setRelegationSpots] = useState(1);
+  const [tierNames, setTierNames] = useState<string[]>(["S Tier", "A Tier", "B Tier", "C Tier"]);
+  
+  // Tiered league hooks
+  const { data: tieredLeagues } = useTieredLeagues(leagueId);
+  const { data: allProfiles } = useAllProfiles();
+  const createTieredLeague = useCreateTieredLeague();
+  const updateTieredLeague = useUpdateTieredLeague();
+  const deleteTieredLeague = useDeleteTieredLeague();
+  const assignDriverToTier = useAssignDriverToTier();
+  const removeDriverFromTier = useRemoveDriverFromTier();
+  
+  // Get assignments for the currently managed tiered league
+  const { data: currentAssignments } = useTierAssignments(managingTieredLeague?.id || 0);
 
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
 
@@ -146,6 +175,71 @@ export default function LeagueDetails() {
       onSuccess: () => setDeletingComp(null)
     });
   };
+
+  // Tiered league handlers
+  const resetTieredLeagueForm = () => {
+    setTieredLeagueName("");
+    setSelectedCompetitionId(null);
+    setNumberOfTiers(4);
+    setDriversPerTier(4);
+    setRacesBeforeShuffle(3);
+    setPromotionSpots(1);
+    setRelegationSpots(1);
+    setTierNames(["S Tier", "A Tier", "B Tier", "C Tier"]);
+  };
+
+  const handleCreateTieredLeague = () => {
+    if (!selectedCompetitionId || !tieredLeagueName) return;
+    createTieredLeague.mutate({
+      name: tieredLeagueName,
+      leagueId,
+      parentCompetitionId: selectedCompetitionId,
+      numberOfTiers,
+      driversPerTier,
+      racesBeforeShuffle,
+      promotionSpots,
+      relegationSpots,
+      tierNames: tierNames.slice(0, numberOfTiers),
+    }, {
+      onSuccess: () => {
+        setOpenCreateTieredLeague(false);
+        resetTieredLeagueForm();
+      }
+    });
+  };
+
+  const handleDeleteTieredLeague = () => {
+    if (!deletingTieredLeague) return;
+    deleteTieredLeague.mutate({ id: deletingTieredLeague.id, leagueId }, {
+      onSuccess: () => setDeletingTieredLeague(null)
+    });
+  };
+
+  const handleTierCountChange = (newCount: number) => {
+    setNumberOfTiers(newCount);
+    const defaultNames = ["S Tier", "A Tier", "B Tier", "C Tier", "D Tier", "E Tier", "F Tier", "G Tier"];
+    if (newCount > tierNames.length) {
+      setTierNames([...tierNames, ...defaultNames.slice(tierNames.length, newCount)]);
+    } else {
+      setTierNames(tierNames.slice(0, newCount));
+    }
+  };
+
+  // Get drivers available for assignment (racers not already assigned)
+  const availableDrivers = allProfiles?.filter(p => 
+    p.role === 'racer' && 
+    !currentAssignments?.some(a => a.profileId === p.id)
+  ) || [];
+
+  // Group assignments by tier
+  const assignmentsByTier = managingTieredLeague?.tierNames?.map(tn => ({
+    tierNumber: tn.tierNumber,
+    tierName: tn.name,
+    drivers: currentAssignments?.filter(a => a.tierNumber === tn.tierNumber).map(a => ({
+      ...a,
+      profile: allProfiles?.find(p => p.id === a.profileId)
+    })) || []
+  })) || [];
 
   if (loadingLeague || loadingCompetitions) return (
     <div className="space-y-6">
@@ -358,6 +452,336 @@ export default function LeagueDetails() {
           </div>
         )}
       </div>
+
+      {/* Tiered Leagues Section - Admin Only */}
+      {isAdmin && (
+        <>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="text-2xl font-display font-bold italic flex items-center gap-2">
+              <Layers className="w-6 h-6 text-primary" />
+              Tiered Leagues
+            </h2>
+            <Dialog open={openCreateTieredLeague} onOpenChange={(open) => {
+              if (!open) resetTieredLeagueForm();
+              setOpenCreateTieredLeague(open);
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90 font-bold" data-testid="button-create-tiered-league">
+                  <Plus className="w-4 h-4 mr-2" /> Create Tiered League
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-white/10 max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create Tiered League</DialogTitle>
+                  <DialogDescription>Configure tiers with promotion and relegation mechanics</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Name</label>
+                    <Input 
+                      placeholder="e.g. Pro Division" 
+                      value={tieredLeagueName}
+                      onChange={(e) => setTieredLeagueName(e.target.value)}
+                      data-testid="input-tiered-league-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Parent Competition</label>
+                    <Select 
+                      value={selectedCompetitionId?.toString() || ""} 
+                      onValueChange={(v) => setSelectedCompetitionId(parseInt(v))}
+                    >
+                      <SelectTrigger data-testid="select-parent-competition">
+                        <SelectValue placeholder="Select competition..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {competitions?.map(comp => (
+                          <SelectItem key={comp.id} value={comp.id.toString()}>{comp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Points from this competition determine tier standings</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Number of Tiers</label>
+                      <Select value={numberOfTiers.toString()} onValueChange={(v) => handleTierCountChange(parseInt(v))}>
+                        <SelectTrigger data-testid="select-number-of-tiers">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n} Tiers</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Drivers per Tier</label>
+                      <Select value={driversPerTier.toString()} onValueChange={(v) => setDriversPerTier(parseInt(v))}>
+                        <SelectTrigger data-testid="select-drivers-per-tier">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[2, 3, 4, 5, 6, 7, 8, 10, 12].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n} Drivers</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Races Before Shuffle</label>
+                      <Select value={racesBeforeShuffle.toString()} onValueChange={(v) => setRacesBeforeShuffle(parseInt(v))}>
+                        <SelectTrigger data-testid="select-races-before-shuffle">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Promotion Spots</label>
+                      <Select value={promotionSpots.toString()} onValueChange={(v) => setPromotionSpots(parseInt(v))}>
+                        <SelectTrigger data-testid="select-promotion-spots">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Relegation Spots</label>
+                      <Select value={relegationSpots.toString()} onValueChange={(v) => setRelegationSpots(parseInt(v))}>
+                        <SelectTrigger data-testid="select-relegation-spots">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4].map(n => (
+                            <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tier Names</label>
+                    <div className="space-y-2">
+                      {tierNames.slice(0, numberOfTiers).map((name, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Badge variant="outline" className="w-8 justify-center">{i + 1}</Badge>
+                          <Input 
+                            value={name}
+                            onChange={(e) => {
+                              const newNames = [...tierNames];
+                              newNames[i] = e.target.value;
+                              setTierNames(newNames);
+                            }}
+                            placeholder={`Tier ${i + 1} name`}
+                            data-testid={`input-tier-name-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleCreateTieredLeague} 
+                    className="w-full bg-primary font-bold" 
+                    disabled={createTieredLeague.isPending || !tieredLeagueName || !selectedCompetitionId}
+                    data-testid="button-submit-tiered-league"
+                  >
+                    Create Tiered League
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Tiered Leagues Grid */}
+          <div className="grid grid-cols-1 gap-4">
+            {tieredLeagues?.map((tl) => {
+              const parentComp = competitions?.find(c => c.id === tl.parentCompetitionId);
+              return (
+                <div key={tl.id} className="p-6 rounded-xl bg-secondary/30 border border-white/5 hover:bg-white/5 transition-all">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <Layers className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold font-display italic">{tl.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {tl.numberOfTiers} tiers, {tl.driversPerTier} drivers each | Shuffle after {tl.racesBeforeShuffle} races
+                        </p>
+                        {parentComp && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Based on: {parentComp.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setManagingTieredLeague(tl)}
+                        data-testid={`button-manage-tiers-${tl.id}`}
+                      >
+                        <Users className="w-4 h-4 mr-1" />
+                        Manage Drivers
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" data-testid={`button-tiered-league-menu-${tl.id}`}>
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setDeletingTieredLeague(tl)} className="text-destructive">
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  {/* Show tier breakdown */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {tl.tierNames?.sort((a, b) => a.tierNumber - b.tierNumber).map(tn => (
+                      <Badge key={tn.id} variant="secondary" className="text-xs">
+                        {tn.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {(!tieredLeagues || tieredLeagues.length === 0) && (
+              <div className="text-center py-12 border border-dashed border-white/10 rounded-xl text-muted-foreground">
+                <Layers className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>No tiered leagues configured</p>
+                <p className="text-sm">Create a tiered league to organize drivers into skill-based tiers</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Manage Drivers Dialog */}
+      <Dialog open={!!managingTieredLeague} onOpenChange={(open) => !open && setManagingTieredLeague(null)}>
+        <DialogContent className="bg-card border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="w-5 h-5" />
+              {managingTieredLeague?.name} - Driver Assignments
+            </DialogTitle>
+            <DialogDescription>Assign drivers to tiers. Drag or use buttons to move drivers between tiers.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Available Drivers */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Available Drivers ({availableDrivers.length})
+              </h4>
+              <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-secondary/30 border border-white/5 min-h-[60px]">
+                {availableDrivers.length > 0 ? (
+                  availableDrivers.map(driver => (
+                    <DropdownMenu key={driver.id}>
+                      <DropdownMenuTrigger asChild>
+                        <Badge 
+                          variant="outline" 
+                          className="cursor-pointer hover:bg-primary/20 transition-colors"
+                          data-testid={`driver-${driver.id}`}
+                        >
+                          {driver.driverName || driver.fullName}
+                        </Badge>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {managingTieredLeague?.tierNames?.sort((a, b) => a.tierNumber - b.tierNumber).map(tn => (
+                          <DropdownMenuItem 
+                            key={tn.tierNumber}
+                            onClick={() => assignDriverToTier.mutate({
+                              tieredLeagueId: managingTieredLeague.id,
+                              profileId: driver.id,
+                              tierNumber: tn.tierNumber
+                            })}
+                          >
+                            Assign to {tn.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">All drivers are assigned to tiers</p>
+                )}
+              </div>
+            </div>
+
+            {/* Tier Groups */}
+            {assignmentsByTier.map(tier => (
+              <div key={tier.tierNumber} className="space-y-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Badge className="bg-primary/20 text-primary border-primary/30">{tier.tierName}</Badge>
+                  <span className="text-muted-foreground">({tier.drivers.length} / {managingTieredLeague?.driversPerTier})</span>
+                </h4>
+                <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-secondary/30 border border-white/5 min-h-[60px]">
+                  {tier.drivers.length > 0 ? (
+                    tier.drivers.map(assignment => (
+                      <Badge 
+                        key={assignment.id}
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        {assignment.profile?.driverName || assignment.profile?.fullName || 'Unknown'}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-4 w-4 ml-1 hover:bg-destructive/20"
+                          onClick={() => removeDriverFromTier.mutate({
+                            tieredLeagueId: managingTieredLeague!.id,
+                            profileId: assignment.profileId
+                          })}
+                          data-testid={`button-remove-driver-${assignment.profileId}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No drivers in this tier</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Tiered League Alert */}
+      <AlertDialog open={!!deletingTieredLeague} onOpenChange={(open) => !open && setDeletingTieredLeague(null)}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tiered League?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deletingTieredLeague?.name}" and all tier assignments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTieredLeague} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit League Dialog */}
       <Dialog open={openEditLeague} onOpenChange={(open) => {
