@@ -135,11 +135,12 @@ export function useUpdateTieredLeague() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: number } & Partial<TieredLeague>) => {
+    mutationFn: async ({ id, leagueId, data }: { id: number; leagueId: number; data: Partial<TieredLeague> & { tierNames?: string[] } }) => {
       return apiRequest("PATCH", `/api/tiered-leagues/${id}`, data);
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, leagueId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/leagues', leagueId, 'tiered-leagues'] });
       toast({ title: "Tiered league updated successfully" });
     },
     onError: (error: Error) => {

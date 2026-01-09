@@ -215,6 +215,28 @@ export default function LeagueDetails() {
     });
   };
 
+  const handleUpdateTieredLeague = () => {
+    if (!editingTieredLeague || !tieredLeagueName) return;
+    updateTieredLeague.mutate({
+      id: editingTieredLeague.id,
+      leagueId,
+      data: {
+        name: tieredLeagueName,
+        numberOfTiers,
+        driversPerTier,
+        racesBeforeShuffle,
+        promotionSpots,
+        relegationSpots,
+        tierNames: tierNames.slice(0, numberOfTiers),
+      }
+    }, {
+      onSuccess: () => {
+        setEditingTieredLeague(null);
+        resetTieredLeagueForm();
+      }
+    });
+  };
+
   const handleTierCountChange = (newCount: number) => {
     setNumberOfTiers(newCount);
     const defaultNames = ["S Tier", "A Tier", "B Tier", "C Tier", "D Tier", "E Tier", "F Tier", "G Tier"];
@@ -644,6 +666,19 @@ export default function LeagueDetails() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setEditingTieredLeague(tl);
+                            setTieredLeagueName(tl.name);
+                            setSelectedCompetitionId(tl.parentCompetitionId);
+                            setNumberOfTiers(tl.numberOfTiers);
+                            setDriversPerTier(tl.driversPerTier);
+                            setRacesBeforeShuffle(tl.racesBeforeShuffle);
+                            setPromotionSpots(tl.promotionSpots);
+                            setRelegationSpots(tl.relegationSpots);
+                            setTierNames(tl.tierNames?.sort((a, b) => a.tierNumber - b.tierNumber).map(t => t.name) || []);
+                          }}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setDeletingTieredLeague(tl)} className="text-destructive">
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
                           </DropdownMenuItem>
@@ -782,6 +817,136 @@ export default function LeagueDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Tiered League Dialog */}
+      <Dialog open={!!editingTieredLeague} onOpenChange={(open) => {
+        if (!open) {
+          setEditingTieredLeague(null);
+          resetTieredLeagueForm();
+        }
+      }}>
+        <DialogContent className="bg-card border-white/10 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Tiered League</DialogTitle>
+            <DialogDescription>Update tiered league configuration</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input 
+                placeholder="e.g. Pro Division" 
+                value={tieredLeagueName}
+                onChange={(e) => setTieredLeagueName(e.target.value)}
+                data-testid="input-edit-tiered-league-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Parent Competition</label>
+              <p className="text-sm p-2 rounded bg-secondary/50">
+                {competitions?.find(c => c.id === selectedCompetitionId)?.name || 'Unknown'}
+              </p>
+              <p className="text-xs text-muted-foreground">Parent competition cannot be changed after creation</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Number of Tiers</label>
+                <Select value={numberOfTiers.toString()} onValueChange={(v) => handleTierCountChange(parseInt(v))}>
+                  <SelectTrigger data-testid="edit-select-number-of-tiers">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n} Tiers</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Drivers per Tier</label>
+                <Select value={driversPerTier.toString()} onValueChange={(v) => setDriversPerTier(parseInt(v))}>
+                  <SelectTrigger data-testid="edit-select-drivers-per-tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2, 3, 4, 5, 6, 7, 8, 10, 12].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n} Drivers</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Races Before Shuffle</label>
+                <Select value={racesBeforeShuffle.toString()} onValueChange={(v) => setRacesBeforeShuffle(parseInt(v))}>
+                  <SelectTrigger data-testid="edit-select-races-before-shuffle">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Promotion Spots</label>
+                <Select value={promotionSpots.toString()} onValueChange={(v) => setPromotionSpots(parseInt(v))}>
+                  <SelectTrigger data-testid="edit-select-promotion-spots">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Relegation Spots</label>
+                <Select value={relegationSpots.toString()} onValueChange={(v) => setRelegationSpots(parseInt(v))}>
+                  <SelectTrigger data-testid="edit-select-relegation-spots">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tier Names</label>
+              <div className="space-y-2">
+                {tierNames.slice(0, numberOfTiers).map((name, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Badge variant="outline" className="w-8 justify-center">{i + 1}</Badge>
+                    <Input 
+                      value={name}
+                      onChange={(e) => {
+                        const newNames = [...tierNames];
+                        newNames[i] = e.target.value;
+                        setTierNames(newNames);
+                      }}
+                      placeholder={`Tier ${i + 1} name`}
+                      data-testid={`edit-input-tier-name-${i}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Button 
+              onClick={handleUpdateTieredLeague} 
+              className="w-full bg-primary font-bold" 
+              disabled={updateTieredLeague.isPending || !tieredLeagueName}
+              data-testid="button-update-tiered-league"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit League Dialog */}
       <Dialog open={openEditLeague} onOpenChange={(open) => {
