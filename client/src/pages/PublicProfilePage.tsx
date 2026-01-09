@@ -4,9 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarChart3, Award, Sparkles } from "lucide-react";
+import { ArrowLeft, UserCircle, Trophy, Calendar, MapPin, Shield, Car, Eye, BarChart3, Award, Sparkles, Target } from "lucide-react";
 import { format } from "date-fns";
-import { DriverStatsDashboard, RecentResults, BadgesSection, DriverIconsSection } from "@/components/driver-stats";
+import { DriverStatsDashboard, RecentResults, BadgesSection, DriverIconsSection, SeasonGoals } from "@/components/driver-stats";
 import { useProfile } from "@/hooks/use-profile";
 import { DriverIconsDisplay } from "@/components/driver-icon-token";
 import type { Profile } from "@shared/schema";
@@ -162,6 +162,11 @@ export default function PublicProfilePage() {
             <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-history">
               <Trophy className="w-4 h-4 mr-2" /> History
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-goals">
+                <Target className="w-4 h-4 mr-2" /> Goals
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="stats" className="space-y-6 mt-6">
@@ -180,6 +185,12 @@ export default function PublicProfilePage() {
           {hasIcons && (
             <TabsContent value="icons" className="mt-6">
               <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="goals" className="mt-6">
+              <SeasonGoals profile={mockProfile} isReadOnly={true} />
             </TabsContent>
           )}
 

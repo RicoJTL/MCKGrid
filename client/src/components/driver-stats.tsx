@@ -363,7 +363,11 @@ const goalSchema = z.object({
   targetValue: z.number().min(1),
 });
 
-export function SeasonGoals({ profile }: DriverStatsProps) {
+interface SeasonGoalsProps extends DriverStatsProps {
+  isReadOnly?: boolean;
+}
+
+export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const { data: goals, isLoading } = useQuery<SeasonGoal[]>({
@@ -414,6 +418,7 @@ export function SeasonGoals({ profile }: DriverStatsProps) {
         <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
           <Target className="w-5 h-5 text-green-500" /> Season Goals
         </h3>
+        {!isReadOnly && (
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" data-testid="button-add-goal">
@@ -488,6 +493,7 @@ export function SeasonGoals({ profile }: DriverStatsProps) {
             </Form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {goals?.length ? (
@@ -504,15 +510,17 @@ export function SeasonGoals({ profile }: DriverStatsProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold">{goal.currentValue}/{goal.targetValue}</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={() => deleteMutation.mutate(goal.id)}
-                      data-testid={`button-delete-goal-${goal.id}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    {!isReadOnly && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => deleteMutation.mutate(goal.id)}
+                        data-testid={`button-delete-goal-${goal.id}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <Progress value={progress} className="h-2" />
