@@ -1023,10 +1023,11 @@ export class DatabaseStorage implements IStorage {
     // Get all goals for this profile
     const goals = await db.select().from(seasonGoals).where(eq(seasonGoals.profileId, profileId));
     
-    // Get all results for this profile with their race's league
+    // Get all results for this profile with their race's league (including qualifying data)
     const driverResults = await db
       .select({
         position: results.position,
+        qualifyingPosition: results.qualifyingPosition,
         points: results.points,
         leagueId: races.leagueId,
       })
@@ -1034,32 +1035,46 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(races, eq(results.raceId, races.id))
       .where(eq(results.racerId, profileId));
     
-    // Calculate stats per league
-    const leagueStats = new Map<number, { points: number; wins: number; podiums: number; races: number; bestPosition: number }>();
+    // Calculate stats per league (expanded for new goal types)
+    const leagueStats = new Map<number, { 
+      points: number; wins: number; podiums: number; races: number; 
+      top5: number; top10: number; poles: number; frontRow: number; 
+      gridClimber: number; perfectWeekend: number;
+    }>();
     
     for (const result of driverResults) {
-      const stats = leagueStats.get(result.leagueId) || { points: 0, wins: 0, podiums: 0, races: 0, bestPosition: 999 };
+      const stats = leagueStats.get(result.leagueId) || { 
+        points: 0, wins: 0, podiums: 0, races: 0, 
+        top5: 0, top10: 0, poles: 0, frontRow: 0, 
+        gridClimber: 0, perfectWeekend: 0
+      };
+      
       stats.points += result.points;
       stats.races += 1;
       if (result.position === 1) stats.wins += 1;
       if (result.position <= 3) stats.podiums += 1;
-      if (result.position < stats.bestPosition) stats.bestPosition = result.position;
+      if (result.position <= 5) stats.top5 += 1;
+      if (result.position <= 10) stats.top10 += 1;
+      
+      // Qualifying-based stats
+      if (result.qualifyingPosition !== null) {
+        if (result.qualifyingPosition === 1) stats.poles += 1;
+        if (result.qualifyingPosition <= 2) stats.frontRow += 1;
+        // Grid climber: finished higher (lower number) than started
+        if (result.position < result.qualifyingPosition) stats.gridClimber += 1;
+        // Perfect weekend: pole position AND win
+        if (result.qualifyingPosition === 1 && result.position === 1) stats.perfectWeekend += 1;
+      }
+      
       leagueStats.set(result.leagueId, stats);
     }
     
     // Get current standings for position goals (championship position)
-    // Position goals only update when the league is COMPLETED (final standings)
+    // Now shows current position even if league not completed
     const leaguePositions = new Map<number, number>();
-    const uniqueLeagueIds = [...new Set(goals.map(g => g.leagueId))];
+    const uniqueLeagueIds = Array.from(new Set(goals.map(g => g.leagueId)));
     
     for (const lid of uniqueLeagueIds) {
-      // Check if this league is completed - position goals only count when season ends
-      const [league] = await db.select().from(leagues).where(eq(leagues.id, lid));
-      if (!league || league.status !== 'completed') {
-        // League not completed yet, position remains 0
-        continue;
-      }
-      
       // Get main competition for this league to calculate standings
       const [mainComp] = await db.select().from(competitions)
         .where(and(eq(competitions.leagueId, lid), eq(competitions.isMain, true)));
@@ -1088,7 +1103,7 @@ export class DatabaseStorage implements IStorage {
           }
           
           // Sort by points descending
-          const sorted = [...driverPoints.entries()].sort((a, b) => b[1] - a[1]);
+          const sorted = Array.from(driverPoints.entries()).sort((a, b) => b[1] - a[1]);
           const position = sorted.findIndex(([id]) => id === profileId) + 1;
           if (position > 0) {
             leaguePositions.set(lid, position);
@@ -1099,7 +1114,11 @@ export class DatabaseStorage implements IStorage {
     
     // Update each goal's currentValue based on type
     for (const goal of goals) {
-      const stats = leagueStats.get(goal.leagueId) || { points: 0, wins: 0, podiums: 0, races: 0, bestPosition: 999 };
+      const stats = leagueStats.get(goal.leagueId) || { 
+        points: 0, wins: 0, podiums: 0, races: 0,
+        top5: 0, top10: 0, poles: 0, frontRow: 0, 
+        gridClimber: 0, perfectWeekend: 0
+      };
       let newValue = 0;
       
       switch (goal.goalType) {
@@ -1116,8 +1135,26 @@ export class DatabaseStorage implements IStorage {
           newValue = stats.races;
           break;
         case 'position':
-          // For position, we want the championship standing (0 means not ranked yet)
+          // Current championship standing (0 means not ranked yet)
           newValue = leaguePositions.get(goal.leagueId) || 0;
+          break;
+        case 'top5':
+          newValue = stats.top5;
+          break;
+        case 'top10':
+          newValue = stats.top10;
+          break;
+        case 'poles':
+          newValue = stats.poles;
+          break;
+        case 'frontRow':
+          newValue = stats.frontRow;
+          break;
+        case 'gridClimber':
+          newValue = stats.gridClimber;
+          break;
+        case 'perfectWeekend':
+          newValue = stats.perfectWeekend;
           break;
       }
       
