@@ -20,7 +20,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { useState, useMemo, memo } from "react";
 import { getIconComponent } from "@/components/icon-picker";
-import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType, DriverIcon } from "@shared/schema";
+import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType, DriverIcon, Race } from "@shared/schema";
 import { DriverIconToken } from "@/components/driver-icon-token";
 
 interface DriverStatsProps {
@@ -378,6 +378,42 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
     queryKey: ['/api/leagues'],
   });
 
+  // Fetch races for all active leagues to determine which have started
+  const activeLeagueIds = leagues?.filter(l => l.status === 'active').map(l => l.id) || [];
+  const { data: leagueRacesData } = useQuery<{ leagueId: number; races: Race[] }[]>({
+    queryKey: ['/api/leagues/races', activeLeagueIds],
+    queryFn: async () => {
+      const results = await Promise.all(
+        activeLeagueIds.map(async (leagueId) => {
+          const res = await fetch(`/api/leagues/${leagueId}/races`);
+          const races = await res.json();
+          return { leagueId, races };
+        })
+      );
+      return results;
+    },
+    enabled: activeLeagueIds.length > 0,
+  });
+
+  // Helper to check if a league has started (any race with valid date is in the past or league is completed)
+  const hasLeagueStarted = (leagueId: number): boolean => {
+    const league = leagues?.find(l => l.id === leagueId);
+    // Completed leagues are always considered "started"
+    if (league?.status === 'completed') return true;
+    
+    const leagueData = leagueRacesData?.find(d => d.leagueId === leagueId);
+    if (!leagueData) return false;
+    const now = new Date();
+    return leagueData.races.some(race => {
+      if (!race.date) return false;
+      const raceDate = new Date(race.date);
+      return !isNaN(raceDate.getTime()) && raceDate <= now;
+    });
+  };
+
+  // Filter leagues that haven't started yet for the dropdown
+  const availableLeagues = leagues?.filter(l => l.status === 'active' && !hasLeagueStarted(l.id)) || [];
+
   const addMutation = useMutation({
     mutationFn: (data: z.infer<typeof goalSchema>) =>
       apiRequest("POST", `/api/profiles/${profile.id}/goals`, data),
@@ -451,7 +487,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {leagues?.filter(l => l.status === 'active').map((league) => (
+                          {availableLeagues.map((league) => (
                             <SelectItem key={league.id} value={String(league.id)}>{league.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -600,7 +636,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!isReadOnly && (
+                    {!isReadOnly && !hasLeagueStarted(goal.leagueId) && (
                       <Button
                         size="icon"
                         variant="ghost"

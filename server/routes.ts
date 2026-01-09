@@ -820,6 +820,19 @@ export async function registerRoutes(
       return res.status(403).json({ error: "Can only create your own goals" });
     }
     const { leagueId, goalType, targetValue } = req.body;
+    
+    // Check if the league has already started (any race with a valid date is in the past)
+    const leagueRaces = await storage.getRacesByLeague(leagueId);
+    const now = new Date();
+    const hasStarted = leagueRaces.some(race => {
+      if (!race.date) return false;
+      const raceDate = new Date(race.date);
+      return !isNaN(raceDate.getTime()) && raceDate <= now;
+    });
+    if (hasStarted) {
+      return res.status(403).json({ error: "Cannot add goals once the league has started" });
+    }
+    
     const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue });
     res.status(201).json(goal);
   });
@@ -854,6 +867,18 @@ export async function registerRoutes(
     const goal = await storage.getSeasonGoalById(Number(req.params.id));
     if (!goal || goal.profileId !== profile.id) {
       return res.status(403).json({ error: "Can only delete your own goals" });
+    }
+    
+    // Check if the league has already started (any race with a valid date is in the past)
+    const leagueRaces = await storage.getRacesByLeague(goal.leagueId);
+    const now = new Date();
+    const hasStarted = leagueRaces.some(race => {
+      if (!race.date) return false;
+      const raceDate = new Date(race.date);
+      return !isNaN(raceDate.getTime()) && raceDate <= now;
+    });
+    if (hasStarted) {
+      return res.status(403).json({ error: "Cannot delete goals once the league has started" });
     }
     
     await storage.deleteSeasonGoal(Number(req.params.id));
