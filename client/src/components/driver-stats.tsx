@@ -358,7 +358,7 @@ export function BadgesSection({ profile, isOwnProfile = false, isAdmin = false }
 }
 
 const goalSchema = z.object({
-  leagueId: z.number(),
+  leagueId: z.number().min(1, "Please select a league"),
   goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend']),
   targetValue: z.number().min(1),
 });
