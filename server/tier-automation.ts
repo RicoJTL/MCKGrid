@@ -41,6 +41,9 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
     const raceCount = await countCompetitionRaces(tieredLeague.parentCompetitionId);
     
     if (raceCount % tieredLeague.racesBeforeShuffle === 0 && raceCount > 0) {
+      const alreadyProcessed = await hasShuffleBeenProcessedAtRaceCount(tieredLeague.id, raceCount);
+      if (alreadyProcessed) continue;
+      
       const result = await processShuffleForTieredLeague(tieredLeague, raceCount);
       if (result.movements.length > 0) {
         shuffleResults.push(result);
@@ -49,6 +52,16 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
   }
 
   return shuffleResults;
+}
+
+async function hasShuffleBeenProcessedAtRaceCount(tieredLeagueId: number, raceCount: number): Promise<boolean> {
+  const existingMovements = await db.select()
+    .from(tierMovements)
+    .where(and(
+      eq(tierMovements.tieredLeagueId, tieredLeagueId),
+      eq(tierMovements.afterRaceNumber, raceCount)
+    ));
+  return existingMovements.length > 0;
 }
 
 async function countCompetitionRaces(competitionId: number): Promise<number> {
@@ -78,13 +91,17 @@ async function processShuffleForTieredLeague(tieredLeague: typeof tieredLeagues.
     
     if (!currentTierStandings || !nextTierStandings) continue;
     
-    const driversToRelegate = currentTierStandings.standings
-      .slice(-tieredLeague.relegationSpots)
-      .map(d => ({ profileId: d.profileId, points: d.points }));
+    const driversToRelegate = tieredLeague.relegationSpots > 0
+      ? currentTierStandings.standings
+          .slice(-tieredLeague.relegationSpots)
+          .map(d => ({ profileId: d.profileId, points: d.points }))
+      : [];
     
-    const driversToPromote = nextTierStandings.standings
-      .slice(0, tieredLeague.promotionSpots)
-      .map(d => ({ profileId: d.profileId, points: d.points }));
+    const driversToPromote = tieredLeague.promotionSpots > 0
+      ? nextTierStandings.standings
+          .slice(0, tieredLeague.promotionSpots)
+          .map(d => ({ profileId: d.profileId, points: d.points }))
+      : [];
     
     for (const driver of driversToRelegate) {
       movements.push({
