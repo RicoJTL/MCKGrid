@@ -736,8 +736,7 @@ export default function LeagueDetails() {
                           <Button
                             key={tn.tierNumber}
                             size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-xs hover:bg-primary/20"
+                            variant="outline"
                             onClick={() => assignDriverToTier.mutate({
                               tieredLeagueId: managingTieredLeague.id,
                               profileId: driver.id,
