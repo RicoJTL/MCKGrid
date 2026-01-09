@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import type { Profile } from "@shared/schema";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
+import { useTieredLeagues, useTierAssignments } from "@/hooks/use-tiered-leagues";
 
 export default function RaceDetails() {
   const [match, params] = useRoute("/races/:id");
@@ -71,6 +72,20 @@ export default function RaceDetails() {
   
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
   const iconsMap = useDriverIconsMap();
+  
+  const { data: tieredLeagues } = useTieredLeagues(race?.leagueId || 0);
+  const firstTieredLeagueId = tieredLeagues?.[0]?.id || 0;
+  const { data: tierAssignments } = useTierAssignments(firstTieredLeagueId);
+  
+  const eligibleDrivers = (() => {
+    if (!profiles) return [];
+    const racers = profiles.filter(p => p.role === 'racer');
+    if (tieredLeagues && tieredLeagues.length > 0 && tierAssignments && tierAssignments.length > 0) {
+      const assignedProfileIds = new Set(tierAssignments.map((a: any) => a.profileId));
+      return racers.filter(p => assignedProfileIds.has(p.id));
+    }
+    return racers;
+  })();
 
   const editRaceForm = useForm({
     defaultValues: {
@@ -215,7 +230,7 @@ export default function RaceDetails() {
             raceId={raceId}
             competitionId={firstCompetitionId}
             existingResults={results || []} 
-            profiles={profiles?.filter(p => p.role === 'racer' || p.role === 'admin') || []}
+            profiles={eligibleDrivers}
             allProfiles={profiles || []}
             onCancel={() => setIsEditing(false)} 
             onSave={() => setIsEditing(false)}
