@@ -14,13 +14,20 @@ const ICON_COMPONENTS: Record<string, any> = {
 };
 
 function useIsTouchDevice() {
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    }
+    return false;
+  });
   
   useEffect(() => {
     const checkTouch = () => {
       setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
     checkTouch();
+    
+    window.addEventListener('touchstart', () => setIsTouchDevice(true), { once: true });
   }, []);
   
   return isTouchDevice;
@@ -113,8 +120,8 @@ export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
     return (
       <Popover>
         <PopoverTrigger asChild>
-          <span>
-            <IconButton icon={icon} config={config} onClick={(e) => e.stopPropagation()} />
+          <span onClick={(e) => e.stopPropagation()}>
+            <IconButton icon={icon} config={config} />
           </span>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3 bg-card/95 backdrop-blur-sm border border-white/10" sideOffset={5}>
