@@ -105,7 +105,21 @@ The tiered league system allows competitions to organize drivers into tiers (e.g
 **Dashboard Integration**:
 - Shows "My Tier" section for drivers with tier assignments
 - Gracefully handles drivers without tier assignments
-- Tier movement notifications appear on dashboard
+- Tier movement notifications appear on dashboard (initial assignment, promotion, relegation)
+
+**Competition-Level Tier View** (in CompetitionDetails.tsx):
+- When a tiered league is linked to a competition, a "Tiers" tab appears
+- Shows tier standings with driver names, points, and positions
+- Highlights promotion zone (green) and relegation zone (red)
+- Links to league page for managing tier assignments
+- API endpoint: GET `/api/competitions/:id/tiered-league`
+
+**Movement Types**:
+- 'initial_assignment': Created when driver is first assigned to a tier
+- 'admin_promotion': Manual promotion by admin
+- 'admin_relegation': Manual relegation by admin
+- 'automatic_promotion': System promotion after shuffle
+- 'automatic_relegation': System relegation after shuffle
 
 ### Customizable Icons and Colors
 Admins can customize the icon and color for leagues and competitions:
