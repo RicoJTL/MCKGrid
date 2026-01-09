@@ -11,7 +11,7 @@ The application follows a full-stack TypeScript architecture with a React fronte
 Preferred communication style: Simple, everyday language.
 
 **CRITICAL UI Requirement**: All UI changes must appear immediately without requiring a page refresh. Every mutation hook must invalidate all related query keys in its `onSuccess` handler to ensure real-time UI updates. This includes:
-- Enrollment mutations must invalidate enrolled-competitions queries
+- Tier assignment mutations must invalidate tier-related queries
 - Result submissions must invalidate standings and dashboard queries
 - Any data change must invalidate all queries that display that data
 
@@ -52,6 +52,32 @@ Located in `shared/schema.ts`, the main entities are:
 - **competitions**: Events within leagues (series, head-to-head, time attack), customizable iconName and iconColor
 - **races**: Individual race events with dates and locations
 - **results**: Race results with positions, times, and points
+- **tieredLeagues**: Tiered league configurations linked to competitions
+- **tierNames**: Tier names (S, A, B, C, etc.) for each tiered league
+- **tierAssignments**: Tracks which drivers are assigned to which tiers
+- **tierMovements**: Records promotion/relegation history
+- **tierMovementNotifications**: Stores notifications about tier changes
+
+### Tiered League System
+The tiered league system allows competitions to organize drivers into tiers (e.g., S, A, B, C) with promotion/relegation mechanics:
+
+**Configuration** (stored in `tieredLeagues` table):
+- Linked to a parent competition
+- Configurable number of tiers with custom names
+- Rules for promotion/relegation (spots, races before shuffle)
+
+**Race Check-in Logic**:
+- For leagues WITH tiered leagues configured: drivers must be assigned to a tier to check in
+- For leagues WITHOUT tiered leagues: all racers can check in freely
+- Error messages display inline while keeping retry buttons visible
+
+**Frontend Hooks** (`client/src/hooks/use-tiered-leagues.ts`):
+- 15+ hooks for managing tiered leagues, tier names, assignments, and notifications
+- All mutations invalidate related queries for real-time UI updates
+
+**Dashboard Integration**:
+- Shows "My Tier" section for drivers with tier assignments
+- Gracefully handles drivers without tier assignments
 
 ### Customizable Icons and Colors
 Admins can customize the icon and color for leagues and competitions:

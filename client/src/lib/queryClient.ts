@@ -45,7 +45,7 @@ export const getQueryFn: <T>(options: {
 export const CACHE_TIMES = {
   // Reference data that rarely changes (leagues, competitions structure)
   STABLE: 5 * 60 * 1000, // 5 minutes
-  // User-specific data that may update (profile, enrollments)
+  // User-specific data that may update (profile, tier assignments)
   USER_DATA: 2 * 60 * 1000, // 2 minutes
   // Frequently updating data (standings, results, check-ins)
   DYNAMIC: 30 * 1000, // 30 seconds
