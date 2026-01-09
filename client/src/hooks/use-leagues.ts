@@ -299,6 +299,7 @@ export function useUpdateRace() {
       queryClient.invalidateQueries({ queryKey: ['races'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
       toast({ title: "Race Updated" });
     },
   });
@@ -349,6 +350,7 @@ export function useDeleteRace() {
       queryClient.invalidateQueries({ queryKey: ['races'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
       queryClient.invalidateQueries({ queryKey: ['results'] });
       toast({ title: "Race Deleted" });
     },
