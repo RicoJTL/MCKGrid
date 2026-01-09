@@ -541,7 +541,17 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const tieredLeague = await storage.getTieredLeague(Number(req.params.id));
     if (!tieredLeague) return res.sendStatus(404);
-    res.json(tieredLeague);
+    const tierNamesList = await storage.getTierNames(tieredLeague.id);
+    res.json({ ...tieredLeague, tierNames: tierNamesList });
+  });
+  
+  // Get tiered league by parent competition ID
+  app.get("/api/competitions/:id/tiered-league", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const tieredLeague = await storage.getTieredLeagueByParentCompetition(Number(req.params.id));
+    if (!tieredLeague) return res.json(null);
+    const tierNamesList = await storage.getTierNames(tieredLeague.id);
+    res.json({ ...tieredLeague, tierNames: tierNamesList });
   });
 
   app.get("/api/tiered-leagues/:id/tier-names", async (req, res) => {

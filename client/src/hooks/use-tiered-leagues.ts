@@ -10,10 +10,11 @@ export interface TieredLeagueWithTiers extends TieredLeague {
 export interface TierStanding {
   tierNumber: number;
   tierName: string;
-  drivers: Array<{
-    profile: Profile;
+  standings: Array<{
+    profileId: number;
+    driverName: string;
+    fullName: string;
     points: number;
-    position: number;
   }>;
 }
 
@@ -46,6 +47,18 @@ export function useTieredLeague(tieredLeagueId: number) {
       return res.json();
     },
     enabled: !!tieredLeagueId,
+  });
+}
+
+export function useTieredLeagueByCompetition(competitionId: number) {
+  return useQuery<TieredLeagueWithTiers | null>({
+    queryKey: ['/api/competitions', competitionId, 'tiered-league'],
+    queryFn: async () => {
+      const res = await fetch(`/api/competitions/${competitionId}/tiered-league`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch tiered league");
+      return res.json();
+    },
+    enabled: !!competitionId,
   });
 }
 

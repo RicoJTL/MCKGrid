@@ -1,7 +1,8 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions, useUpdateRaceCompetitions, useRaceCompetitions } from "@/hooks/use-leagues";
+import { useTieredLeagueByCompetition, useTierStandings, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, Layers, Star, Check, Ban } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, Layers, Star, Check, Ban, ChevronUp, ChevronDown } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
@@ -54,6 +55,8 @@ export default function CompetitionDetails() {
   const { data: standings, isLoading: standingsLoading } = useCompetitionStandings(compId);
   const { data: profile } = useProfile();
   const { data: allProfiles, isLoading: profilesLoading } = useAllProfiles();
+  const { data: tieredLeague } = useTieredLeagueByCompetition(compId);
+  const { data: tierStandings, isLoading: tierStandingsLoading } = useTierStandings(tieredLeague?.id || 0);
   const createRace = useCreateRace();
   const updateCompetition = useUpdateCompetition();
   const deleteCompetition = useDeleteCompetition();
@@ -87,6 +90,7 @@ export default function CompetitionDetails() {
   const getInitialTab = () => {
     if (typeof window !== 'undefined' && window.location.hash === '#drivers') return 'drivers';
     if (typeof window !== 'undefined' && window.location.hash === '#races') return 'races';
+    if (typeof window !== 'undefined' && window.location.hash === '#tiers') return 'tiers';
     return 'standings';
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
@@ -95,6 +99,7 @@ export default function CompetitionDetails() {
     const hash = window.location.hash;
     if (hash === '#drivers') setActiveTab('drivers');
     else if (hash === '#races') setActiveTab('races');
+    else if (hash === '#tiers') setActiveTab('tiers');
   }, []);
   
   const updateRaceCompetitions = useUpdateRaceCompetitions();
@@ -370,6 +375,12 @@ export default function CompetitionDetails() {
             <Users className="w-4 h-4 mr-2" />
             Drivers
           </TabsTrigger>
+          {tieredLeague && (
+            <TabsTrigger value="tiers" className="data-[state=active]:bg-primary data-[state=active]:text-white">
+              <Layers className="w-4 h-4 mr-2" />
+              Tiers
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="standings" className="mt-6">
@@ -747,6 +758,125 @@ export default function CompetitionDetails() {
             );
           })()}
         </TabsContent>
+
+        {/* Tiered League Standings Tab */}
+        {tieredLeague && (
+          <TabsContent value="tiers" className="mt-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-xl font-bold font-display italic flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-primary" />
+                    {tieredLeague.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {tieredLeague.driversPerTier} drivers per tier • Shuffle after {tieredLeague.racesBeforeShuffle} races
+                  </p>
+                </div>
+                {isAdmin && competition?.leagueId && (
+                  <Link href={`/leagues/${competition.leagueId}`}>
+                    <Button size="sm" variant="outline" data-testid="button-manage-tiered-league">
+                      <Layers className="w-4 h-4 mr-1" />
+                      Manage Tiers
+                    </Button>
+                  </Link>
+                )}
+              </div>
+
+              {tierStandingsLoading ? (
+                <Skeleton className="h-64 w-full rounded-xl" />
+              ) : tierStandings && tierStandings.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {tierStandings.map((tier) => (
+                    <div 
+                      key={tier.tierNumber} 
+                      className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden"
+                      data-testid={`tier-standings-${tier.tierNumber}`}
+                    >
+                      <div className="p-4 bg-white/5 border-b border-white/5">
+                        <h4 className="font-bold font-display italic text-lg flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                            tier.tierNumber === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                            tier.tierNumber === 2 ? 'bg-blue-500/20 text-blue-400' :
+                            tier.tierNumber === 3 ? 'bg-green-500/20 text-green-400' :
+                            'bg-white/10 text-muted-foreground'
+                          }`}>
+                            {tier.tierName}
+                          </div>
+                          <span>{tier.tierName} Tier</span>
+                        </h4>
+                      </div>
+                      <div className="divide-y divide-white/5">
+                        {tier.standings.map((driver: any, index: number) => {
+                          const isPromotionZone = index < (tieredLeague.promotionSpots || 0) && tier.tierNumber > 1;
+                          const isRelegationZone = tier.standings.length > 0 && 
+                            index >= tier.standings.length - (tieredLeague.relegationSpots || 0) && 
+                            tier.tierNumber < (tieredLeague.numberOfTiers || 1);
+                          
+                          return (
+                            <Link key={driver.profileId} href={`/profiles/${driver.profileId}`}>
+                              <div 
+                                className={`flex items-center justify-between p-3 hover:bg-white/5 transition-colors cursor-pointer ${
+                                  isPromotionZone ? 'bg-green-500/10 border-l-2 border-green-500' :
+                                  isRelegationZone ? 'bg-red-500/10 border-l-2 border-red-500' : ''
+                                }`}
+                                data-testid={`tier-driver-${driver.profileId}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-white/10">
+                                    {index + 1}
+                                  </div>
+                                  <span className="font-medium">
+                                    <DriverNameWithIcons 
+                                      profileId={driver.profileId} 
+                                      name={driver.driverName || 'Unknown'} 
+                                      iconsMap={iconsMap}
+                                    />
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold font-display text-primary">{driver.points}</span>
+                                  <span className="text-xs text-muted-foreground">pts</span>
+                                  {isPromotionZone && <ChevronUp className="w-4 h-4 text-green-500" />}
+                                  {isRelegationZone && <ChevronDown className="w-4 h-4 text-red-500" />}
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                        {tier.standings.length === 0 && (
+                          <div className="p-4 text-center text-muted-foreground text-sm">
+                            No drivers assigned to this tier
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                  <Layers className="w-16 h-16 mb-4 opacity-20" />
+                  <p className="text-lg font-medium">No tier standings yet</p>
+                  <p className="text-sm">Assign drivers to tiers to see standings!</p>
+                </div>
+              )}
+
+              {/* Promotion/Relegation Legend */}
+              {tierStandings && tierStandings.length > 1 && (
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-green-500" />
+                    <span>Promotion zone</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-red-500" />
+                    <span>Relegation zone</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Edit Competition Dialog */}
