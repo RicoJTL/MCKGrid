@@ -472,6 +472,10 @@ export class DatabaseStorage implements IStorage {
       await syncSeasonEndBadgesForLeague(race.leagueId);
     }
     
+    // Check for tier promotion/relegation after race results
+    const { checkAndProcessTierShuffle } = await import("./tier-automation");
+    await checkAndProcessTierShuffle(raceId);
+    
     return insertedResults;
   }
   
