@@ -9,7 +9,7 @@ import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, CACHE_TIMES } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { Competition, RaceCheckin, Badge as BadgeType, DriverIcon } from "@shared/schema";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { getBadgeIcon } from "@/components/badge-icons";
@@ -225,6 +225,51 @@ export default function Dashboard() {
   const standings = mainStandings || [];
   const upcomingRaces = upcomingRacesData || [];
   const nextRace = upcomingRaces[0];
+
+  // Countdown timer state
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const [isRaceDay, setIsRaceDay] = useState(false);
+
+  const calculateCountdown = useCallback(() => {
+    if (!nextRace?.date) {
+      setCountdown(null);
+      setIsRaceDay(false);
+      return;
+    }
+
+    const raceDate = new Date(nextRace.date);
+    const now = new Date();
+    
+    // Check if it's race day (same calendar date)
+    const isToday = raceDate.toDateString() === now.toDateString();
+    setIsRaceDay(isToday);
+
+    if (isToday) {
+      setCountdown(null);
+      return;
+    }
+
+    // If race is in the past, no countdown
+    if (raceDate < now) {
+      setCountdown(null);
+      setIsRaceDay(false);
+      return;
+    }
+
+    const diff = raceDate.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    setCountdown({ days, hours, minutes, seconds });
+  }, [nextRace?.date]);
+
+  useEffect(() => {
+    calculateCountdown();
+    const interval = setInterval(calculateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [calculateCountdown]);
   
   // Find current user's position in main competition
   const userStanding = standings.find((s: any) => s.racerId === profile?.id);
@@ -233,6 +278,70 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Race Countdown Banner */}
+      <AnimatePresence>
+        {isRaceDay && nextRace && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 via-green-500 to-green-600 p-6 text-center shadow-lg shadow-green-500/30"
+            data-testid="race-day-banner"
+          >
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23000%22 fill-opacity=%220.1%22%3E%3Cpath d=%22M0 0h30v30H0zM30 30h30v30H30z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30" />
+            <div className="relative">
+              <h2 className="text-4xl md:text-5xl font-display font-bold italic text-white drop-shadow-lg">
+                RACE DAY
+              </h2>
+              <p className="text-white/90 mt-2 text-lg font-medium">
+                {nextRace.name} {nextRace.location && `@ ${nextRace.location}`}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {countdown && !isRaceDay && nextRace && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border border-primary/30 p-6"
+            data-testid="race-countdown-banner"
+          >
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">Next Race</p>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {nextRace.name} {nextRace.location && <span className="text-muted-foreground">@ {nextRace.location}</span>}
+              </h3>
+              <div className="flex justify-center gap-4 md:gap-8">
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{countdown.days}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Days</div>
+                </div>
+                <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.hours).padStart(2, '0')}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
+                </div>
+                <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.minutes).padStart(2, '0')}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Mins</div>
+                </div>
+                <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.seconds).padStart(2, '0')}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Secs</div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-4">
+                {format(new Date(nextRace.date), 'EEEE, MMMM d, yyyy')}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">
