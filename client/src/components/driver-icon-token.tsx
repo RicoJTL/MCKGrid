@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getIconComponent } from "@/components/icon-picker";
 import { Crown, Star, Medal, Trophy, Shield, Gem, Sparkles, Flame, Zap, Rocket, Award, BadgeCheck, Swords, Target, CircleDot, Hexagon, Diamond, Heart, Skull, Ghost, Bird, Cat, Dog, Fish, Bug, Leaf, Snowflake, Sun, Moon, Cloud, Mountain, Waves, Wind, Compass, Anchor, Flag, Clock, Bell, Gift, Key, Lock, Eye, Lightbulb, Music, Camera, Mic, Headphones, Gamepad2, Dice1 } from "lucide-react";
 import type { DriverIcon } from "@shared/schema";
@@ -11,13 +13,92 @@ const ICON_COMPONENTS: Record<string, any> = {
   Gift, Key, Lock, Eye, Lightbulb, Music, Camera, Mic, Headphones, Gamepad2, Dice1
 };
 
+function useIsTouchDevice() {
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  useEffect(() => {
+    const checkTouch = () => {
+      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    };
+    checkTouch();
+  }, []);
+  
+  return isTouchDevice;
+}
+
 interface DriverIconTokenProps {
   icon: DriverIcon;
   size?: "sm" | "md" | "lg";
 }
 
-export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
+function IconButton({ icon, config, onClick }: { icon: DriverIcon; config: any; onClick?: (e: React.MouseEvent) => void }) {
   const IconComponent = ICON_COMPONENTS[icon.iconName] || getIconComponent(icon.iconName) || Star;
+  
+  return (
+    <button 
+      type="button"
+      className={`inline-flex items-center justify-center cursor-pointer ${config.container} relative group`}
+      data-testid={`driver-icon-${icon.slug}`}
+      style={{ perspective: "200px" }}
+      onClick={onClick}
+    >
+      <span
+        className="absolute inset-0 rounded-full opacity-60 blur-sm group-hover:opacity-80 transition-opacity duration-300 animate-pulse"
+        style={{
+          background: `radial-gradient(circle, ${icon.iconColor}40 0%, transparent 70%)`,
+        }}
+      />
+      <span
+        className="relative flex items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110"
+        style={{
+          background: `linear-gradient(135deg, ${icon.iconColor}30 0%, ${icon.iconColor}10 50%, ${icon.iconColor}20 100%)`,
+          boxShadow: `
+            0 ${config.shadow} ${config.glow} ${icon.iconColor}40,
+            inset 0 1px 2px rgba(255,255,255,0.3),
+            inset 0 -1px 2px rgba(0,0,0,0.2)
+          `,
+          border: `1px solid ${icon.iconColor}50`,
+          width: '100%',
+          height: '100%',
+          transform: 'rotateX(10deg)',
+        }}
+      >
+        <IconComponent 
+          className={`${config.icon} drop-shadow-sm`}
+          style={{ 
+            color: icon.iconColor,
+            filter: `drop-shadow(0 1px 2px ${icon.iconColor}60)`
+          }}
+        />
+      </span>
+    </button>
+  );
+}
+
+function IconTooltipContent({ icon }: { icon: DriverIcon }) {
+  const IconComponent = ICON_COMPONENTS[icon.iconName] || getIconComponent(icon.iconName) || Star;
+  
+  return (
+    <div className="flex items-center gap-2">
+      <span 
+        className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+        style={{
+          background: `linear-gradient(135deg, ${icon.iconColor}40 0%, ${icon.iconColor}20 100%)`,
+          boxShadow: `0 2px 8px ${icon.iconColor}40`
+        }}
+      >
+        <IconComponent className="w-4 h-4" style={{ color: icon.iconColor }} />
+      </span>
+      <div>
+        <p className="font-semibold text-sm">{icon.name}</p>
+        <p className="text-xs text-muted-foreground">{icon.description}</p>
+      </div>
+    </div>
+  );
+}
+
+export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
+  const isTouchDevice = useIsTouchDevice();
   
   const sizeConfig = {
     sm: { icon: "w-4 h-4", container: "w-6 h-6", glow: "8px", shadow: "2px" },
@@ -27,67 +108,34 @@ export function DriverIconToken({ icon, size = "sm" }: DriverIconTokenProps) {
 
   const config = sizeConfig[size];
 
+  // Mobile: use Popover (click to open)
+  if (isTouchDevice) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <span>
+            <IconButton icon={icon} config={config} onClick={(e) => e.stopPropagation()} />
+          </span>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3 bg-card/95 backdrop-blur-sm border border-white/10" sideOffset={5}>
+          <IconTooltipContent icon={icon} />
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Desktop: use Tooltip (hover to show)
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button 
-          type="button"
-          className={`inline-flex items-center justify-center cursor-pointer ${config.container} relative group`}
-          data-testid={`driver-icon-${icon.slug}`}
-          style={{
-            perspective: "200px"
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span
-            className="absolute inset-0 rounded-full opacity-60 blur-sm group-hover:opacity-80 transition-opacity duration-300 animate-pulse"
-            style={{
-              background: `radial-gradient(circle, ${icon.iconColor}40 0%, transparent 70%)`,
-            }}
-          />
-          <span
-            className="relative flex items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110"
-            style={{
-              background: `linear-gradient(135deg, ${icon.iconColor}30 0%, ${icon.iconColor}10 50%, ${icon.iconColor}20 100%)`,
-              boxShadow: `
-                0 ${config.shadow} ${config.glow} ${icon.iconColor}40,
-                inset 0 1px 2px rgba(255,255,255,0.3),
-                inset 0 -1px 2px rgba(0,0,0,0.2)
-              `,
-              border: `1px solid ${icon.iconColor}50`,
-              width: '100%',
-              height: '100%',
-              transform: 'rotateX(10deg)',
-            }}
-          >
-            <IconComponent 
-              className={`${config.icon} drop-shadow-sm`}
-              style={{ 
-                color: icon.iconColor,
-                filter: `drop-shadow(0 1px 2px ${icon.iconColor}60)`
-              }}
-            />
-          </span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-3 bg-card/95 backdrop-blur-sm border border-white/10" sideOffset={5}>
-        <div className="flex items-center gap-2">
-          <span 
-            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-            style={{
-              background: `linear-gradient(135deg, ${icon.iconColor}40 0%, ${icon.iconColor}20 100%)`,
-              boxShadow: `0 2px 8px ${icon.iconColor}40`
-            }}
-          >
-            <IconComponent className="w-4 h-4" style={{ color: icon.iconColor }} />
-          </span>
-          <div>
-            <p className="font-semibold text-sm">{icon.name}</p>
-            <p className="text-xs text-muted-foreground">{icon.description}</p>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span>
+          <IconButton icon={icon} config={config} />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="p-3 bg-card/95 backdrop-blur-sm border border-white/10" sideOffset={5}>
+        <IconTooltipContent icon={icon} />
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
