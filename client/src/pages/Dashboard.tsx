@@ -9,7 +9,7 @@ import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, CACHE_TIMES } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { Competition, RaceCheckin, Badge as BadgeType, DriverIcon } from "@shared/schema";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { getBadgeIcon } from "@/components/badge-icons";
@@ -217,46 +217,52 @@ export default function Dashboard() {
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [isRaceDay, setIsRaceDay] = useState(false);
 
-  const calculateCountdown = useCallback(() => {
-    if (!nextRace?.date) {
-      setCountdown(null);
-      setIsRaceDay(false);
-      return;
-    }
-
-    const raceDate = new Date(nextRace.date);
-    const now = new Date();
-    
-    // Check if it's race day (same calendar date)
-    const isToday = raceDate.toDateString() === now.toDateString();
-    setIsRaceDay(isToday);
-
-    if (isToday) {
-      setCountdown(null);
-      return;
-    }
-
-    // If race is in the past, no countdown
-    if (raceDate < now) {
-      setCountdown(null);
-      setIsRaceDay(false);
-      return;
-    }
-
-    const diff = raceDate.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    setCountdown({ days, hours, minutes, seconds });
-  }, [nextRace?.date]);
+  // Use the race date string as a stable reference for the effect
+  const nextRaceDate = nextRace?.date;
 
   useEffect(() => {
+    const calculateCountdown = () => {
+      if (!nextRaceDate) {
+        setCountdown(null);
+        setIsRaceDay(false);
+        return;
+      }
+
+      const raceDate = new Date(nextRaceDate);
+      const now = new Date();
+      
+      // Check if it's race day (same calendar date)
+      const isToday = raceDate.toDateString() === now.toDateString();
+      setIsRaceDay(isToday);
+
+      if (isToday) {
+        setCountdown(null);
+        return;
+      }
+
+      // If race is in the past, no countdown
+      if (raceDate < now) {
+        setCountdown(null);
+        setIsRaceDay(false);
+        return;
+      }
+
+      const diff = raceDate.getTime() - now.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds });
+    };
+
+    // Calculate immediately when race changes
     calculateCountdown();
+    
+    // Then update every second
     const interval = setInterval(calculateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [calculateCountdown]);
+  }, [nextRaceDate]);
 
   if (!profileLoading && !profile) {
     setLocation("/profile");
