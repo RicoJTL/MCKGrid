@@ -1048,11 +1048,18 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Get current standings for position goals (championship position)
-    // For each league, calculate standings and find position
+    // Position goals only update when the league is COMPLETED (final standings)
     const leaguePositions = new Map<number, number>();
     const uniqueLeagueIds = [...new Set(goals.map(g => g.leagueId))];
     
     for (const lid of uniqueLeagueIds) {
+      // Check if this league is completed - position goals only count when season ends
+      const [league] = await db.select().from(leagues).where(eq(leagues.id, lid));
+      if (!league || league.status !== 'completed') {
+        // League not completed yet, position remains 0
+        continue;
+      }
+      
       // Get main competition for this league to calculate standings
       const [mainComp] = await db.select().from(competitions)
         .where(and(eq(competitions.leagueId, lid), eq(competitions.isMain, true)));
