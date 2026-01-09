@@ -147,7 +147,7 @@ export function useCreateRace() {
         }
       }
       queryClient.invalidateQueries({ queryKey: ['races'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues'], exact: false });
       toast({ title: "Race Scheduled", description: "Date set!" });
     },
@@ -176,7 +176,7 @@ export function useUpdateLeague() {
       queryClient.invalidateQueries({ queryKey: ['/api/leagues/main'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/competitions'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['standings'], exact: false });
@@ -299,7 +299,7 @@ export function useUpdateRace() {
       queryClient.invalidateQueries({ queryKey: ['races'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
       toast({ title: "Race Updated" });
     },
   });
@@ -350,7 +350,7 @@ export function useDeleteRace() {
       queryClient.invalidateQueries({ queryKey: ['races'] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', result.leagueId, 'races'] });
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['results'] });
       toast({ title: "Race Deleted" });
     },

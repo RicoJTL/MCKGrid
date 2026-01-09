@@ -902,6 +902,20 @@ export class DatabaseStorage implements IStorage {
           threshold: badge.threshold,
           sortOrder: badge.sortOrder,
         });
+      } else {
+        // Update existing badge to ensure definition matches
+        await db.update(badges)
+          .set({
+            name: badge.name,
+            description: badge.description,
+            category: badge.category,
+            iconName: badge.iconName,
+            iconColor: badge.iconColor,
+            criteria: badge.criteria,
+            threshold: badge.threshold,
+            sortOrder: badge.sortOrder,
+          })
+          .where(eq(badges.slug, badge.slug));
       }
     }
   }
