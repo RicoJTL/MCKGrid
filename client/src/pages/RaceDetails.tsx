@@ -2,7 +2,7 @@ import { useRace, useUpdateRace, useDeleteRace, useRaceCompetitions, useUpdateRa
 import { useResults, useSubmitResults } from "@/hooks/use-results";
 import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical, Check, Users } from "lucide-react";
 import { RaceCheckinButton, RaceCheckinList, RaceCountdown } from "@/components/race-checkin";
 import { useProfile } from "@/hooks/use-profile";
@@ -137,7 +137,11 @@ export default function RaceDetails() {
             <Flag className="w-4 h-4" /> {race.status}
           </div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">{race.name}</h1>
-          <p className="text-muted-foreground">{format(new Date(race.date), "PPP 'at' p")} - {race.location}</p>
+          <p className="text-muted-foreground">
+            {race.date && isValid(new Date(race.date)) 
+              ? format(new Date(race.date), "PPP 'at' p") 
+              : "Date TBD"} - {race.location}
+          </p>
         </div>
         {isAdmin && (
           <DropdownMenu>
@@ -151,7 +155,9 @@ export default function RaceDetails() {
                 editRaceForm.reset({ 
                   name: race.name, 
                   location: race.location, 
-                  date: new Date(race.date).toISOString().slice(0, 16),
+                  date: race.date && isValid(new Date(race.date)) 
+                    ? new Date(race.date).toISOString().slice(0, 16)
+                    : '',
                   status: race.status 
                 });
                 setSelectedCompetitions(raceCompetitions?.map(c => c.id) || []);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle, UserPlus } from "lucide-react";
-import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes } from "date-fns";
+import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes, isValid } from "date-fns";
 import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
 import { Link } from "wouter";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
@@ -180,6 +180,10 @@ interface RaceCountdownProps {
 export function RaceCountdown({ race }: RaceCountdownProps) {
   const raceDate = new Date(race.date);
   const now = new Date();
+  
+  // Don't render if date is invalid
+  if (!race.date || !isValid(raceDate)) return null;
+  
   const days = differenceInDays(raceDate, now);
   const hours = differenceInHours(raceDate, now) % 24;
   const minutes = differenceInMinutes(raceDate, now) % 60;

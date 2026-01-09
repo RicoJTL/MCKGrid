@@ -7,7 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
 import { useState, useEffect } from "react";
 import { useEnrolledDrivers, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-enrollments";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -451,8 +451,14 @@ export default function CompetitionDetails() {
                     <Link href={`/races/${race.id}`}>
                       <div className="flex items-center gap-5 cursor-pointer">
                         <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 group-hover:bg-primary group-hover:text-white transition-colors">
-                          <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
-                          <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
+                          {race.date && isValid(new Date(race.date)) ? (
+                            <>
+                              <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
+                              <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
+                            </>
+                          ) : (
+                            <span className="text-xs">TBD</span>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-lg font-bold font-display italic mb-0.5">{race.name}</h3>
@@ -478,7 +484,9 @@ export default function CompetitionDetails() {
                               editRaceForm.reset({ 
                                 name: race.name, 
                                 location: race.location, 
-                                date: new Date(race.date).toISOString().slice(0, 16),
+                                date: race.date && isValid(new Date(race.date)) 
+                                  ? new Date(race.date).toISOString().slice(0, 16)
+                                  : '',
                                 status: race.status 
                               });
                               // Fetch current competitions for this race
@@ -519,8 +527,14 @@ export default function CompetitionDetails() {
                     <Link href={`/races/${race.id}`}>
                       <div className="flex items-center gap-5 cursor-pointer">
                         <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-white/5">
-                          <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
-                          <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
+                          {race.date && isValid(new Date(race.date)) ? (
+                            <>
+                              <span className="text-lg font-bold font-display">{format(new Date(race.date), 'dd')}</span>
+                              <span className="text-[10px] font-medium uppercase">{format(new Date(race.date), 'MMM')}</span>
+                            </>
+                          ) : (
+                            <span className="text-xs">TBD</span>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-lg font-bold font-display italic mb-0.5">{race.name}</h3>
@@ -546,7 +560,9 @@ export default function CompetitionDetails() {
                               editRaceForm.reset({ 
                                 name: race.name, 
                                 location: race.location, 
-                                date: new Date(race.date).toISOString().slice(0, 16),
+                                date: race.date && isValid(new Date(race.date)) 
+                                  ? new Date(race.date).toISOString().slice(0, 16)
+                                  : '',
                                 status: race.status 
                               });
                               // Fetch current competitions for this race
@@ -590,8 +606,14 @@ export default function CompetitionDetails() {
                     <Link href={`/races/${race.id}`} className="flex-1">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-lg bg-white/5 flex flex-col items-center justify-center">
-                          <span className="text-xs text-muted-foreground">{format(new Date(race.date), 'MMM')}</span>
-                          <span className="text-lg font-bold">{format(new Date(race.date), 'd')}</span>
+                          {race.date && isValid(new Date(race.date)) ? (
+                            <>
+                              <span className="text-xs text-muted-foreground">{format(new Date(race.date), 'MMM')}</span>
+                              <span className="text-lg font-bold">{format(new Date(race.date), 'd')}</span>
+                            </>
+                          ) : (
+                            <span className="text-xs">TBD</span>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-lg font-bold font-display italic mb-0.5 line-through">{race.name}</h3>
@@ -616,7 +638,9 @@ export default function CompetitionDetails() {
                             editRaceForm.reset({ 
                               name: race.name, 
                               location: race.location, 
-                              date: new Date(race.date).toISOString().slice(0, 16),
+                              date: race.date && isValid(new Date(race.date)) 
+                                ? new Date(race.date).toISOString().slice(0, 16)
+                                : '',
                               status: race.status 
                             });
                             try {

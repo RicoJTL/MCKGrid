@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { useQuery, useQueries, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest, CACHE_TIMES } from "@/lib/queryClient";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -208,6 +208,7 @@ export default function Dashboard() {
     return upcomingRaces.find((race: any) => {
       if (!race.date) return false;
       const raceDate = new Date(race.date);
+      if (!isValid(raceDate)) return false;
       const raceDateOnly = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
       return raceDateOnly >= today;
     });
@@ -873,7 +874,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <h4 className="font-medium text-sm truncate">{result.raceName}</h4>
-                  <p className="text-xs text-muted-foreground truncate">{format(new Date(result.raceDate), "MMM d, yyyy")}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {result.raceDate && isValid(new Date(result.raceDate)) 
+                      ? format(new Date(result.raceDate), "MMM d, yyyy")
+                      : "Date TBD"}
+                  </p>
                 </div>
               </Link>
             ))}
@@ -900,8 +905,14 @@ export default function Dashboard() {
                   <div className="flex flex-wrap items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-transparent hover:border-white/10 cursor-pointer gap-3">
                     <div className="flex items-center gap-4 min-w-0 flex-1">
                       <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary font-bold font-display flex-shrink-0">
-                        <span className="text-sm">{format(new Date(race.date), 'dd')}</span>
-                        <span className="text-[10px]">{format(new Date(race.date), 'MMM')}</span>
+                        {race.date && isValid(new Date(race.date)) ? (
+                          <>
+                            <span className="text-sm">{format(new Date(race.date), 'dd')}</span>
+                            <span className="text-[10px]">{format(new Date(race.date), 'MMM')}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs">TBD</span>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-bold truncate">{race.name}</h4>
