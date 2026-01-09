@@ -199,7 +199,19 @@ export default function Dashboard() {
 
   // Get next race for countdown (must be before conditional returns)
   const upcomingRaces = upcomingRacesData || [];
-  const nextRace = upcomingRaces[0];
+  
+  // Find the first race that's today or in the future
+  const nextRace = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return upcomingRaces.find((race: any) => {
+      if (!race.date) return false;
+      const raceDate = new Date(race.date);
+      const raceDateOnly = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
+      return raceDateOnly >= today;
+    });
+  }, [upcomingRaces]);
 
   // Countdown timer state (must be before conditional returns)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
