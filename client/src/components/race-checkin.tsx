@@ -3,11 +3,12 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle, UserPlus } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, Clock, AlertCircle } from "lucide-react";
 import { format, formatDistanceToNow, differenceInDays, differenceInHours, differenceInMinutes, isValid } from "date-fns";
-import type { Race, Profile, RaceCheckin, Competition } from "@shared/schema";
+import type { Race, Profile, RaceCheckin } from "@shared/schema";
 import { Link } from "wouter";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
+import { useState } from "react";
 
 interface RaceCheckinProps {
   race: Race;
@@ -16,59 +17,40 @@ interface RaceCheckinProps {
 
 export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const { data: myCheckin, isLoading } = useQuery<RaceCheckin | null>({
     queryKey: ['/api/races', race.id, 'my-checkin'],
     enabled: !!profile && profile.role === 'racer',
   });
 
-  // Fetch race's competitions (for enrollment checks and admin linking)
-  const { data: raceCompetitions } = useQuery<Competition[]>({
-    queryKey: ['/api/races', race.id, 'competitions'],
-    enabled: !!profile,
-  });
-
-  const { data: enrolledCompetitions } = useQuery<Competition[]>({
-    queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
-    enabled: !!profile && profile.role === 'racer',
-  });
-
   const checkinMutation = useMutation({
-    mutationFn: (status: 'confirmed' | 'maybe' | 'not_attending') =>
-      apiRequest("POST", `/api/races/${race.id}/checkin`, { status }),
+    mutationFn: async (status: 'confirmed' | 'maybe' | 'not_attending') => {
+      const res = await fetch(`/api/races/${race.id}/checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to check in');
+      }
+      return res.json();
+    },
     onSuccess: () => {
+      setErrorMessage(null);
       queryClient.invalidateQueries({ queryKey: ['/api/races', race.id, 'my-checkin'] });
       queryClient.invalidateQueries({ queryKey: ['/api/races', race.id, 'checkins'] });
+    },
+    onError: (error: Error) => {
+      setErrorMessage(error.message);
     },
   });
 
   // Only racers can check in
   if (!profile || profile.role !== 'racer') return null;
   if (isLoading) return <Skeleton className="h-9 w-24" />;
-
-  // Check if driver is enrolled in at least one competition for this race
-  const enrolledCompIds = new Set(enrolledCompetitions?.map(c => c.id) || []);
-  const isEnrolled = raceCompetitions?.some(c => enrolledCompIds.has(c.id)) ?? false;
-  const firstCompetition = raceCompetitions?.[0];
-
-  if (!isEnrolled && raceCompetitions && enrolledCompetitions) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <AlertCircle className="w-4 h-4 text-yellow-500" />
-          <span>You need to be enrolled in this competition to confirm attendance. Please contact an admin.</span>
-        </div>
-        {isAdmin && firstCompetition && (
-          <Link href={`/competitions/${firstCompetition.id}#drivers`}>
-            <Button size="sm" variant="outline" data-testid="button-enroll-drivers">
-              <UserPlus className="w-4 h-4 mr-1" />
-              Enroll Drivers
-            </Button>
-          </Link>
-        )}
-      </div>
-    );
-  }
 
   const statusConfig = {
     confirmed: { icon: CheckCircle, color: 'text-green-400 bg-green-500/20 border-green-500/30', label: 'Going' },
@@ -77,26 +59,37 @@ export function RaceCheckinButton({ race, profile }: RaceCheckinProps) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {(['confirmed', 'maybe', 'not_attending'] as const).map((status) => {
-        const config = statusConfig[status];
-        const isActive = myCheckin?.status === status;
-        const Icon = config.icon;
-        return (
-          <Button
-            key={status}
-            size="sm"
-            variant={isActive ? "default" : "outline"}
-            className={isActive ? config.color : ''}
-            onClick={() => checkinMutation.mutate(status)}
-            disabled={checkinMutation.isPending}
-            data-testid={`button-checkin-${status}`}
-          >
-            <Icon className="w-4 h-4 mr-1" />
-            {config.label}
-          </Button>
-        );
-      })}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {(['confirmed', 'maybe', 'not_attending'] as const).map((status) => {
+          const config = statusConfig[status];
+          const isActive = myCheckin?.status === status;
+          const Icon = config.icon;
+          return (
+            <Button
+              key={status}
+              size="sm"
+              variant={isActive ? "default" : "outline"}
+              className={isActive ? config.color : ''}
+              onClick={() => {
+                setErrorMessage(null);
+                checkinMutation.mutate(status);
+              }}
+              disabled={checkinMutation.isPending}
+              data-testid={`button-checkin-${status}`}
+            >
+              <Icon className="w-4 h-4 mr-1" />
+              {config.label}
+            </Button>
+          );
+        })}
+      </div>
+      {errorMessage && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <AlertCircle className="w-4 h-4 text-yellow-500" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -90,10 +90,57 @@ export const results = pgTable("results", {
   raceTime: text("race_time"),
 });
 
-export const enrollments = pgTable("competition_enrollments", {
+// Tiered Leagues - groups drivers into tiers with promotion/relegation
+export const tieredLeagues = pgTable("tiered_leagues", {
   id: serial("id").primaryKey(),
-  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
+  name: text("name").notNull(),
+  leagueId: integer("league_id").references(() => leagues.id).notNull(),
+  parentCompetitionId: integer("parent_competition_id").references(() => competitions.id).notNull(),
+  numberOfTiers: integer("number_of_tiers").default(4).notNull(),
+  driversPerTier: integer("drivers_per_tier").default(4).notNull(),
+  racesBeforeShuffle: integer("races_before_shuffle").default(3).notNull(),
+  promotionSpots: integer("promotion_spots").default(1).notNull(),
+  relegationSpots: integer("relegation_spots").default(1).notNull(),
+  racesCompleted: integer("races_completed").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Tier names (S, A, B, C, etc.)
+export const tierNames = pgTable("tier_names", {
+  id: serial("id").primaryKey(),
+  tieredLeagueId: integer("tiered_league_id").references(() => tieredLeagues.id).notNull(),
+  tierNumber: integer("tier_number").notNull(), // 1 = top tier (S), 2 = second tier (A), etc.
+  name: text("name").notNull(), // "S Tier", "A Tier", etc.
+});
+
+// Driver tier assignments
+export const tierAssignments = pgTable("tier_assignments", {
+  id: serial("id").primaryKey(),
+  tieredLeagueId: integer("tiered_league_id").references(() => tieredLeagues.id).notNull(),
   profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  tierNumber: integer("tier_number").notNull(), // 1 = top tier, 2 = second tier, etc.
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+});
+
+// Movement history (promotions/relegations)
+export const tierMovements = pgTable("tier_movements", {
+  id: serial("id").primaryKey(),
+  tieredLeagueId: integer("tiered_league_id").references(() => tieredLeagues.id).notNull(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  fromTier: integer("from_tier").notNull(),
+  toTier: integer("to_tier").notNull(),
+  movementType: text("movement_type").notNull(), // 'promotion' or 'relegation'
+  afterRaceNumber: integer("after_race_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Tier movement notifications
+export const tierMovementNotifications = pgTable("tier_movement_notifications", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  movementId: integer("movement_id").references(() => tierMovements.id).notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const badges = pgTable("badges", {
@@ -152,13 +199,6 @@ export const badgeNotifications = pgTable("badge_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const enrollmentNotifications = pgTable("enrollment_notifications", {
-  id: serial("id").primaryKey(),
-  profileId: integer("profile_id").references(() => profiles.id).notNull(),
-  competitionId: integer("competition_id").references(() => competitions.id).notNull(),
-  isRead: boolean("is_read").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
 
 // Driver Icons - special symbols awarded by admins that appear next to driver names
 export const driverIcons = pgTable("driver_icons", {
@@ -225,9 +265,33 @@ export const resultsRelations = relations(results, ({ one }) => ({
   racer: one(profiles, { fields: [results.racerId], references: [profiles.id] }),
 }));
 
-export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
-  competition: one(competitions, { fields: [enrollments.competitionId], references: [competitions.id] }),
-  profile: one(profiles, { fields: [enrollments.profileId], references: [profiles.id] }),
+// Tiered League Relations
+export const tieredLeaguesRelations = relations(tieredLeagues, ({ one, many }) => ({
+  league: one(leagues, { fields: [tieredLeagues.leagueId], references: [leagues.id] }),
+  parentCompetition: one(competitions, { fields: [tieredLeagues.parentCompetitionId], references: [competitions.id] }),
+  tierNames: many(tierNames),
+  tierAssignments: many(tierAssignments),
+  tierMovements: many(tierMovements),
+}));
+
+export const tierNamesRelations = relations(tierNames, ({ one }) => ({
+  tieredLeague: one(tieredLeagues, { fields: [tierNames.tieredLeagueId], references: [tieredLeagues.id] }),
+}));
+
+export const tierAssignmentsRelations = relations(tierAssignments, ({ one }) => ({
+  tieredLeague: one(tieredLeagues, { fields: [tierAssignments.tieredLeagueId], references: [tieredLeagues.id] }),
+  profile: one(profiles, { fields: [tierAssignments.profileId], references: [profiles.id] }),
+}));
+
+export const tierMovementsRelations = relations(tierMovements, ({ one, many }) => ({
+  tieredLeague: one(tieredLeagues, { fields: [tierMovements.tieredLeagueId], references: [tieredLeagues.id] }),
+  profile: one(profiles, { fields: [tierMovements.profileId], references: [profiles.id] }),
+  notifications: many(tierMovementNotifications),
+}));
+
+export const tierMovementNotificationsRelations = relations(tierMovementNotifications, ({ one }) => ({
+  profile: one(profiles, { fields: [tierMovementNotifications.profileId], references: [profiles.id] }),
+  movement: one(tierMovements, { fields: [tierMovementNotifications.movementId], references: [tierMovements.id] }),
 }));
 
 export const badgesRelations = relations(badges, ({ many }) => ({
@@ -283,14 +347,17 @@ export const insertCompetitionSchema = createInsertSchema(competitions).omit({ i
 export const insertRaceSchema = createInsertSchema(races).omit({ id: true });
 export const insertRaceCompetitionSchema = createInsertSchema(raceCompetitions).omit({ id: true });
 export const insertResultSchema = createInsertSchema(results).omit({ id: true });
-export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true });
+export const insertTieredLeagueSchema = createInsertSchema(tieredLeagues).omit({ id: true, racesCompleted: true, createdAt: true });
+export const insertTierNameSchema = createInsertSchema(tierNames).omit({ id: true });
+export const insertTierAssignmentSchema = createInsertSchema(tierAssignments).omit({ id: true, assignedAt: true });
+export const insertTierMovementSchema = createInsertSchema(tierMovements).omit({ id: true, createdAt: true });
+export const insertTierMovementNotificationSchema = createInsertSchema(tierMovementNotifications).omit({ id: true, isRead: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, sortOrder: true });
 export const insertProfileBadgeSchema = createInsertSchema(profileBadges).omit({ id: true });
 export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, createdAt: true });
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });
 export const insertPersonalBestSchema = createInsertSchema(personalBests).omit({ id: true, achievedAt: true });
 export const insertBadgeNotificationSchema = createInsertSchema(badgeNotifications).omit({ id: true, isRead: true, createdAt: true });
-export const insertEnrollmentNotificationSchema = createInsertSchema(enrollmentNotifications).omit({ id: true, isRead: true, createdAt: true });
 export const insertDriverIconSchema = createInsertSchema(driverIcons).omit({ id: true, isPredefined: true, createdAt: true });
 export const insertProfileDriverIconSchema = createInsertSchema(profileDriverIcons).omit({ id: true, awardedAt: true });
 export const insertDriverIconNotificationSchema = createInsertSchema(driverIconNotifications).omit({ id: true, isRead: true, createdAt: true });
@@ -302,7 +369,11 @@ export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 export type InsertRace = z.infer<typeof insertRaceSchema>;
 export type InsertRaceCompetition = z.infer<typeof insertRaceCompetitionSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
-export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
+export type InsertTieredLeague = z.infer<typeof insertTieredLeagueSchema>;
+export type InsertTierName = z.infer<typeof insertTierNameSchema>;
+export type InsertTierAssignment = z.infer<typeof insertTierAssignmentSchema>;
+export type InsertTierMovement = z.infer<typeof insertTierMovementSchema>;
+export type InsertTierMovementNotification = z.infer<typeof insertTierMovementNotificationSchema>;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 export type InsertProfileBadge = z.infer<typeof insertProfileBadgeSchema>;
 export type InsertSeasonGoal = z.infer<typeof insertSeasonGoalSchema>;
@@ -316,7 +387,11 @@ export type Competition = typeof competitions.$inferSelect;
 export type Race = typeof races.$inferSelect;
 export type RaceCompetition = typeof raceCompetitions.$inferSelect;
 export type Result = typeof results.$inferSelect;
-export type Enrollment = typeof enrollments.$inferSelect;
+export type TieredLeague = typeof tieredLeagues.$inferSelect;
+export type TierName = typeof tierNames.$inferSelect;
+export type TierAssignment = typeof tierAssignments.$inferSelect;
+export type TierMovement = typeof tierMovements.$inferSelect;
+export type TierMovementNotification = typeof tierMovementNotifications.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
 export type ProfileBadge = typeof profileBadges.$inferSelect;
 export type SeasonGoal = typeof seasonGoals.$inferSelect;
@@ -324,8 +399,6 @@ export type RaceCheckin = typeof raceCheckins.$inferSelect;
 export type PersonalBest = typeof personalBests.$inferSelect;
 export type BadgeNotification = typeof badgeNotifications.$inferSelect;
 export type InsertBadgeNotification = z.infer<typeof insertBadgeNotificationSchema>;
-export type EnrollmentNotification = typeof enrollmentNotifications.$inferSelect;
-export type InsertEnrollmentNotification = z.infer<typeof insertEnrollmentNotificationSchema>;
 export type DriverIcon = typeof driverIcons.$inferSelect;
 export type ProfileDriverIcon = typeof profileDriverIcons.$inferSelect;
 export type DriverIconNotification = typeof driverIconNotifications.$inferSelect;

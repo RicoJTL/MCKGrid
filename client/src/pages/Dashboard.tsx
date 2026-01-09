@@ -1,7 +1,7 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";
@@ -14,17 +14,14 @@ import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
+import { useDriverActiveTier, useTierMovementNotifications, useMarkTierMovementNotificationRead, type DriverActiveTier } from "@/hooks/use-tiered-leagues";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const [, setLocation] = useLocation();
 
-  const { data: enrolledCompetitions } = useQuery<Competition[]>({
-    queryKey: ['/api/profiles', profile?.id, 'enrolled-competitions'],
-    enabled: !!profile?.id,
-    staleTime: CACHE_TIMES.USER_DATA,
-  });
+  const { data: activeTier } = useDriverActiveTier(profile?.id);
 
   const { data: allCompetitions } = useQuery<any[]>({
     queryKey: ['/api/competitions/active'],
@@ -122,31 +119,20 @@ export default function Dashboard() {
     n => !dismissedIconIds.has(n.notification.id)
   );
 
-  // Enrollment notifications
-  const { data: enrollmentNotifications } = useQuery<{ notification: { id: number; createdAt: string }; competition: Competition }[]>({
-    queryKey: ['/api/enrollment-notifications'],
-    enabled: !!profile?.id,
-    staleTime: CACHE_TIMES.NOTIFICATIONS,
-  });
+  // Tier movement notifications
+  const { data: tierMovementNotifications } = useTierMovementNotifications();
+  const markTierMovementReadMutation = useMarkTierMovementNotificationRead();
 
-  const [dismissedEnrollmentIds, setDismissedEnrollmentIds] = useState<Set<number>>(new Set());
+  const [dismissedTierMovementIds, setDismissedTierMovementIds] = useState<Set<number>>(new Set());
 
-  const markEnrollmentReadMutation = useMutation({
-    mutationFn: (notificationId: number) => apiRequest("POST", `/api/enrollment-notifications/${notificationId}/mark-read`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enrollment-notifications'] });
-    },
-  });
-
-  const handleDismissAllEnrollmentNotifications = () => {
-    const currentIds = (enrollmentNotifications || []).map(n => n.notification.id);
-    setDismissedEnrollmentIds(new Set(currentIds));
-    // Mark all as read
-    currentIds.forEach(id => markEnrollmentReadMutation.mutate(id));
+  const handleDismissAllTierMovementNotifications = () => {
+    const currentIds = (tierMovementNotifications || []).map(n => n.id);
+    setDismissedTierMovementIds(new Set(currentIds));
+    currentIds.forEach(id => markTierMovementReadMutation.mutate(id));
   };
 
-  const visibleEnrollmentNotifications = (enrollmentNotifications || []).filter(
-    n => !dismissedEnrollmentIds.has(n.notification.id)
+  const visibleTierMovementNotifications = (tierMovementNotifications || []).filter(
+    n => !dismissedTierMovementIds.has(n.id)
   );
 
   // Fetch check-in status for all upcoming races (only for racers)
@@ -158,32 +144,23 @@ export default function Dashboard() {
     })),
   });
 
-  // Find races where the driver hasn't checked in yet AND is enrolled in that competition
+  // Find races where the driver hasn't checked in yet
+  // If tier is assigned, filter to that league; otherwise show all upcoming races
   const racesNeedingCheckin = useMemo(() => {
-    if (!upcomingRacesData || !profile || profile.role !== 'racer' || !enrolledCompetitions) return [];
-    
-    const enrolledCompIds = new Set(enrolledCompetitions.map(c => c.id));
+    if (!upcomingRacesData || !profile || profile.role !== 'racer') return [];
     
     return upcomingRacesData.slice(0, 5).filter((race: any, index: number) => {
       const checkinData = checkinQueries[index]?.data as RaceCheckin | null | undefined;
-      // Only show races where driver is enrolled in the competition
-      const isEnrolled = race.competitionId && enrolledCompIds.has(race.competitionId);
-      return !checkinData && isEnrolled;
+      // If driver has a tier, only show races from their assigned league
+      // If no tier, show all upcoming races for check-in
+      if (activeTier) {
+        const isInLeague = race.leagueId === activeTier.tieredLeague.leagueId;
+        return !checkinData && isInLeague;
+      }
+      return !checkinData;
     });
-  }, [upcomingRacesData, checkinQueries, profile, enrolledCompetitions]);
+  }, [upcomingRacesData, checkinQueries, profile, activeTier]);
 
-  // Sort competitions: main first, then chronologically by createdAt (with id as tiebreaker)
-  const sortedEnrolledCompetitions = useMemo(() => {
-    if (!enrolledCompetitions) return [];
-    return [...enrolledCompetitions].sort((a, b) => {
-      if (a.isMain && !b.isMain) return -1;
-      if (!a.isMain && b.isMain) return 1;
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      if (dateA !== dateB) return dateA - dateB;
-      return a.id - b.id;
-    });
-  }, [enrolledCompetitions]);
 
   const sortedAllCompetitions = useMemo(() => {
     if (!allCompetitions) return [];
@@ -542,67 +519,43 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Enrollment Notifications - Consolidated Banner */}
-        {visibleEnrollmentNotifications.length > 0 && (
+        {/* Tier Movement Notifications Banner */}
+        {visibleTierMovementNotifications.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
-            data-testid="banner-enrollment-notifications"
+            data-testid="banner-tier-movement-notifications"
             onClick={() => { 
-              handleDismissAllEnrollmentNotifications(); 
-              setLocation(`/competitions/${visibleEnrollmentNotifications[0].competition.id}`); 
+              handleDismissAllTierMovementNotifications(); 
             }}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20">
-                  <Flag className="w-6 h-6 text-blue-400" />
+                  <Layers className="w-6 h-6 text-blue-400" />
                 </div>
                 <div>
                   <h3 className="font-bold text-blue-300">
-                    You've Been Enrolled in {visibleEnrollmentNotifications.length} Competition{visibleEnrollmentNotifications.length > 1 ? 's' : ''}!
+                    Tier Update{visibleTierMovementNotifications.length > 1 ? 's' : ''}!
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {visibleEnrollmentNotifications.length === 1 
-                      ? `You've been added to ${visibleEnrollmentNotifications[0].competition.name}. Click to view.`
-                      : `Click a competition below to view, or dismiss to close.`
+                    {visibleTierMovementNotifications.length === 1 
+                      ? `Your tier has been updated! Click to dismiss.`
+                      : `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`
                     }
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
-                {visibleEnrollmentNotifications.slice(0, 3).map((item) => {
-                  const CompIcon = getIconComponent(item.competition.iconName) || Flag;
-                  const iconColor = item.competition.iconColor || "#3b82f6";
-                  return (
-                    <div
-                      key={item.notification.id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: `${iconColor}25`, borderColor: `${iconColor}40` }}
-                      data-testid={`enrollment-notification-${item.competition.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismissAllEnrollmentNotifications();
-                        setLocation(`/competitions/${item.competition.id}`);
-                      }}
-                    >
-                      <CompIcon className="w-4 h-4" style={{ color: iconColor }} />
-                      <span className="text-sm font-medium">{item.competition.name}</span>
-                    </div>
-                  );
-                })}
-                {visibleEnrollmentNotifications.length > 3 && (
-                  <span className="text-sm text-blue-300">+{visibleEnrollmentNotifications.length - 3} more</span>
-                )}
                 <Button
                   size="icon"
                   variant="ghost"
                   className="text-blue-300"
-                  onClick={(e) => { e.stopPropagation(); handleDismissAllEnrollmentNotifications(); }}
-                  disabled={markEnrollmentReadMutation.isPending}
-                  data-testid="button-dismiss-enrollment-notifications"
+                  onClick={(e) => { e.stopPropagation(); handleDismissAllTierMovementNotifications(); }}
+                  disabled={markTierMovementReadMutation.isPending}
+                  data-testid="button-dismiss-tier-movement-notifications"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -612,43 +565,37 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* My Competitions - Scrollable Tabs */}
-      {sortedEnrolledCompetitions.length > 0 && (
+      {/* My Tier - Current tier assignment */}
+      {activeTier && (
         <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20">
           <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
-            <Trophy className="w-5 h-5 text-yellow-500" /> My Competitions
+            <Layers className="w-5 h-5 text-yellow-500" /> My Tier
           </h3>
-          <ScrollArea className="w-full">
-            <div className="flex gap-4 pb-2">
-              {sortedEnrolledCompetitions.map((comp, index) => {
-                const CompIcon = getIconComponent(comp.iconName) || Trophy;
-                const iconColor = comp.iconColor || "#eab308";
-                return (
-                  <Link key={comp.id} href={`/competitions/${comp.id}`}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10 hover:border-yellow-500/50 hover:bg-secondary transition-all cursor-pointer min-w-[220px] shadow-lg"
-                      data-testid={`card-my-competition-${comp.id}`}
-                    >
-                      <div 
-                        className="p-3 rounded-lg"
-                        style={{ backgroundColor: `${iconColor}20` }}
-                      >
-                        <CompIcon className="w-5 h-5" style={{ color: iconColor }} />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="font-bold text-white truncate">{comp.name}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{comp.type?.replace('_', ' ') || 'Series'}</p>
-                      </div>
-                    </motion.div>
-                  </Link>
-                );
-              })}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-6"
+          >
+            <div className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10">
+              <div className="p-3 rounded-lg bg-yellow-500/20">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold font-display italic text-white">{activeTier.tierName}</p>
+                <p className="text-sm text-muted-foreground">{activeTier.tieredLeague.name}</p>
+              </div>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+            <div className="flex gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold font-display text-primary">P{activeTier.standing}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Position</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold font-display text-white">{activeTier.points}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Points</div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
 

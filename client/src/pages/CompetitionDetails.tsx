@@ -1,12 +1,11 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions, useUpdateRaceCompetitions, useRaceCompetitions } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star, Check, Ban } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, Layers, Star, Check, Ban } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
 import { useState, useEffect } from "react";
-import { useEnrolledDrivers, useEnrollDriver, useUnenrollDriver } from "@/hooks/use-enrollments";
 import { format, isValid } from "date-fns";
 import {
   Dialog,
@@ -60,9 +59,6 @@ export default function CompetitionDetails() {
   const deleteCompetition = useDeleteCompetition();
   const updateRace = useUpdateRace();
   const deleteRace = useDeleteRace();
-  const { data: enrolledDrivers, isLoading: enrolledLoading } = useEnrolledDrivers(compId);
-  const enrollDriver = useEnrollDriver();
-  const unenrollDriver = useUnenrollDriver();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -680,113 +676,70 @@ export default function CompetitionDetails() {
         </TabsContent>
 
         <TabsContent value="drivers" className="mt-6">
-          {(profilesLoading || enrolledLoading) ? (
+          {profilesLoading ? (
             <Skeleton className="h-64 w-full rounded-xl" />
           ) : (() => {
-            const allDrivers = allProfiles?.filter(p => p.role === 'racer' || p.role === 'admin') || [];
-            const enrolledIds = new Set(enrolledDrivers?.map(d => d.id) || []);
-            const enrolled = allDrivers.filter(d => enrolledIds.has(d.id));
-            const notEnrolled = allDrivers.filter(d => !enrolledIds.has(d.id));
+            const driversFromStandings = standings?.map(s => ({
+              id: s.racerId,
+              name: s.driverName,
+              points: s.points
+            })) || [];
 
             return (
               <div className="space-y-6">
-                <div id="enrolled-drivers" className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden scroll-mt-4">
+                <div id="competitors" className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden scroll-mt-4">
                   <div className="p-4 border-b border-white/5">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                       <Users className="w-5 h-5" />
-                      Enrolled Drivers ({enrolled.length})
+                      Competitors ({driversFromStandings.length})
                     </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Drivers are assigned to tiers in tiered leagues. Go to the league page to manage tier assignments.
+                    </p>
                   </div>
-                  {enrolled.length > 0 ? (
+                  {driversFromStandings.length > 0 ? (
                     <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {enrolled.map((driver) => (
-                        <div 
-                          key={driver.id}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5"
-                          data-testid={`enrolled-driver-${driver.id}`}
-                        >
-                          <Avatar className="w-12 h-12">
-                            <AvatarImage src={driver.profileImage || undefined} />
-                            <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                              {driver.driverName?.[0]?.toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <Link href={`/profiles/${driver.id}`}>
-                              <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
+                      {driversFromStandings.map((driver) => (
+                        <Link key={driver.id} href={`/profiles/${driver.id}`}>
+                          <div 
+                            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                            data-testid={`competitor-${driver.id}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold truncate">
                                 <DriverNameWithIcons 
                                   profileId={driver.id} 
-                                  name={driver.driverName || driver.fullName || 'Unknown'} 
+                                  name={driver.name || 'Unknown'} 
                                   iconsMap={iconsMap}
                                 />
                               </p>
-                            </Link>
+                              <p className="text-sm text-muted-foreground">{driver.points} points</p>
+                            </div>
                           </div>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => unenrollDriver.mutate({ competitionId: compId, profileId: driver.id })}
-                              disabled={unenrollDriver.isPending}
-                              data-testid={`button-unenroll-${driver.id}`}
-                            >
-                              <UserMinus className="w-4 h-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (
                     <div className="p-8 text-center text-muted-foreground">
-                      <p>No drivers enrolled in this competition yet.</p>
+                      <p>No drivers have competed in this competition yet.</p>
                     </div>
                   )}
                 </div>
 
-                {isAdmin && notEnrolled.length > 0 && (
-                  <div className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden">
-                    <div className="p-4 border-b border-white/5">
-                      <h3 className="font-bold text-lg flex items-center gap-2">
-                        <UserPlus className="w-5 h-5" />
-                        Available Drivers ({notEnrolled.length})
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">Click to enroll drivers in this competition</p>
-                    </div>
-                    <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {notEnrolled.map((driver) => (
-                        <div 
-                          key={driver.id}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-white/5"
-                          data-testid={`available-driver-${driver.id}`}
-                        >
-                          <Avatar className="w-12 h-12">
-                            <AvatarImage src={driver.profileImage || undefined} />
-                            <AvatarFallback className="bg-muted text-muted-foreground font-bold">
-                              {driver.driverName?.[0]?.toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <Link href={`/profiles/${driver.id}`}>
-                              <p className="font-bold truncate hover:text-primary cursor-pointer transition-colors">
-                                <DriverNameWithIcons 
-                                  profileId={driver.id} 
-                                  name={driver.driverName || driver.fullName || 'Unknown'} 
-                                  iconsMap={iconsMap}
-                                />
-                              </p>
-                            </Link>
-                          </div>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => enrollDriver.mutate({ competitionId: compId, profileId: driver.id })}
-                            disabled={enrollDriver.isPending}
-                            data-testid={`button-enroll-${driver.id}`}
-                          >
-                            <UserPlus className="w-4 h-4 mr-1" /> Enroll
-                          </Button>
-                        </div>
-                      ))}
+                {isAdmin && competition?.leagueId && (
+                  <div className="rounded-xl bg-secondary/30 border border-white/5 p-4">
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-bold">Manage Tier Assignments</p>
+                        <p className="text-sm text-muted-foreground">Assign drivers to tiers in the league settings</p>
+                      </div>
+                      <Link href={`/leagues/${competition.leagueId}`} className="ml-auto">
+                        <Button size="sm" variant="outline" data-testid="button-manage-tiers">
+                          <Layers className="w-4 h-4 mr-1" />
+                          Go to League
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 )}

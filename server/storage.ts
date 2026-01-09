@@ -1,14 +1,17 @@
 import { db } from "./db";
 import { 
-  leagues, competitions, races, results, profiles, teams, enrollments, raceCompetitions,
+  leagues, competitions, races, results, profiles, teams, raceCompetitions,
   badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
-  driverIcons, profileDriverIcons, driverIconNotifications, enrollmentNotifications,
-  type League, type Competition, type Race, type Result, type Profile, type Team, type Enrollment, type RaceCompetition,
+  driverIcons, profileDriverIcons, driverIconNotifications,
+  tieredLeagues, tierNames, tierAssignments, tierMovements, tierMovementNotifications,
+  type League, type Competition, type Race, type Result, type Profile, type Team, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
-  type DriverIcon, type ProfileDriverIcon, type DriverIconNotification, type EnrollmentNotification,
-  type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam, type InsertEnrollment,
+  type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
+  type TieredLeague, type TierName, type TierAssignment, type TierMovement, type TierMovementNotification,
+  type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
-  type InsertDriverIcon, type InsertProfileDriverIcon
+  type InsertDriverIcon, type InsertProfileDriverIcon,
+  type InsertTieredLeague, type InsertTierName, type InsertTierAssignment
 } from "@shared/schema";
 import { eq, desc, and, inArray, sql, gte, or } from "drizzle-orm";
 
@@ -59,12 +62,29 @@ export interface IStorage {
   getCompetitionStandings(competitionId: number): Promise<any[]>;
   getUpcomingRaces(competitionId?: number): Promise<Race[]>;
   
-  // Enrollments
-  getEnrollments(competitionId: number): Promise<Enrollment[]>;
-  getEnrolledDrivers(competitionId: number): Promise<Profile[]>;
-  enrollDriver(competitionId: number, profileId: number): Promise<Enrollment>;
-  unenrollDriver(competitionId: number, profileId: number): Promise<void>;
-  getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]>;
+  // Tiered Leagues
+  getTieredLeagues(leagueId: number): Promise<TieredLeague[]>;
+  getTieredLeague(id: number): Promise<TieredLeague | undefined>;
+  getTieredLeagueByParentCompetition(competitionId: number): Promise<TieredLeague | undefined>;
+  createTieredLeague(data: InsertTieredLeague, tierNamesList: string[]): Promise<TieredLeague>;
+  updateTieredLeague(id: number, data: Partial<InsertTieredLeague>): Promise<TieredLeague>;
+  deleteTieredLeague(id: number): Promise<void>;
+  getTierNames(tieredLeagueId: number): Promise<TierName[]>;
+  
+  // Tier Assignments
+  getTierAssignments(tieredLeagueId: number): Promise<(TierAssignment & { profile: Profile })[]>;
+  getDriverTierAssignment(tieredLeagueId: number, profileId: number): Promise<TierAssignment | undefined>;
+  getDriverActiveTier(profileId: number): Promise<{ tieredLeague: TieredLeague; tierAssignment: TierAssignment; tierName: TierName } | null>;
+  assignDriverToTier(tieredLeagueId: number, profileId: number, tierNumber: number): Promise<TierAssignment>;
+  removeDriverFromTier(tieredLeagueId: number, profileId: number): Promise<void>;
+  moveDriverToTier(tieredLeagueId: number, profileId: number, newTierNumber: number, movementType: string, afterRaceNumber: number): Promise<TierMovement>;
+  
+  // Tier Standings
+  getTierStandings(tieredLeagueId: number): Promise<{ tierNumber: number; tierName: string; standings: { profileId: number; driverName: string; fullName: string; points: number }[] }[]>;
+  
+  // Tier Movement Notifications
+  getUnreadTierMovementNotifications(profileId: number): Promise<{ notification: TierMovementNotification; movement: TierMovement; tieredLeague: TieredLeague }[]>;
+  markTierMovementNotificationRead(notificationId: number): Promise<void>;
   getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
   getAllActiveCompetitions(): Promise<any[]>;
   getAllUpcomingRaces(): Promise<any[]>;
@@ -89,10 +109,6 @@ export interface IStorage {
   getUnreadBadgeNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; badge: Badge }[]>;
   markBadgeNotificationsRead(profileId: number): Promise<void>;
   
-  // Enrollment Notifications
-  getUnreadEnrollmentNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; competition: Competition }[]>;
-  markEnrollmentNotificationRead(notificationId: number): Promise<void>;
-  createEnrollmentNotification(profileId: number, competitionId: number): Promise<void>;
   
   // Driver Icons
   getDriverIcons(): Promise<DriverIcon[]>;
@@ -183,11 +199,13 @@ export class DatabaseStorage implements IStorage {
       await this.deleteRace(race.id);
     }
     
-    // Delete all competitions in this league (which cascades to enrollments)
-    const comps = await db.select().from(competitions).where(eq(competitions.leagueId, id));
-    for (const comp of comps) {
-      await db.delete(enrollments).where(eq(enrollments.competitionId, comp.id));
+    // Delete all tiered leagues in this league
+    const leagueTieredLeagues = await db.select().from(tieredLeagues).where(eq(tieredLeagues.leagueId, id));
+    for (const tl of leagueTieredLeagues) {
+      await this.deleteTieredLeague(tl.id);
     }
+    
+    // Delete all competitions in this league
     await db.delete(competitions).where(eq(competitions.leagueId, id));
     
     // Delete the league
@@ -221,8 +239,11 @@ export class DatabaseStorage implements IStorage {
       await this.deleteRace(raceId);
     }
     
-    // Delete enrollments for this competition
-    await db.delete(enrollments).where(eq(enrollments.competitionId, id));
+    // Check if any tiered league uses this as parent competition and delete it
+    const parentTieredLeague = await db.select().from(tieredLeagues).where(eq(tieredLeagues.parentCompetitionId, id));
+    for (const tl of parentTieredLeague) {
+      await this.deleteTieredLeague(tl.id);
+    }
     // Delete the competition
     await db.delete(competitions).where(eq(competitions.id, id));
   }
@@ -541,8 +562,8 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteProfile(id: number): Promise<void> {
-    // First delete all competition enrollments for this driver to avoid foreign key constraint
-    await db.delete(enrollments).where(eq(enrollments.profileId, id));
+    // First delete all tier assignments for this driver
+    await db.delete(tierAssignments).where(eq(tierAssignments.profileId, id));
     // Then delete all race results for this driver
     await db.delete(results).where(eq(results.racerId, id));
     // Finally delete the profile
@@ -577,14 +598,6 @@ export class DatabaseStorage implements IStorage {
 
     const raceIds = competitionRaces.map(r => r.race.id);
     
-    // Get enrolled drivers for this competition
-    const enrolledDriverIds = await db
-      .select({ profileId: enrollments.profileId })
-      .from(enrollments)
-      .where(eq(enrollments.competitionId, competitionId));
-    
-    const enrolledIds = new Set(enrolledDriverIds.map(e => e.profileId));
-    
     // Get all results for all races in this competition using inArray
     const allRaceResults = await db
       .select({
@@ -598,13 +611,10 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(profiles, eq(results.racerId, profiles.id))
       .where(inArray(results.raceId, raceIds));
 
-    // Aggregate by racer - only include enrolled drivers
+    // Aggregate by racer - include all drivers who have race results
     const standingsMap = new Map<number, { racerId: number; driverName: string | null; fullName: string | null; points: number; podiums: number }>();
     
     for (const result of allRaceResults) {
-      // Skip drivers who are not enrolled in this competition
-      if (!enrolledIds.has(result.racerId)) continue;
-      
       const existing = standingsMap.get(result.racerId);
       if (existing) {
         existing.points += result.points;
@@ -643,99 +653,221 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(races).where(eq(races.status, 'scheduled')).orderBy(races.date);
   }
 
-  async getEnrollments(competitionId: number): Promise<Enrollment[]> {
-    return await db.select().from(enrollments).where(eq(enrollments.competitionId, competitionId));
+  // Tiered League functions
+  async getTieredLeagues(leagueId: number): Promise<TieredLeague[]> {
+    return await db.select().from(tieredLeagues).where(eq(tieredLeagues.leagueId, leagueId));
   }
 
-  async getEnrolledDrivers(competitionId: number): Promise<Profile[]> {
-    const enrolled = await db
-      .select({ profile: profiles })
-      .from(enrollments)
-      .innerJoin(profiles, eq(enrollments.profileId, profiles.id))
-      .where(eq(enrollments.competitionId, competitionId));
-    return enrolled.map(e => e.profile);
+  async getTieredLeague(id: number): Promise<TieredLeague | undefined> {
+    const [tieredLeague] = await db.select().from(tieredLeagues).where(eq(tieredLeagues.id, id));
+    return tieredLeague;
   }
 
-  async enrollDriver(competitionId: number, profileId: number): Promise<Enrollment> {
-    // Check if already enrolled
-    const existing = await db.select().from(enrollments)
-      .where(and(eq(enrollments.competitionId, competitionId), eq(enrollments.profileId, profileId)));
-    if (existing.length > 0) return existing[0];
-    
-    const [enrollment] = await db.insert(enrollments).values({ competitionId, profileId }).returning();
-    
-    // Create enrollment notification for the driver
-    await db.insert(enrollmentNotifications).values({ profileId, competitionId });
-    
-    return enrollment;
+  async getTieredLeagueByParentCompetition(competitionId: number): Promise<TieredLeague | undefined> {
+    const [tieredLeague] = await db.select().from(tieredLeagues).where(eq(tieredLeagues.parentCompetitionId, competitionId));
+    return tieredLeague;
   }
 
-  async unenrollDriver(competitionId: number, profileId: number): Promise<void> {
-    // First, remove the enrollment
-    await db.delete(enrollments).where(
-      and(eq(enrollments.competitionId, competitionId), eq(enrollments.profileId, profileId))
-    );
+  async createTieredLeague(data: InsertTieredLeague, tierNamesList: string[]): Promise<TieredLeague> {
+    const [tieredLeague] = await db.insert(tieredLeagues).values(data).returning();
     
-    // Delete any pending enrollment notifications for this competition/profile
-    await db.delete(enrollmentNotifications).where(
-      and(
-        eq(enrollmentNotifications.competitionId, competitionId),
-        eq(enrollmentNotifications.profileId, profileId)
-      )
-    );
-    
-    // Get all races linked to this competition
-    const competitionRaces = await db
-      .select({ raceId: raceCompetitions.raceId })
-      .from(raceCompetitions)
-      .where(eq(raceCompetitions.competitionId, competitionId));
-    
-    if (competitionRaces.length === 0) return;
-    
-    const raceIds = competitionRaces.map(r => r.raceId);
-    
-    // For each race, check if driver is still enrolled in any other competition that race belongs to
-    for (const raceId of raceIds) {
-      // Get all competitions this race belongs to
-      const raceComps = await db
-        .select({ competitionId: raceCompetitions.competitionId })
-        .from(raceCompetitions)
-        .where(eq(raceCompetitions.raceId, raceId));
-      
-      const compIds = raceComps.map(rc => rc.competitionId);
-      
-      // Check if driver is enrolled in any of these competitions
-      const stillEnrolled = await db
-        .select({ id: enrollments.id })
-        .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.profileId, profileId),
-            inArray(enrollments.competitionId, compIds)
-          )
-        )
-        .limit(1);
-      
-      // If driver is not enrolled in any competition this race belongs to, remove their check-in
-      if (stillEnrolled.length === 0) {
-        await db.delete(raceCheckins).where(
-          and(
-            eq(raceCheckins.raceId, raceId),
-            eq(raceCheckins.profileId, profileId)
-          )
-        );
-      }
+    // Create tier names
+    for (let i = 0; i < tierNamesList.length; i++) {
+      await db.insert(tierNames).values({
+        tieredLeagueId: tieredLeague.id,
+        tierNumber: i + 1,
+        name: tierNamesList[i],
+      });
     }
+    
+    return tieredLeague;
   }
 
-  async getDriverEnrolledCompetitions(profileId: number): Promise<Competition[]> {
-    const enrolled = await db
-      .select({ competition: competitions })
-      .from(enrollments)
-      .innerJoin(competitions, eq(enrollments.competitionId, competitions.id))
-      .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
-      .where(and(eq(enrollments.profileId, profileId), eq(leagues.status, 'active')));
-    return enrolled.map(e => e.competition);
+  async updateTieredLeague(id: number, data: Partial<InsertTieredLeague>): Promise<TieredLeague> {
+    const [updated] = await db.update(tieredLeagues).set(data).where(eq(tieredLeagues.id, id)).returning();
+    return updated;
+  }
+
+  async deleteTieredLeague(id: number): Promise<void> {
+    // Delete in order: notifications -> movements -> assignments -> tier names -> tiered league
+    const movements = await db.select().from(tierMovements).where(eq(tierMovements.tieredLeagueId, id));
+    for (const movement of movements) {
+      await db.delete(tierMovementNotifications).where(eq(tierMovementNotifications.movementId, movement.id));
+    }
+    await db.delete(tierMovements).where(eq(tierMovements.tieredLeagueId, id));
+    await db.delete(tierAssignments).where(eq(tierAssignments.tieredLeagueId, id));
+    await db.delete(tierNames).where(eq(tierNames.tieredLeagueId, id));
+    await db.delete(tieredLeagues).where(eq(tieredLeagues.id, id));
+  }
+
+  async getTierNames(tieredLeagueId: number): Promise<TierName[]> {
+    return await db.select().from(tierNames)
+      .where(eq(tierNames.tieredLeagueId, tieredLeagueId))
+      .orderBy(tierNames.tierNumber);
+  }
+
+  async getTierAssignments(tieredLeagueId: number): Promise<(TierAssignment & { profile: Profile })[]> {
+    const assignments = await db
+      .select({ assignment: tierAssignments, profile: profiles })
+      .from(tierAssignments)
+      .innerJoin(profiles, eq(tierAssignments.profileId, profiles.id))
+      .where(eq(tierAssignments.tieredLeagueId, tieredLeagueId))
+      .orderBy(tierAssignments.tierNumber);
+    return assignments.map(a => ({ ...a.assignment, profile: a.profile }));
+  }
+
+  async getDriverTierAssignment(tieredLeagueId: number, profileId: number): Promise<TierAssignment | undefined> {
+    const [assignment] = await db.select().from(tierAssignments)
+      .where(and(eq(tierAssignments.tieredLeagueId, tieredLeagueId), eq(tierAssignments.profileId, profileId)));
+    return assignment;
+  }
+
+  async getDriverActiveTier(profileId: number): Promise<{ tieredLeague: TieredLeague; tierAssignment: TierAssignment; tierName: TierName } | null> {
+    // Find active tiered league assignment for the driver
+    const result = await db
+      .select({ 
+        tieredLeague: tieredLeagues, 
+        tierAssignment: tierAssignments,
+        tierName: tierNames
+      })
+      .from(tierAssignments)
+      .innerJoin(tieredLeagues, eq(tierAssignments.tieredLeagueId, tieredLeagues.id))
+      .innerJoin(leagues, eq(tieredLeagues.leagueId, leagues.id))
+      .innerJoin(tierNames, and(
+        eq(tierNames.tieredLeagueId, tieredLeagues.id),
+        eq(tierNames.tierNumber, tierAssignments.tierNumber)
+      ))
+      .where(and(
+        eq(tierAssignments.profileId, profileId),
+        eq(leagues.status, 'active')
+      ))
+      .limit(1);
+    
+    if (result.length === 0) return null;
+    return result[0];
+  }
+
+  async assignDriverToTier(tieredLeagueId: number, profileId: number, tierNumber: number): Promise<TierAssignment> {
+    // Check if already assigned
+    const existing = await this.getDriverTierAssignment(tieredLeagueId, profileId);
+    if (existing) {
+      // Update tier number
+      const [updated] = await db.update(tierAssignments)
+        .set({ tierNumber })
+        .where(eq(tierAssignments.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [assignment] = await db.insert(tierAssignments).values({
+      tieredLeagueId,
+      profileId,
+      tierNumber,
+    }).returning();
+    
+    return assignment;
+  }
+
+  async removeDriverFromTier(tieredLeagueId: number, profileId: number): Promise<void> {
+    await db.delete(tierAssignments).where(
+      and(eq(tierAssignments.tieredLeagueId, tieredLeagueId), eq(tierAssignments.profileId, profileId))
+    );
+  }
+
+  async moveDriverToTier(tieredLeagueId: number, profileId: number, newTierNumber: number, movementType: string, afterRaceNumber: number): Promise<TierMovement> {
+    // Get current tier
+    const currentAssignment = await this.getDriverTierAssignment(tieredLeagueId, profileId);
+    if (!currentAssignment) throw new Error("Driver not assigned to a tier");
+    
+    const fromTier = currentAssignment.tierNumber;
+    
+    // Update the assignment
+    await db.update(tierAssignments)
+      .set({ tierNumber: newTierNumber })
+      .where(eq(tierAssignments.id, currentAssignment.id));
+    
+    // Record the movement
+    const [movement] = await db.insert(tierMovements).values({
+      tieredLeagueId,
+      profileId,
+      fromTier,
+      toTier: newTierNumber,
+      movementType,
+      afterRaceNumber,
+    }).returning();
+    
+    // Create notification
+    await db.insert(tierMovementNotifications).values({
+      profileId,
+      movementId: movement.id,
+    });
+    
+    return movement;
+  }
+
+  async getTierStandings(tieredLeagueId: number): Promise<{ tierNumber: number; tierName: string; standings: { profileId: number; driverName: string; fullName: string; points: number }[] }[]> {
+    const tieredLeague = await this.getTieredLeague(tieredLeagueId);
+    if (!tieredLeague) return [];
+    
+    const names = await this.getTierNames(tieredLeagueId);
+    const assignments = await this.getTierAssignments(tieredLeagueId);
+    
+    // Get parent competition standings
+    const parentStandings = await this.getCompetitionStandings(tieredLeague.parentCompetitionId);
+    const pointsMap = new Map(parentStandings.map((s: any) => [s.racerId, s.points]));
+    
+    // Group assignments by tier and add points
+    const tierMap = new Map<number, { profileId: number; driverName: string; fullName: string; points: number }[]>();
+    
+    for (const assignment of assignments) {
+      const tierNumber = assignment.tierNumber;
+      if (!tierMap.has(tierNumber)) {
+        tierMap.set(tierNumber, []);
+      }
+      tierMap.get(tierNumber)!.push({
+        profileId: assignment.profileId,
+        driverName: assignment.profile.driverName || '',
+        fullName: assignment.profile.fullName || '',
+        points: pointsMap.get(assignment.profileId) || 0,
+      });
+    }
+    
+    // Sort each tier by points
+    Array.from(tierMap.values()).forEach(standings => {
+      standings.sort((a: { points: number }, b: { points: number }) => b.points - a.points);
+    });
+    
+    // Build result
+    return names.map(name => ({
+      tierNumber: name.tierNumber,
+      tierName: name.name,
+      standings: tierMap.get(name.tierNumber) || [],
+    }));
+  }
+
+  async getUnreadTierMovementNotifications(profileId: number): Promise<{ notification: TierMovementNotification; movement: TierMovement; tieredLeague: TieredLeague }[]> {
+    const result = await db
+      .select({
+        notification: tierMovementNotifications,
+        movement: tierMovements,
+        tieredLeague: tieredLeagues,
+      })
+      .from(tierMovementNotifications)
+      .innerJoin(tierMovements, eq(tierMovementNotifications.movementId, tierMovements.id))
+      .innerJoin(tieredLeagues, eq(tierMovements.tieredLeagueId, tieredLeagues.id))
+      .where(and(
+        eq(tierMovementNotifications.profileId, profileId),
+        eq(tierMovementNotifications.isRead, false)
+      ))
+      .orderBy(desc(tierMovementNotifications.createdAt));
+    
+    return result;
+  }
+
+  async markTierMovementNotificationRead(notificationId: number): Promise<void> {
+    await db.update(tierMovementNotifications)
+      .set({ isRead: true })
+      .where(eq(tierMovementNotifications.id, notificationId));
   }
 
   async getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]> {
@@ -972,28 +1104,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(badgeNotifications.profileId, profileId));
   }
 
-  async getUnreadEnrollmentNotifications(profileId: number): Promise<{ notification: { id: number; createdAt: Date }; competition: Competition }[]> {
-    const result = await db
-      .select({
-        notification: { id: enrollmentNotifications.id, createdAt: enrollmentNotifications.createdAt },
-        competition: competitions,
-      })
-      .from(enrollmentNotifications)
-      .innerJoin(competitions, eq(enrollmentNotifications.competitionId, competitions.id))
-      .where(and(eq(enrollmentNotifications.profileId, profileId), eq(enrollmentNotifications.isRead, false)))
-      .orderBy(desc(enrollmentNotifications.createdAt));
-    return result;
-  }
-
-  async markEnrollmentNotificationRead(notificationId: number): Promise<void> {
-    await db.update(enrollmentNotifications)
-      .set({ isRead: true })
-      .where(eq(enrollmentNotifications.id, notificationId));
-  }
-
-  async createEnrollmentNotification(profileId: number, competitionId: number): Promise<void> {
-    await db.insert(enrollmentNotifications).values({ profileId, competitionId });
-  }
 
   async getProfilesWithBadge(badgeId: number): Promise<{ profileId: number; badgeId: number }[]> {
     const result = await db

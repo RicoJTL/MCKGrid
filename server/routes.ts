@@ -239,22 +239,22 @@ export async function registerRoutes(
     res.json(history);
   });
 
-  // Get competitions a driver is enrolled in (only accessible to profile owner or admins)
-  app.get("/api/profiles/:id/enrolled-competitions", async (req: any, res) => {
+  // Get driver's active tier info (for "My Competitions" section)
+  app.get("/api/profiles/:id/active-tier", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = req.user.claims.sub;
     const profile = await storage.getProfile(userId);
     const targetId = Number(req.params.id);
     
-    // Only allow profile owner or admins to view enrolled competitions
+    // Only allow profile owner or admins to view tier info
     const isOwner = profile?.id === targetId;
     const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({ error: "Can only view your own enrolled competitions" });
+      return res.status(403).json({ error: "Can only view your own tier" });
     }
     
-    const competitions = await storage.getDriverEnrolledCompetitions(targetId);
-    res.json(competitions);
+    const tierInfo = await storage.getDriverActiveTier(targetId);
+    res.json(tierInfo);
   });
 
   // Get all active competitions across all leagues
@@ -508,25 +508,81 @@ export async function registerRoutes(
     res.status(201).json(team);
   });
 
-  // === Enrollments ===
-  app.get("/api/competitions/:id/enrollments", async (req, res) => {
+  // === Tiered Leagues ===
+  app.get("/api/leagues/:id/tiered-leagues", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const enrolledDrivers = await storage.getEnrolledDrivers(Number(req.params.id));
-    res.json(enrolledDrivers);
+    const tieredLeagues = await storage.getTieredLeagues(Number(req.params.id));
+    res.json(tieredLeagues);
   });
 
-  app.post("/api/competitions/:id/enrollments", requireAdmin, async (req: any, res) => {
-    const competitionId = Number(req.params.id);
-    const { profileId } = req.body;
-    if (!profileId) return res.status(400).json({ error: "profileId required" });
-    const enrollment = await storage.enrollDriver(competitionId, profileId);
-    res.status(201).json(enrollment);
+  app.get("/api/tiered-leagues/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const tieredLeague = await storage.getTieredLeague(Number(req.params.id));
+    if (!tieredLeague) return res.sendStatus(404);
+    res.json(tieredLeague);
   });
 
-  app.delete("/api/competitions/:id/enrollments/:profileId", requireAdmin, async (req: any, res) => {
-    const competitionId = Number(req.params.id);
+  app.get("/api/tiered-leagues/:id/tier-names", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const tierNames = await storage.getTierNames(Number(req.params.id));
+    res.json(tierNames);
+  });
+
+  app.get("/api/tiered-leagues/:id/standings", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const standings = await storage.getTierStandings(Number(req.params.id));
+    res.json(standings);
+  });
+
+  app.get("/api/tiered-leagues/:id/assignments", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const assignments = await storage.getTierAssignments(Number(req.params.id));
+    res.json(assignments);
+  });
+
+  app.post("/api/tiered-leagues", requireAdmin, async (req: any, res) => {
+    const { name, leagueId, parentCompetitionId, numberOfTiers, driversPerTier, racesBeforeShuffle, promotionSpots, relegationSpots, tierNames } = req.body;
+    if (!name || !leagueId || !parentCompetitionId || !tierNames || tierNames.length === 0) {
+      return res.status(400).json({ error: "name, leagueId, parentCompetitionId, and tierNames required" });
+    }
+    const tieredLeague = await storage.createTieredLeague({
+      name,
+      leagueId,
+      parentCompetitionId,
+      numberOfTiers: numberOfTiers || tierNames.length,
+      driversPerTier: driversPerTier || 4,
+      racesBeforeShuffle: racesBeforeShuffle || 3,
+      promotionSpots: promotionSpots || 1,
+      relegationSpots: relegationSpots || 1,
+    }, tierNames);
+    res.status(201).json(tieredLeague);
+  });
+
+  app.patch("/api/tiered-leagues/:id", requireAdmin, async (req: any, res) => {
+    const tieredLeague = await storage.updateTieredLeague(Number(req.params.id), req.body);
+    res.json(tieredLeague);
+  });
+
+  app.delete("/api/tiered-leagues/:id", requireAdmin, async (req: any, res) => {
+    await storage.deleteTieredLeague(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
+  // Tier Assignments
+  app.post("/api/tiered-leagues/:id/assignments", requireAdmin, async (req: any, res) => {
+    const tieredLeagueId = Number(req.params.id);
+    const { profileId, tierNumber } = req.body;
+    if (!profileId || tierNumber === undefined) {
+      return res.status(400).json({ error: "profileId and tierNumber required" });
+    }
+    const assignment = await storage.assignDriverToTier(tieredLeagueId, profileId, tierNumber);
+    res.status(201).json(assignment);
+  });
+
+  app.delete("/api/tiered-leagues/:id/assignments/:profileId", requireAdmin, async (req: any, res) => {
+    const tieredLeagueId = Number(req.params.id);
     const profileId = Number(req.params.profileId);
-    await storage.unenrollDriver(competitionId, profileId);
+    await storage.removeDriverFromTier(tieredLeagueId, profileId);
     res.sendStatus(204);
   });
 
@@ -685,20 +741,20 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
-  // Enrollment Notifications
-  app.get("/api/enrollment-notifications", async (req: any, res) => {
+  // Tier Movement Notifications
+  app.get("/api/tier-movement-notifications", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = req.user.claims.sub;
     const profile = await storage.getProfile(userId);
     if (!profile) return res.json([]);
-    const notifications = await storage.getUnreadEnrollmentNotifications(profile.id);
+    const notifications = await storage.getUnreadTierMovementNotifications(profile.id);
     res.json(notifications);
   });
 
-  app.post("/api/enrollment-notifications/:id/mark-read", async (req: any, res) => {
+  app.post("/api/tier-movement-notifications/:id/mark-read", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const notificationId = Number(req.params.id);
-    await storage.markEnrollmentNotificationRead(notificationId);
+    await storage.markTierMovementNotificationRead(notificationId);
     res.sendStatus(204);
   });
 
@@ -914,15 +970,26 @@ export async function registerRoutes(
     
     const raceId = Number(req.params.id);
     
-    // Verify driver is enrolled in at least one competition this race belongs to
-    const raceCompetitions = await storage.getRaceCompetitions(raceId);
-    const enrolledCompetitions = await storage.getDriverEnrolledCompetitions(profile.id);
-    const enrolledCompIds = new Set(enrolledCompetitions.map(c => c.id));
-    const isEnrolled = raceCompetitions.some(c => enrolledCompIds.has(c.id));
-    
-    if (!isEnrolled) {
-      return res.status(403).json({ error: "You must be enrolled in this competition to confirm attendance" });
+    // Verify race exists
+    const race = await storage.getRace(raceId);
+    if (!race) {
+      return res.status(404).json({ error: "Race not found" });
     }
+    
+    // Check if this league uses tiered leagues
+    const tieredLeagues = await storage.getTieredLeagues(race.leagueId);
+    
+    if (tieredLeagues && tieredLeagues.length > 0) {
+      // League has tiered leagues - require tier assignment
+      const driverTier = await storage.getDriverActiveTier(profile.id);
+      if (!driverTier) {
+        return res.status(403).json({ error: "You must be assigned to a tier to confirm attendance" });
+      }
+      if (driverTier.tieredLeague.leagueId !== race.leagueId) {
+        return res.status(403).json({ error: "You must be in this league to confirm attendance" });
+      }
+    }
+    // If no tiered leagues configured, allow all racers to check in
     
     const { status } = req.body;
     if (!['confirmed', 'maybe', 'not_attending'].includes(status)) {
