@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles, ArrowRight, Flag } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles, ArrowRight, Flag, Zap, Grid2x2, ArrowUp, Star, CircleDot } from "lucide-react";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -359,7 +359,7 @@ export function BadgesSection({ profile, isOwnProfile = false, isAdmin = false }
 
 const goalSchema = z.object({
   leagueId: z.number(),
-  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position']),
+  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend']),
   targetValue: z.number().min(1),
 });
 
@@ -409,7 +409,13 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
     podiums: 'Podium Finishes',
     points: 'Total Points',
     races: 'Races Entered',
-    position: 'Final Position',
+    position: 'Championship Position',
+    top5: 'Top 5 Finishes',
+    top10: 'Top 10 Finishes',
+    poles: 'Pole Positions',
+    frontRow: 'Front Row Starts',
+    gridClimber: 'Grid Climber (Finish Higher Than Start)',
+    perfectWeekend: 'Perfect Weekends (Pole + Win)',
   };
 
   return (
@@ -553,7 +559,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
             const isCompleted = isPositionGoal 
               ? (goal.currentValue > 0 && goal.currentValue <= goal.targetValue)
               : goal.currentValue >= goal.targetValue;
-            const isCountGoal = ['wins', 'podiums', 'races'].includes(goal.goalType);
+            const isCountGoal = ['wins', 'podiums', 'races', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend'].includes(goal.goalType);
             const progress = isPositionGoal 
               ? (goal.currentValue > 0 ? Math.min(100, (goal.targetValue / goal.currentValue) * 100) : 0)
               : Math.min(100, (goal.currentValue / goal.targetValue) * 100);
@@ -641,21 +647,33 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                         {Array.from({ length: goal.targetValue }).map((_, i) => {
                           const isAchieved = i < goal.currentValue;
                           const IconComponent = goal.goalType === 'wins' ? Trophy : 
-                                               goal.goalType === 'podiums' ? Medal : Flag;
+                                               goal.goalType === 'podiums' ? Medal :
+                                               goal.goalType === 'poles' ? Zap :
+                                               goal.goalType === 'frontRow' ? Grid2x2 :
+                                               goal.goalType === 'gridClimber' ? ArrowUp :
+                                               goal.goalType === 'perfectWeekend' ? Star :
+                                               goal.goalType === 'top5' ? CircleDot :
+                                               goal.goalType === 'top10' ? CircleDot : Flag;
                           return (
                             <div
                               key={i}
                               className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
                                 isAchieved 
                                   ? goal.goalType === 'wins' ? 'bg-yellow-500/20' : 
-                                    goal.goalType === 'podiums' ? 'bg-orange-500/20' : 'bg-primary/20'
+                                    goal.goalType === 'podiums' ? 'bg-orange-500/20' : 
+                                    goal.goalType === 'poles' ? 'bg-purple-500/20' :
+                                    goal.goalType === 'perfectWeekend' ? 'bg-amber-500/20' :
+                                    goal.goalType === 'gridClimber' ? 'bg-green-500/20' : 'bg-primary/20'
                                   : 'bg-muted/20'
                               }`}
                             >
                               <IconComponent className={`w-4 h-4 ${
                                 isAchieved 
                                   ? goal.goalType === 'wins' ? 'text-yellow-500' : 
-                                    goal.goalType === 'podiums' ? 'text-orange-400' : 'text-primary'
+                                    goal.goalType === 'podiums' ? 'text-orange-400' : 
+                                    goal.goalType === 'poles' ? 'text-purple-400' :
+                                    goal.goalType === 'perfectWeekend' ? 'text-amber-400' :
+                                    goal.goalType === 'gridClimber' ? 'text-green-400' : 'text-primary'
                                   : 'text-muted-foreground/30'
                               }`} />
                             </div>
