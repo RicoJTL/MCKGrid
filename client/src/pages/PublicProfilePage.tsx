@@ -145,23 +145,27 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {isDriver ? (
-        <Tabs defaultValue="stats" className="w-full">
+      {(isDriver || isAdmin) ? (
+        <Tabs defaultValue={isDriver ? "stats" : "goals"} className="w-full">
           <TabsList className="w-full justify-start bg-secondary/30 p-1 rounded-xl gap-1 flex-wrap h-auto" data-testid="public-profile-tabs">
-            <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-stats">
-              <BarChart3 className="w-4 h-4 mr-2" /> Stats
-            </TabsTrigger>
-            <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-badges">
-              <Award className="w-4 h-4 mr-2" /> Badges
-            </TabsTrigger>
-            {hasIcons && (
-              <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-icons">
-                <Sparkles className="w-4 h-4 mr-2" /> Icons
-              </TabsTrigger>
+            {isDriver && (
+              <>
+                <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-stats">
+                  <BarChart3 className="w-4 h-4 mr-2" /> Stats
+                </TabsTrigger>
+                <TabsTrigger value="badges" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-badges">
+                  <Award className="w-4 h-4 mr-2" /> Badges
+                </TabsTrigger>
+                {hasIcons && (
+                  <TabsTrigger value="icons" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-icons">
+                    <Sparkles className="w-4 h-4 mr-2" /> Icons
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-history">
+                  <Trophy className="w-4 h-4 mr-2" /> History
+                </TabsTrigger>
+              </>
             )}
-            <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-history">
-              <Trophy className="w-4 h-4 mr-2" /> History
-            </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="goals" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-public-goals">
                 <Target className="w-4 h-4 mr-2" /> Goals
@@ -169,32 +173,27 @@ export default function PublicProfilePage() {
             )}
           </TabsList>
 
-          <TabsContent value="stats" className="space-y-6 mt-6">
-            <DriverStatsDashboard profile={mockProfile} />
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold font-display italic">Recent Results</h3>
-              <RecentResults profile={mockProfile} />
-            </div>
-          </TabsContent>
+          {isDriver && (
+            <>
+              <TabsContent value="stats" className="space-y-6 mt-6">
+                <DriverStatsDashboard profile={mockProfile} />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold font-display italic">Recent Results</h3>
+                  <RecentResults profile={mockProfile} />
+                </div>
+              </TabsContent>
 
+              <TabsContent value="badges" className="mt-6">
+                <BadgesSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
+              </TabsContent>
 
-          <TabsContent value="badges" className="mt-6">
-            <BadgesSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
-          </TabsContent>
+              {hasIcons && (
+                <TabsContent value="icons" className="mt-6">
+                  <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
+                </TabsContent>
+              )}
 
-          {hasIcons && (
-            <TabsContent value="icons" className="mt-6">
-              <DriverIconsSection profile={mockProfile} isOwnProfile={false} isAdmin={isAdmin} />
-            </TabsContent>
-          )}
-
-          {isAdmin && (
-            <TabsContent value="goals" className="mt-6">
-              <SeasonGoals profile={mockProfile} isReadOnly={true} />
-            </TabsContent>
-          )}
-
-          <TabsContent value="history" className="space-y-6 mt-6">
+              <TabsContent value="history" className="space-y-6 mt-6">
             <h2 className="text-xl font-display font-bold italic text-white">Race History</h2>
             {competitionGroups.length > 0 ? (
               <div className="space-y-6">
@@ -245,7 +244,15 @@ export default function PublicProfilePage() {
                 <p>No race history yet.</p>
               </div>
             )}
-          </TabsContent>
+              </TabsContent>
+            </>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="goals" className="mt-6">
+              <SeasonGoals profile={mockProfile} isReadOnly={true} />
+            </TabsContent>
+          )}
         </Tabs>
       ) : (
         <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
