@@ -113,12 +113,12 @@ export const PREDEFINED_BADGES: PredefinedBadge[] = [
   {
     slug: "goal_getter",
     name: "Goal Getter",
-    description: "Achieve your first season goal",
+    description: "Achieve 3 season goals",
     category: "milestones",
     iconName: "badge_target",
     iconColor: "#10b981",
     criteria: "goal_getter",
-    threshold: 1,
+    threshold: 3,
     sortOrder: 9,
   },
 

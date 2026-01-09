@@ -821,6 +821,11 @@ export async function registerRoutes(
     }
     const { leagueId, goalType, targetValue } = req.body;
     const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue });
+    
+    // Sync badges after goal creation (for Goal Getter badge)
+    const { syncBadgesForDriver } = await import("./badge-automation");
+    await syncBadgesForDriver(profile.id);
+    
     res.status(201).json(goal);
   });
 
@@ -841,6 +846,11 @@ export async function registerRoutes(
     if (targetValue !== undefined) data.targetValue = targetValue;
     if (currentValue !== undefined) data.currentValue = currentValue;
     const updated = await storage.updateSeasonGoal(Number(req.params.id), data);
+    
+    // Sync badges after goal update (for Goal Getter badge)
+    const { syncBadgesForDriver } = await import("./badge-automation");
+    await syncBadgesForDriver(profile.id);
+    
     res.json(updated);
   });
 
@@ -857,6 +867,11 @@ export async function registerRoutes(
     }
     
     await storage.deleteSeasonGoal(Number(req.params.id));
+    
+    // Sync badges after goal deletion (may revoke Goal Getter badge)
+    const { syncBadgesForDriver } = await import("./badge-automation");
+    await syncBadgesForDriver(profile.id);
+    
     res.sendStatus(204);
   });
 

@@ -1,7 +1,21 @@
 import { db } from "./db";
-import { results, races, profiles, badges, profileBadges, leagues, competitions, raceCompetitions } from "@shared/schema";
+import { results, races, profiles, badges, profileBadges, leagues, competitions, raceCompetitions, seasonGoals } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { PREDEFINED_BADGES } from "@shared/predefined-badges";
+
+async function getCompletedGoalsCount(profileId: number): Promise<number> {
+  const goals = await db
+    .select()
+    .from(seasonGoals)
+    .where(eq(seasonGoals.profileId, profileId));
+  
+  return goals.filter(goal => {
+    if (goal.goalType === 'position') {
+      return goal.currentValue > 0 && goal.currentValue <= goal.targetValue;
+    }
+    return goal.currentValue >= goal.targetValue;
+  }).length;
+}
 
 interface DriverStats {
   totalRaces: number;
@@ -278,6 +292,14 @@ export async function checkAndAwardBadges(profileId: number): Promise<string[]> 
     }
   }
 
+  // Goal Getter badge - achieve 3 season goals
+  const completedGoals = await getCompletedGoalsCount(profileId);
+  if (completedGoals >= 3) {
+    if (await awardBadgeIfNotExists(profileId, "goal_getter", existingBadges)) {
+      awardedBadges.push("goal_getter");
+    }
+  }
+
   return awardedBadges;
 }
 
@@ -290,6 +312,7 @@ const REVOCABLE_BADGE_SLUGS = [
   "first_podium",
   "first_win", 
   "late_bloomer",
+  "goal_getter",
   // Race highlights (qualifying-based)
   "pole_position",
   "grid_climber",
@@ -441,6 +464,12 @@ export async function syncBadgesForDriver(profileId: number): Promise<{ awarded:
   const stats = await getDriverStatsForBadges(profileId);
   const existingBadges = await getExistingBadges(profileId);
   const eligibleBadges = calculateEligibleBadges(stats);
+  
+  // Add goal_getter to eligible set if driver has 3+ completed goals
+  const completedGoals = await getCompletedGoalsCount(profileId);
+  if (completedGoals >= 3) {
+    eligibleBadges.add("goal_getter");
+  }
   
   const awarded: string[] = [];
   const revoked: string[] = [];
