@@ -1,7 +1,7 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions, useUpdateRaceCompetitions, useRaceCompetitions } from "@/hooks/use-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star, Check } from "lucide-react";
+import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, UserPlus, UserMinus, Star, Check, Ban } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/use-profile";
@@ -196,6 +196,7 @@ export default function CompetitionDetails() {
 
   const upcomingRaces = races?.filter(r => r.status === 'scheduled') || [];
   const completedRaces = races?.filter(r => r.status === 'completed') || [];
+  const cancelledRaces = races?.filter(r => r.status === 'cancelled') || [];
 
   if (racesLoading) return <Skeleton className="h-96 w-full rounded-2xl" />;
 
@@ -570,6 +571,74 @@ export default function CompetitionDetails() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cancelled Races - Admin Only */}
+          {isAdmin && cancelledRaces.length > 0 && (
+            <div>
+              <h2 className="text-xl font-display font-bold italic mb-4 text-muted-foreground flex items-center gap-2">
+                <Ban className="w-5 h-5" /> Cancelled Races ({cancelledRaces.length})
+              </h2>
+              <div className="space-y-3 opacity-60">
+                {cancelledRaces.map((race) => (
+                  <div key={race.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary/30 rounded-xl border border-white/5" data-testid={`race-card-cancelled-${race.id}`}>
+                    <Link href={`/races/${race.id}`} className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-lg bg-white/5 flex flex-col items-center justify-center">
+                          <span className="text-xs text-muted-foreground">{format(new Date(race.date), 'MMM')}</span>
+                          <span className="text-lg font-bold">{format(new Date(race.date), 'd')}</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold font-display italic mb-0.5 line-through">{race.name}</h3>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {race.location}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="mt-3 md:mt-0 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-destructive/20 text-destructive border border-destructive/30">
+                        Cancelled
+                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" data-testid={`button-race-menu-${race.id}`}>
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={async () => {
+                            editRaceForm.reset({ 
+                              name: race.name, 
+                              location: race.location, 
+                              date: new Date(race.date).toISOString().slice(0, 16),
+                              status: race.status 
+                            });
+                            try {
+                              const res = await fetch(`/api/races/${race.id}/competitions`, { credentials: "include" });
+                              if (res.ok) {
+                                const comps = await res.json();
+                                setEditSelectedCompetitions(comps.map((c: any) => c.id));
+                              } else {
+                                setEditSelectedCompetitions([compId]);
+                              }
+                            } catch {
+                              setEditSelectedCompetitions([compId]);
+                            }
+                            setEditingRace(race);
+                          }}>
+                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeletingRace(race)} className="text-destructive">
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
