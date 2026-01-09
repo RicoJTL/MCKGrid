@@ -254,7 +254,23 @@ export async function registerRoutes(
     }
     
     const tierInfo = await storage.getDriverActiveTier(targetId);
-    res.json(tierInfo);
+    if (!tierInfo) {
+      return res.json(null);
+    }
+    
+    // Get tier standings to calculate position and points
+    const standings = await storage.getTierStandings(tierInfo.tieredLeague.id);
+    const tierStanding = standings.find(s => s.tierNumber === tierInfo.tierAssignment.tierNumber);
+    const driverStanding = tierStanding?.standings.find((s: any) => s.profileId === targetId);
+    const standingIndex = tierStanding?.standings.findIndex((s: any) => s.profileId === targetId) ?? -1;
+    
+    res.json({
+      tieredLeague: tierInfo.tieredLeague,
+      tierNumber: tierInfo.tierAssignment.tierNumber,
+      tierName: tierInfo.tierName.name,
+      standing: standingIndex >= 0 ? standingIndex + 1 : 0,
+      points: driverStanding?.points || 0,
+    });
   });
 
   // Get all active competitions across all leagues

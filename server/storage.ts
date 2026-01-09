@@ -769,6 +769,21 @@ export class DatabaseStorage implements IStorage {
       tierNumber,
     }).returning();
     
+    // Create initial assignment notification
+    const [movement] = await db.insert(tierMovements).values({
+      tieredLeagueId,
+      profileId,
+      fromTier: 0,
+      toTier: tierNumber,
+      movementType: 'initial_assignment',
+      afterRaceNumber: 0,
+    }).returning();
+    
+    await db.insert(tierMovementNotifications).values({
+      profileId,
+      movementId: movement.id,
+    });
+    
     return assignment;
   }
 
