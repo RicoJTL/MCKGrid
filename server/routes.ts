@@ -512,7 +512,13 @@ export async function registerRoutes(
   app.get("/api/leagues/:id/tiered-leagues", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const tieredLeagues = await storage.getTieredLeagues(Number(req.params.id));
-    res.json(tieredLeagues);
+    const tieredLeaguesWithTiers = await Promise.all(
+      tieredLeagues.map(async (tl) => {
+        const tierNamesList = await storage.getTierNames(tl.id);
+        return { ...tl, tierNames: tierNamesList };
+      })
+    );
+    res.json(tieredLeaguesWithTiers);
   });
 
   app.get("/api/tiered-leagues/:id", async (req, res) => {
