@@ -586,6 +586,27 @@ export async function registerRoutes(
     res.sendStatus(204);
   });
 
+  // Manual admin promotion/relegation - creates movement record and notification
+  app.post("/api/tiered-leagues/:id/move-driver", requireAdmin, async (req: any, res) => {
+    const tieredLeagueId = Number(req.params.id);
+    const { profileId, newTierNumber } = req.body;
+    if (!profileId || newTierNumber === undefined) {
+      return res.status(400).json({ error: "profileId and newTierNumber required" });
+    }
+    try {
+      // Get current assignment to determine movement type
+      const currentAssignment = await storage.getDriverTierAssignment(tieredLeagueId, profileId);
+      if (!currentAssignment) {
+        return res.status(400).json({ error: "Driver not assigned to a tier in this league" });
+      }
+      const movementType = newTierNumber < currentAssignment.tierNumber ? 'admin_promotion' : 'admin_relegation';
+      const movement = await storage.moveDriverToTier(tieredLeagueId, profileId, newTierNumber, movementType, 0);
+      res.json(movement);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // === Driver Stats (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/stats", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

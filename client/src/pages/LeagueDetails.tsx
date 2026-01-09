@@ -3,7 +3,7 @@ import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, Flag, Pencil, Trash2, MoreVertical, Star, CheckCircle2, Circle, UserCheck, Layers, ChevronUp, ChevronDown, Users, X } from "lucide-react";
 import { useProfile, useAllProfiles } from "@/hooks/use-profile";
-import { useTieredLeagues, useCreateTieredLeague, useUpdateTieredLeague, useDeleteTieredLeague, useTierAssignments, useAssignDriverToTier, useRemoveDriverFromTier, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
+import { useTieredLeagues, useCreateTieredLeague, useUpdateTieredLeague, useDeleteTieredLeague, useTierAssignments, useAssignDriverToTier, useRemoveDriverFromTier, useMoveDriverTier, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
@@ -105,6 +105,7 @@ export default function LeagueDetails() {
   const deleteTieredLeague = useDeleteTieredLeague();
   const assignDriverToTier = useAssignDriverToTier();
   const removeDriverFromTier = useRemoveDriverFromTier();
+  const moveDriverTier = useMoveDriverTier();
   
   // Get assignments for the currently managed tiered league
   const { data: currentAssignments } = useTierAssignments(managingTieredLeague?.id || 0);
@@ -761,7 +762,7 @@ export default function LeagueDetails() {
             </div>
 
             {/* Tier Groups */}
-            {assignmentsByTier.map(tier => (
+            {assignmentsByTier.map((tier, tierIndex) => (
               <div key={tier.tierNumber} className="space-y-2">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <Badge className="bg-primary/20 text-primary border-primary/30">{tier.tierName}</Badge>
@@ -769,27 +770,66 @@ export default function LeagueDetails() {
                 </h4>
                 <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-secondary/30 border border-white/5 min-h-[60px]">
                   {tier.drivers.length > 0 ? (
-                    tier.drivers.map(assignment => (
-                      <Badge 
-                        key={assignment.id}
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1"
-                      >
-                        {assignment.profile?.driverName || assignment.profile?.fullName || 'Unknown'}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-4 w-4 ml-1 hover:bg-destructive/20"
-                          onClick={() => removeDriverFromTier.mutate({
-                            tieredLeagueId: managingTieredLeague!.id,
-                            profileId: assignment.profileId
-                          })}
-                          data-testid={`button-remove-driver-${assignment.profileId}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </Badge>
-                    ))
+                    tier.drivers.map(assignment => {
+                      const canPromote = tierIndex > 0;
+                      const canRelegate = tierIndex < assignmentsByTier.length - 1;
+                      const promoteTier = canPromote ? assignmentsByTier[tierIndex - 1] : null;
+                      const relegateTier = canRelegate ? assignmentsByTier[tierIndex + 1] : null;
+                      
+                      return (
+                        <DropdownMenu key={assignment.id}>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="secondary"
+                              className="flex items-center gap-1 pr-1 cursor-pointer hover:bg-secondary/80"
+                              data-testid={`driver-badge-${assignment.profileId}`}
+                            >
+                              {assignment.profile?.driverName || assignment.profile?.fullName || 'Unknown'}
+                              <MoreVertical className="w-3 h-3 ml-1" />
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            {canPromote && promoteTier && (
+                              <DropdownMenuItem 
+                                onClick={() => moveDriverTier.mutate({
+                                  tieredLeagueId: managingTieredLeague!.id,
+                                  profileId: assignment.profileId,
+                                  newTierNumber: promoteTier.tierNumber
+                                })}
+                                data-testid={`button-promote-${assignment.profileId}`}
+                              >
+                                <ChevronUp className="w-4 h-4 mr-2 text-green-500" />
+                                Promote to {promoteTier.tierName}
+                              </DropdownMenuItem>
+                            )}
+                            {canRelegate && relegateTier && (
+                              <DropdownMenuItem 
+                                onClick={() => moveDriverTier.mutate({
+                                  tieredLeagueId: managingTieredLeague!.id,
+                                  profileId: assignment.profileId,
+                                  newTierNumber: relegateTier.tierNumber
+                                })}
+                                data-testid={`button-relegate-${assignment.profileId}`}
+                              >
+                                <ChevronDown className="w-4 h-4 mr-2 text-orange-500" />
+                                Relegate to {relegateTier.tierName}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => removeDriverFromTier.mutate({
+                                tieredLeagueId: managingTieredLeague!.id,
+                                profileId: assignment.profileId
+                              })}
+                              className="text-destructive"
+                              data-testid={`button-remove-driver-${assignment.profileId}`}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Remove from Tier
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    })
                   ) : (
                     <p className="text-sm text-muted-foreground">No drivers in this tier</p>
                   )}

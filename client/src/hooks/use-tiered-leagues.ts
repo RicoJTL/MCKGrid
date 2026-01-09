@@ -220,6 +220,30 @@ export function useRemoveDriverFromTier() {
   });
 }
 
+export function useMoveDriverTier() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ tieredLeagueId, profileId, newTierNumber }: { tieredLeagueId: number; profileId: number; newTierNumber: number }) => {
+      return apiRequest("POST", `/api/tiered-leagues/${tieredLeagueId}/move-driver`, { profileId, newTierNumber });
+    },
+    onSuccess: (_, { tieredLeagueId, profileId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'standings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'active-tier'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
+      toast({ title: "Driver tier updated" });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to move driver", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+}
+
 export function useTierMovementNotifications() {
   return useQuery<Array<{ id: number; movementId: number; isRead: boolean; movement: any }>>({
     queryKey: ['/api/tier-movement-notifications'],
