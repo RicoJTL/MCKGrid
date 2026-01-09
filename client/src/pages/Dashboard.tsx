@@ -197,36 +197,11 @@ export default function Dashboard() {
     });
   }, [allCompetitions]);
 
-  if (!profileLoading && !profile) {
-    setLocation("/profile");
-    return null;
-  }
-
-  if (profileLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-12 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Skeleton className="h-80 rounded-2xl" />
-          <Skeleton className="h-80 rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
-
-  const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
-  
-  const standings = mainStandings || [];
+  // Get next race for countdown (must be before conditional returns)
   const upcomingRaces = upcomingRacesData || [];
   const nextRace = upcomingRaces[0];
 
-  // Countdown timer state
+  // Countdown timer state (must be before conditional returns)
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [isRaceDay, setIsRaceDay] = useState(false);
 
@@ -270,7 +245,34 @@ export default function Dashboard() {
     const interval = setInterval(calculateCountdown, 1000);
     return () => clearInterval(interval);
   }, [calculateCountdown]);
+
+  if (!profileLoading && !profile) {
+    setLocation("/profile");
+    return null;
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="h-80 rounded-2xl" />
+          <Skeleton className="h-80 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  const roleDisplay = profile?.role === 'racer' ? 'Driver' : profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).replace('_', ' ') : 'Driver';
   
+  const standings = mainStandings || [];
+
   // Find current user's position in main competition
   const userStanding = standings.find((s: any) => s.racerId === profile?.id);
   const userPosition = userStanding ? standings.indexOf(userStanding) + 1 : null;
