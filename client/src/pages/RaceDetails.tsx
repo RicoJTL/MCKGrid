@@ -73,19 +73,25 @@ export default function RaceDetails() {
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
   const iconsMap = useDriverIconsMap();
   
-  const { data: tieredLeagues } = useTieredLeagues(race?.leagueId || 0);
-  const firstTieredLeagueId = tieredLeagues?.[0]?.id || 0;
-  const { data: tierAssignments } = useTierAssignments(firstTieredLeagueId);
+  const { data: tieredLeagues, isLoading: loadingTieredLeagues } = useTieredLeagues(race?.leagueId || 0);
+  const matchingTieredLeague = tieredLeagues?.find((tl: any) => tl.parentCompetitionId === firstCompetitionId);
+  const matchingTieredLeagueId = matchingTieredLeague?.id || 0;
+  const { data: tierAssignments, isLoading: loadingTierAssignments } = useTierAssignments(matchingTieredLeagueId);
   
   const eligibleDrivers = (() => {
     if (!profiles) return [];
     const racers = profiles.filter(p => p.role === 'racer');
-    if (tieredLeagues && tieredLeagues.length > 0 && tierAssignments && tierAssignments.length > 0) {
+    if (matchingTieredLeague) {
+      if (!tierAssignments || tierAssignments.length === 0) {
+        return [];
+      }
       const assignedProfileIds = new Set(tierAssignments.map((a: any) => a.profileId));
       return racers.filter(p => assignedProfileIds.has(p.id));
     }
     return racers;
   })();
+  
+  const loadingEligibleDrivers = loadingTieredLeagues || (matchingTieredLeague && loadingTierAssignments);
 
   const editRaceForm = useForm({
     defaultValues: {
@@ -226,15 +232,19 @@ export default function RaceDetails() {
         </div>
 
         {isEditing ? (
-          <ResultsEditor 
-            raceId={raceId}
-            competitionId={firstCompetitionId}
-            existingResults={results || []} 
-            profiles={eligibleDrivers}
-            allProfiles={profiles || []}
-            onCancel={() => setIsEditing(false)} 
-            onSave={() => setIsEditing(false)}
-          />
+          loadingEligibleDrivers ? (
+            <Skeleton className="h-48 w-full" />
+          ) : (
+            <ResultsEditor 
+              raceId={raceId}
+              competitionId={firstCompetitionId}
+              existingResults={results || []} 
+              profiles={eligibleDrivers}
+              allProfiles={profiles || []}
+              onCancel={() => setIsEditing(false)} 
+              onSave={() => setIsEditing(false)}
+            />
+          )
         ) : (
           <div className="bg-secondary/30 rounded-xl border border-white/5 overflow-hidden">
             <Table>
