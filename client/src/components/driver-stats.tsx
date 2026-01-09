@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles, ArrowRight, Flag } from "lucide-react";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -477,14 +477,37 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                 <FormField
                   control={form.control}
                   name="targetValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Target</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={1} {...field} onChange={(e) => field.onChange(Number(e.target.value))} data-testid="input-goal-target" />
-                      </FormControl>
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const goalType = form.watch('goalType');
+                    const isPositionGoal = goalType === 'position';
+                    return (
+                      <FormItem>
+                        <FormLabel>
+                          {isPositionGoal ? 'Target Position' : 'Target'}
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            {isPositionGoal && (
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">P</span>
+                            )}
+                            <Input 
+                              type="number" 
+                              min={1} 
+                              className={isPositionGoal ? "pl-8" : ""}
+                              {...field} 
+                              onChange={(e) => field.onChange(Number(e.target.value))} 
+                              data-testid="input-goal-target" 
+                            />
+                          </div>
+                        </FormControl>
+                        {isPositionGoal && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            E.g., enter "5" to aim for a Top 5 finish in the championship
+                          </p>
+                        )}
+                      </FormItem>
+                    );
+                  }}
                 />
                 <Button type="submit" className="w-full" disabled={addMutation.isPending} data-testid="button-save-goal">
                   {addMutation.isPending ? 'Saving...' : 'Save Goal'}
@@ -498,18 +521,69 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
 
       {goals?.length ? (
         <div className="space-y-3">
+          {(() => {
+            const completedCount = goals.filter(g => {
+              const isPositionGoal = g.goalType === 'position';
+              return isPositionGoal 
+                ? (g.currentValue > 0 && g.currentValue <= g.targetValue)
+                : g.currentValue >= g.targetValue;
+            }).length;
+            return completedCount > 0 && (
+              <div className="p-3 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium">
+                    {completedCount}/{goals.length} goal{goals.length !== 1 ? 's' : ''} achieved
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: goals.length }).map((_, i) => (
+                    <div 
+                      key={i}
+                      className={`w-2 h-2 rounded-full ${i < completedCount ? 'bg-green-500' : 'bg-muted/30'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {goals.map((goal) => {
-            const progress = Math.min(100, (goal.currentValue / goal.targetValue) * 100);
             const league = leagues?.find(l => l.id === goal.leagueId);
+            const isPositionGoal = goal.goalType === 'position';
+            const isCompleted = isPositionGoal 
+              ? (goal.currentValue > 0 && goal.currentValue <= goal.targetValue)
+              : goal.currentValue >= goal.targetValue;
+            const isCountGoal = ['wins', 'podiums', 'races'].includes(goal.goalType);
+            const progress = isPositionGoal 
+              ? (goal.currentValue > 0 ? Math.min(100, (goal.targetValue / goal.currentValue) * 100) : 0)
+              : Math.min(100, (goal.currentValue / goal.targetValue) * 100);
+
             return (
-              <div key={goal.id} className="p-4 rounded-xl bg-secondary/30 border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="font-medium">{goalLabels[goal.goalType] || goal.goalType}</p>
-                    {league && <p className="text-xs text-muted-foreground">{league.name}</p>}
+              <div 
+                key={goal.id} 
+                className={`p-4 rounded-xl border transition-all ${
+                  isCompleted 
+                    ? 'bg-green-500/10 border-green-500/30' 
+                    : 'bg-secondary/30 border-white/5'
+                }`}
+                data-testid={`goal-card-${goal.id}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {isCompleted && (
+                      <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center" data-testid={`goal-completed-${goal.id}`}>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      </div>
+                    )}
+                    <div>
+                      <p className={`font-medium ${isCompleted ? 'text-green-400' : ''}`}>
+                        {goalLabels[goal.goalType] || goal.goalType}
+                        {isCompleted && <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Achieved!</span>}
+                      </p>
+                      {league && <p className="text-xs text-muted-foreground">{league.name}</p>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold">{goal.currentValue}/{goal.targetValue}</span>
                     {!isReadOnly && (
                       <Button
                         size="icon"
@@ -523,16 +597,127 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                     )}
                   </div>
                 </div>
-                <Progress value={progress} className="h-2" />
+
+                {isPositionGoal ? (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Current</p>
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold font-display italic text-lg ${
+                          goal.currentValue === 0 ? 'bg-muted/30 text-muted-foreground' :
+                          goal.currentValue === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                          goal.currentValue === 2 ? 'bg-gray-400/20 text-gray-300' :
+                          goal.currentValue === 3 ? 'bg-orange-600/20 text-orange-400' :
+                          goal.currentValue <= goal.targetValue ? 'bg-green-500/20 text-green-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {goal.currentValue > 0 ? `P${goal.currentValue}` : '—'}
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Target</p>
+                        <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center font-bold font-display italic text-lg text-primary">
+                          P{goal.targetValue}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-1 text-right">
+                      {goal.currentValue === 0 ? (
+                        <span className="text-sm text-muted-foreground">Season not started</span>
+                      ) : isCompleted ? (
+                        <span className="text-sm text-green-400 font-medium">Goal achieved!</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {goal.currentValue - goal.targetValue} position{goal.currentValue - goal.targetValue !== 1 ? 's' : ''} to go
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : isCountGoal ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: goal.targetValue }).map((_, i) => {
+                          const isAchieved = i < goal.currentValue;
+                          const IconComponent = goal.goalType === 'wins' ? Trophy : 
+                                               goal.goalType === 'podiums' ? Medal : Flag;
+                          return (
+                            <div
+                              key={i}
+                              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                                isAchieved 
+                                  ? goal.goalType === 'wins' ? 'bg-yellow-500/20' : 
+                                    goal.goalType === 'podiums' ? 'bg-orange-500/20' : 'bg-primary/20'
+                                  : 'bg-muted/20'
+                              }`}
+                            >
+                              <IconComponent className={`w-4 h-4 ${
+                                isAchieved 
+                                  ? goal.goalType === 'wins' ? 'text-yellow-500' : 
+                                    goal.goalType === 'podiums' ? 'text-orange-400' : 'text-primary'
+                                  : 'text-muted-foreground/30'
+                              }`} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <span className="text-sm font-bold">
+                        {goal.currentValue}/{goal.targetValue}
+                      </span>
+                    </div>
+                    {!isCompleted && goal.currentValue > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {goal.targetValue - goal.currentValue} more to go!
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{goal.currentValue} / {goal.targetValue} pts</span>
+                      <span className={`font-medium ${isCompleted ? 'text-green-400' : ''}`}>
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+                    <Progress value={progress} className={`h-2 ${isCompleted ? '[&>div]:bg-green-500' : ''}`} />
+                    {!isCompleted && goal.currentValue > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {goal.targetValue - goal.currentValue} points to go!
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {goals.some(g => {
+            const isPositionGoal = g.goalType === 'position';
+            return isPositionGoal 
+              ? (g.currentValue > 0 && g.currentValue <= g.targetValue)
+              : g.currentValue >= g.targetValue;
+          }) && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-500/20 text-center">
+              <div className="flex items-center justify-center gap-2 text-green-400 font-medium">
+                <Sparkles className="w-4 h-4" />
+                <span>Goal Achieved! Keep pushing for more!</span>
+                <Sparkles className="w-4 h-4" />
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
           <Target className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p>No goals set yet</p>
-          <p className="text-sm">Set targets for the season!</p>
+          <p className="font-medium mb-2">No goals set yet</p>
+          <p className="text-sm mb-4">Set targets to track your progress and unlock the "Goal Getter" badge!</p>
+          <div className="flex flex-wrap justify-center gap-2 text-xs">
+            <span className="px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-400">Win races</span>
+            <span className="px-2 py-1 rounded-full bg-orange-500/10 text-orange-400">Podium finishes</span>
+            <span className="px-2 py-1 rounded-full bg-primary/10 text-primary">Points target</span>
+            <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-400">Championship position</span>
+          </div>
         </div>
       )}
     </div>

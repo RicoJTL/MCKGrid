@@ -110,6 +110,17 @@ export const PREDEFINED_BADGES: PredefinedBadge[] = [
     criteria: "first_promotion",
     sortOrder: 8,
   },
+  {
+    slug: "goal_getter",
+    name: "Goal Getter",
+    description: "Achieve your first season goal",
+    category: "milestones",
+    iconName: "badge_target",
+    iconColor: "#10b981",
+    criteria: "goal_getter",
+    threshold: 1,
+    sortOrder: 9,
+  },
 
   // Race Highlights (3 badges)
   {
