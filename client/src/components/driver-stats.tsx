@@ -383,8 +383,6 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
       apiRequest("POST", `/api/profiles/${profile.id}/goals`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'goals'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'badges'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
       setIsAddOpen(false);
     },
   });
@@ -394,8 +392,6 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
       apiRequest("DELETE", `/api/goals/${goalId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'goals'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profile.id, 'badges'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
     },
   });
 

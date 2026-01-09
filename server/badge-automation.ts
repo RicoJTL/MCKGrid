@@ -1,95 +1,7 @@
 import { db } from "./db";
-import { results, races, profiles, badges, profileBadges, leagues, competitions, raceCompetitions, seasonGoals, badgeNotifications } from "@shared/schema";
+import { results, races, profiles, badges, profileBadges, leagues, competitions, raceCompetitions } from "@shared/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { PREDEFINED_BADGES } from "@shared/predefined-badges";
-
-async function getCompletedGoalsCount(profileId: number): Promise<number> {
-  // Use SQL aggregate for faster performance - count completed goals directly in DB
-  const result = await db
-    .select({
-      count: sql<number>`
-        SUM(CASE 
-          WHEN ${seasonGoals.goalType} = 'position' 
-            AND ${seasonGoals.currentValue} > 0 
-            AND ${seasonGoals.currentValue} <= ${seasonGoals.targetValue}
-            AND ${leagues.status} = 'completed'
-          THEN 1
-          WHEN ${seasonGoals.goalType} != 'position' 
-            AND ${seasonGoals.currentValue} >= ${seasonGoals.targetValue}
-          THEN 1
-          ELSE 0
-        END)::int
-      `.as('count'),
-    })
-    .from(seasonGoals)
-    .leftJoin(leagues, eq(seasonGoals.leagueId, leagues.id))
-    .where(eq(seasonGoals.profileId, profileId));
-  
-  return result[0]?.count ?? 0;
-}
-
-// Fast goal-only badge sync - only updates goal_getter badge without recalculating race stats
-export async function syncGoalBadges(profileId: number): Promise<{ awarded: boolean; revoked: boolean }> {
-  const completedGoals = await getCompletedGoalsCount(profileId);
-  const isEligible = completedGoals >= 3;
-  
-  // Check if driver already has the badge
-  const goalGetterBadge = await db
-    .select({ id: badges.id })
-    .from(badges)
-    .where(eq(badges.slug, "goal_getter"))
-    .limit(1);
-  
-  if (!goalGetterBadge.length) {
-    return { awarded: false, revoked: false };
-  }
-  
-  const badgeId = goalGetterBadge[0].id;
-  
-  const existing = await db
-    .select({ id: profileBadges.id })
-    .from(profileBadges)
-    .where(and(
-      eq(profileBadges.profileId, profileId),
-      eq(profileBadges.badgeId, badgeId)
-    ))
-    .limit(1);
-  
-  const hasBadge = existing.length > 0;
-  
-  if (isEligible && !hasBadge) {
-    // Award the badge
-    await db.insert(profileBadges).values({
-      profileId,
-      badgeId,
-      earnedAt: new Date(),
-    });
-    
-    // Create notification
-    await db.insert(badgeNotifications).values({
-      profileId,
-      badgeId,
-      isRead: false,
-      createdAt: new Date(),
-    });
-    
-    return { awarded: true, revoked: false };
-  } else if (!isEligible && hasBadge) {
-    // Revoke the badge
-    await db.delete(profileBadges).where(
-      and(eq(profileBadges.profileId, profileId), eq(profileBadges.badgeId, badgeId))
-    );
-    
-    // Also delete any notifications for this badge
-    await db.delete(badgeNotifications).where(
-      and(eq(badgeNotifications.profileId, profileId), eq(badgeNotifications.badgeId, badgeId))
-    );
-    
-    return { awarded: false, revoked: true };
-  }
-  
-  return { awarded: false, revoked: false };
-}
 
 interface DriverStats {
   totalRaces: number;
@@ -366,14 +278,6 @@ export async function checkAndAwardBadges(profileId: number): Promise<string[]> 
     }
   }
 
-  // Goal Getter badge - achieve 3 season goals
-  const completedGoals = await getCompletedGoalsCount(profileId);
-  if (completedGoals >= 3) {
-    if (await awardBadgeIfNotExists(profileId, "goal_getter", existingBadges)) {
-      awardedBadges.push("goal_getter");
-    }
-  }
-
   return awardedBadges;
 }
 
@@ -386,7 +290,6 @@ const REVOCABLE_BADGE_SLUGS = [
   "first_podium",
   "first_win", 
   "late_bloomer",
-  "goal_getter",
   // Race highlights (qualifying-based)
   "pole_position",
   "grid_climber",
@@ -538,12 +441,6 @@ export async function syncBadgesForDriver(profileId: number): Promise<{ awarded:
   const stats = await getDriverStatsForBadges(profileId);
   const existingBadges = await getExistingBadges(profileId);
   const eligibleBadges = calculateEligibleBadges(stats);
-  
-  // Add goal_getter to eligible set if driver has 3+ completed goals
-  const completedGoals = await getCompletedGoalsCount(profileId);
-  if (completedGoals >= 3) {
-    eligibleBadges.add("goal_getter");
-  }
   
   const awarded: string[] = [];
   const revoked: string[] = [];
