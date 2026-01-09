@@ -65,11 +65,31 @@ The tiered league system allows competitions to organize drivers into tiers (e.g
 - Linked to a parent competition
 - Configurable number of tiers with custom names
 - Rules for promotion/relegation (spots, races before shuffle)
+- Configurable drivers per tier (target, not hard limit)
+
+**Admin UI** (in LeagueDetails.tsx):
+- Create Tiered League dialog with full configuration options
+- Edit Tiered League dialog to modify settings after creation
+- Delete confirmation with cascade cleanup
+- Manage Drivers dialog for assigning/removing drivers from tiers
 
 **Race Check-in Logic**:
 - For leagues WITH tiered leagues configured: drivers must be assigned to a tier to check in
 - For leagues WITHOUT tiered leagues: all racers can check in freely
 - Error messages display inline while keeping retry buttons visible
+
+**Tier Standings** (in storage.ts):
+- Standings calculated from parent competition race results
+- Points aggregated and grouped by tier
+- Drivers sorted by points within each tier
+
+**Promotion/Relegation Automation** (server/tier-automation.ts):
+- Triggers automatically after race results are submitted
+- Checks if races completed equals `racesBeforeShuffle` threshold
+- Bottom drivers of higher tier relegated, top drivers of lower tier promoted
+- Guards against zero promotion/relegation spots
+- Prevents duplicate shuffles on race result edits
+- Creates tier movement notifications for affected drivers
 
 **Frontend Hooks** (`client/src/hooks/use-tiered-leagues.ts`):
 - 15+ hooks for managing tiered leagues, tier names, assignments, and notifications
@@ -78,6 +98,7 @@ The tiered league system allows competitions to organize drivers into tiers (e.g
 **Dashboard Integration**:
 - Shows "My Tier" section for drivers with tier assignments
 - Gracefully handles drivers without tier assignments
+- Tier movement notifications appear on dashboard
 
 ### Customizable Icons and Colors
 Admins can customize the icon and color for leagues and competitions:
