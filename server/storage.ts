@@ -1019,7 +1019,114 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Season Goals
+  async syncSeasonGoalProgress(profileId: number): Promise<void> {
+    // Get all goals for this profile
+    const goals = await db.select().from(seasonGoals).where(eq(seasonGoals.profileId, profileId));
+    
+    // Get all results for this profile with their race's league
+    const driverResults = await db
+      .select({
+        position: results.position,
+        points: results.points,
+        leagueId: races.leagueId,
+      })
+      .from(results)
+      .innerJoin(races, eq(results.raceId, races.id))
+      .where(eq(results.racerId, profileId));
+    
+    // Calculate stats per league
+    const leagueStats = new Map<number, { points: number; wins: number; podiums: number; races: number; bestPosition: number }>();
+    
+    for (const result of driverResults) {
+      const stats = leagueStats.get(result.leagueId) || { points: 0, wins: 0, podiums: 0, races: 0, bestPosition: 999 };
+      stats.points += result.points;
+      stats.races += 1;
+      if (result.position === 1) stats.wins += 1;
+      if (result.position <= 3) stats.podiums += 1;
+      if (result.position < stats.bestPosition) stats.bestPosition = result.position;
+      leagueStats.set(result.leagueId, stats);
+    }
+    
+    // Get current standings for position goals (championship position)
+    // For each league, calculate standings and find position
+    const leaguePositions = new Map<number, number>();
+    const uniqueLeagueIds = [...new Set(goals.map(g => g.leagueId))];
+    
+    for (const lid of uniqueLeagueIds) {
+      // Get main competition for this league to calculate standings
+      const [mainComp] = await db.select().from(competitions)
+        .where(and(eq(competitions.leagueId, lid), eq(competitions.isMain, true)));
+      
+      if (mainComp) {
+        // Get all results for races in this competition
+        const raceIds = await db
+          .select({ raceId: raceCompetitions.raceId })
+          .from(raceCompetitions)
+          .where(eq(raceCompetitions.competitionId, mainComp.id));
+        
+        if (raceIds.length > 0) {
+          const raceIdList = raceIds.map(r => r.raceId);
+          const standingsData = await db
+            .select({
+              racerId: results.racerId,
+              points: results.points,
+            })
+            .from(results)
+            .where(inArray(results.raceId, raceIdList));
+          
+          // Aggregate points per driver
+          const driverPoints = new Map<number, number>();
+          for (const r of standingsData) {
+            driverPoints.set(r.racerId, (driverPoints.get(r.racerId) || 0) + r.points);
+          }
+          
+          // Sort by points descending
+          const sorted = [...driverPoints.entries()].sort((a, b) => b[1] - a[1]);
+          const position = sorted.findIndex(([id]) => id === profileId) + 1;
+          if (position > 0) {
+            leaguePositions.set(lid, position);
+          }
+        }
+      }
+    }
+    
+    // Update each goal's currentValue based on type
+    for (const goal of goals) {
+      const stats = leagueStats.get(goal.leagueId) || { points: 0, wins: 0, podiums: 0, races: 0, bestPosition: 999 };
+      let newValue = 0;
+      
+      switch (goal.goalType) {
+        case 'points':
+          newValue = stats.points;
+          break;
+        case 'wins':
+          newValue = stats.wins;
+          break;
+        case 'podiums':
+          newValue = stats.podiums;
+          break;
+        case 'races':
+          newValue = stats.races;
+          break;
+        case 'position':
+          // For position, we want the championship standing (0 means not ranked yet)
+          newValue = leaguePositions.get(goal.leagueId) || 0;
+          break;
+      }
+      
+      // Only update if value changed
+      if (goal.currentValue !== newValue) {
+        await db.update(seasonGoals)
+          .set({ currentValue: newValue })
+          .where(eq(seasonGoals.id, goal.id));
+      }
+    }
+  }
+
   async getSeasonGoals(profileId: number, leagueId?: number): Promise<SeasonGoal[]> {
+    // First sync the progress from actual race data
+    await this.syncSeasonGoalProgress(profileId);
+    
     if (leagueId) {
       return await db.select().from(seasonGoals)
         .where(and(eq(seasonGoals.profileId, profileId), eq(seasonGoals.leagueId, leagueId)));
