@@ -88,6 +88,7 @@ export const results = pgTable("results", {
   qualifyingPosition: integer("qualifying_position"),
   points: integer("points").notNull(),
   raceTime: text("race_time"),
+  dnf: boolean("dnf").default(false),
 });
 
 // Tiered Leagues - groups drivers into tiers with promotion/relegation

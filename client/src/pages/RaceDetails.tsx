@@ -3,7 +3,7 @@ import { useResults, useSubmitResults } from "@/hooks/use-results";
 import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";
-import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical, Check, Users } from "lucide-react";
+import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical, Check, Users, AlertTriangle } from "lucide-react";
 import { RaceCheckinButton, RaceCheckinList, RaceCountdown } from "@/components/race-checkin";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
@@ -451,6 +451,7 @@ interface ResultEntry {
   qualifyingPosition: string;
   raceTime: string;
   points: string;
+  dnf: boolean;
 }
 
 function ResultsEditor({ 
@@ -480,25 +481,35 @@ function ResultsEditor({
         position: String(r.position),
         qualifyingPosition: r.qualifyingPosition ? String(r.qualifyingPosition) : "",
         raceTime: r.raceTime || "",
-        points: String(r.points)
+        points: String(r.points),
+        dnf: r.dnf || false
       }));
     }
-    return [{ racerId: "", position: "1", qualifyingPosition: "", raceTime: "", points: "25" }];
+    return [{ racerId: "", position: "1", qualifyingPosition: "", raceTime: "", points: "25", dnf: false }];
   });
 
   const addEntry = () => {
     const nextPos = entries.length + 1;
     const defaultPoints = nextPos === 1 ? 25 : nextPos === 2 ? 18 : nextPos === 3 ? 15 : 10;
-    setEntries([...entries, { racerId: "", position: String(nextPos), qualifyingPosition: "", raceTime: "", points: String(defaultPoints) }]);
+    setEntries([...entries, { racerId: "", position: String(nextPos), qualifyingPosition: "", raceTime: "", points: String(defaultPoints), dnf: false }]);
   };
 
   const removeEntry = (index: number) => {
     setEntries(entries.filter((_, i) => i !== index));
   };
 
-  const updateEntry = (index: number, field: keyof ResultEntry, value: string) => {
+  const updateEntry = (index: number, field: Exclude<keyof ResultEntry, 'dnf'>, value: string) => {
     const updated = [...entries];
     updated[index][field] = value;
+    setEntries(updated);
+  };
+
+  const toggleDnf = (index: number) => {
+    const updated = [...entries];
+    updated[index].dnf = !updated[index].dnf;
+    if (updated[index].dnf) {
+      updated[index].points = "0";
+    }
     setEntries(updated);
   };
 
@@ -510,7 +521,8 @@ function ResultsEditor({
         position: parseInt(e.position),
         qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
         raceTime: e.raceTime || null,
-        points: parseInt(e.points)
+        points: parseInt(e.points),
+        dnf: e.dnf
       }));
 
     submitResults.mutate({ raceId, competitionId, results: resultsData }, {
@@ -537,8 +549,10 @@ function ResultsEditor({
     <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">
       <div className="space-y-3">
         {entries.map((entry, i) => (
-          <div key={i} className="flex items-center gap-3 p-4 bg-white/5 rounded-lg">
-            <div className="w-12 text-center font-bold text-lg">P{entry.position}</div>
+          <div key={i} className={`flex items-center gap-3 p-4 rounded-lg ${entry.dnf ? 'bg-destructive/10 border border-destructive/30' : 'bg-white/5'}`}>
+            <div className={`w-12 text-center font-bold text-lg ${entry.dnf ? 'text-destructive' : ''}`}>
+              {entry.dnf ? 'DNF' : `P${entry.position}`}
+            </div>
             <Select value={entry.racerId} onValueChange={(v) => updateEntry(i, 'racerId', v)}>
               <SelectTrigger className="flex-1 bg-secondary/30" data-testid={`select-driver-${i}`}>
                 <SelectValue placeholder="Select Driver" />
@@ -569,6 +583,7 @@ function ResultsEditor({
               onChange={(e) => updateEntry(i, 'raceTime', e.target.value)}
               className="w-32 bg-secondary/30"
               data-testid={`input-racetime-${i}`}
+              disabled={entry.dnf}
             />
             <Input 
               placeholder="Points" 
@@ -577,7 +592,18 @@ function ResultsEditor({
               onChange={(e) => updateEntry(i, 'points', e.target.value)}
               className="w-20 bg-secondary/30"
               data-testid={`input-points-${i}`}
+              disabled={entry.dnf}
             />
+            <Button 
+              variant={entry.dnf ? "destructive" : "outline"}
+              size="sm"
+              onClick={() => toggleDnf(i)}
+              className="text-xs"
+              data-testid={`button-dnf-${i}`}
+            >
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              DNF
+            </Button>
             <Button 
               variant="ghost" 
               size="icon" 
