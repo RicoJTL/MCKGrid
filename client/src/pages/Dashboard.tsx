@@ -567,36 +567,41 @@ export default function Dashboard() {
 
       {/* My Tier - Current tier assignment */}
       {activeTier && (
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20">
-          <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
-            <Layers className="w-5 h-5 text-yellow-500" /> My Tier
-          </h3>
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-6"
+        <Link href={`/competitions/${activeTier.tieredLeague.parentCompetitionId}#tiers`}>
+          <div 
+            className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer"
+            data-testid="card-my-tier"
           >
-            <div className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10">
-              <div className="p-3 rounded-lg bg-yellow-500/20">
-                <Trophy className="w-6 h-6 text-yellow-500" />
+            <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
+              <Layers className="w-5 h-5 text-yellow-500" /> My Tier
+            </h3>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-6"
+            >
+              <div className="flex items-center gap-4 px-6 py-4 rounded-xl bg-secondary/80 border border-white/10">
+                <div className="p-3 rounded-lg bg-yellow-500/20">
+                  <Trophy className="w-6 h-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-display italic text-white">{activeTier.tierName}</p>
+                  <p className="text-sm text-muted-foreground">{activeTier.tieredLeague.name}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold font-display italic text-white">{activeTier.tierName}</p>
-                <p className="text-sm text-muted-foreground">{activeTier.tieredLeague.name}</p>
+              <div className="flex gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold font-display text-primary">P{activeTier.standing}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Position</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold font-display text-white">{activeTier.points}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Points</div>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold font-display text-primary">P{activeTier.standing}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">Position</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold font-display text-white">{activeTier.points}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">Points</div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        </Link>
       )}
 
       {/* All Competitions - Scrollable */}

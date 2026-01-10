@@ -67,7 +67,7 @@ export interface IStorage {
   getTieredLeague(id: number): Promise<TieredLeague | undefined>;
   getTieredLeagueByParentCompetition(competitionId: number): Promise<TieredLeague | undefined>;
   createTieredLeague(data: InsertTieredLeague, tierNamesList: string[]): Promise<TieredLeague>;
-  updateTieredLeague(id: number, data: Partial<InsertTieredLeague>): Promise<TieredLeague>;
+  updateTieredLeague(id: number, data: Partial<InsertTieredLeague>, tierNames?: string[]): Promise<TieredLeague>;
   deleteTieredLeague(id: number): Promise<void>;
   getTierNames(tieredLeagueId: number): Promise<TierName[]>;
   
@@ -687,8 +687,41 @@ export class DatabaseStorage implements IStorage {
     return tieredLeague;
   }
 
-  async updateTieredLeague(id: number, data: Partial<InsertTieredLeague>): Promise<TieredLeague> {
+  async updateTieredLeague(id: number, data: Partial<InsertTieredLeague>, tierNamesList?: string[]): Promise<TieredLeague> {
     const [updated] = await db.update(tieredLeagues).set(data).where(eq(tieredLeagues.id, id)).returning();
+    
+    // Update tier names if provided
+    if (tierNamesList && tierNamesList.length > 0) {
+      // Get existing tier names
+      const existingTierNames = await db.select().from(tierNames)
+        .where(eq(tierNames.tieredLeagueId, id))
+        .orderBy(tierNames.tierNumber);
+      
+      // Update existing tier names and add new ones if needed
+      for (let i = 0; i < tierNamesList.length; i++) {
+        const tierNumber = i + 1;
+        const existing = existingTierNames.find(tn => tn.tierNumber === tierNumber);
+        if (existing) {
+          await db.update(tierNames)
+            .set({ name: tierNamesList[i] })
+            .where(eq(tierNames.id, existing.id));
+        } else {
+          await db.insert(tierNames).values({
+            tieredLeagueId: id,
+            tierNumber,
+            name: tierNamesList[i],
+          });
+        }
+      }
+      
+      // Remove extra tier names if reducing number of tiers
+      for (const existing of existingTierNames) {
+        if (existing.tierNumber > tierNamesList.length) {
+          await db.delete(tierNames).where(eq(tierNames.id, existing.id));
+        }
+      }
+    }
+    
     return updated;
   }
 

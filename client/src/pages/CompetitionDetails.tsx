@@ -1,5 +1,5 @@
 import { useRaces, useCreateRace, useCompetitionStandings, useCompetition, useUpdateCompetition, useDeleteCompetition, useUpdateRace, useDeleteRace, useCompetitions, useUpdateRaceCompetitions, useRaceCompetitions } from "@/hooks/use-leagues";
-import { useTieredLeagueByCompetition, useTierStandings, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
+import { useTieredLeagueByCompetition, useTierStandings, useMoveDriverTier, type TieredLeagueWithTiers } from "@/hooks/use-tiered-leagues";
 import { Link, useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, Calendar, MapPin, Flag, Trophy, Medal, Pencil, Trash2, MoreVertical, Users, Layers, Star, Check, Ban, ChevronUp, ChevronDown } from "lucide-react";
@@ -57,6 +57,7 @@ export default function CompetitionDetails() {
   const { data: allProfiles, isLoading: profilesLoading } = useAllProfiles();
   const { data: tieredLeague } = useTieredLeagueByCompetition(compId);
   const { data: tierStandings, isLoading: tierStandingsLoading } = useTierStandings(tieredLeague?.id || 0);
+  const moveDriverTier = useMoveDriverTier();
   const createRace = useCreateRace();
   const updateCompetition = useUpdateCompetition();
   const deleteCompetition = useDeleteCompetition();
@@ -795,15 +796,15 @@ export default function CompetitionDetails() {
                     >
                       <div className="p-4 bg-white/5 border-b border-white/5">
                         <h4 className="font-bold font-display italic text-lg flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
                             tier.tierNumber === 1 ? 'bg-yellow-500/20 text-yellow-400' :
                             tier.tierNumber === 2 ? 'bg-blue-500/20 text-blue-400' :
                             tier.tierNumber === 3 ? 'bg-green-500/20 text-green-400' :
                             'bg-white/10 text-muted-foreground'
                           }`}>
-                            {tier.tierName}
+                            {tier.tierNumber}
                           </div>
-                          <span>{tier.tierName} Tier</span>
+                          <span>{tier.tierName}</span>
                         </h4>
                       </div>
                       <div className="divide-y divide-white/5">
@@ -812,36 +813,76 @@ export default function CompetitionDetails() {
                           const isRelegationZone = tier.standings.length > 0 && 
                             index >= tier.standings.length - (tieredLeague.relegationSpots || 0) && 
                             tier.tierNumber < (tieredLeague.numberOfTiers || 1);
+                          const canPromote = tier.tierNumber > 1;
+                          const canRelegate = tier.tierNumber < (tieredLeague.numberOfTiers || 1);
+                          const promoteTier = canPromote ? tierStandings?.find(t => t.tierNumber === tier.tierNumber - 1) : null;
+                          const relegateTier = canRelegate ? tierStandings?.find(t => t.tierNumber === tier.tierNumber + 1) : null;
                           
                           return (
-                            <Link key={driver.profileId} href={`/profiles/${driver.profileId}`}>
-                              <div 
-                                className={`flex items-center justify-between p-3 hover:bg-white/5 transition-colors cursor-pointer ${
-                                  isPromotionZone ? 'bg-green-500/10 border-l-2 border-green-500' :
-                                  isRelegationZone ? 'bg-red-500/10 border-l-2 border-red-500' : ''
-                                }`}
-                                data-testid={`tier-driver-${driver.profileId}`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-white/10">
-                                    {index + 1}
-                                  </div>
-                                  <span className="font-medium">
-                                    <DriverNameWithIcons 
-                                      profileId={driver.profileId} 
-                                      name={driver.driverName || 'Unknown'} 
-                                      iconsMap={iconsMap}
-                                    />
-                                  </span>
+                            <div 
+                              key={driver.profileId}
+                              className={`flex items-center justify-between p-3 hover:bg-white/5 transition-colors ${
+                                isPromotionZone ? 'bg-green-500/10 border-l-2 border-green-500' :
+                                isRelegationZone ? 'bg-red-500/10 border-l-2 border-red-500' : ''
+                              }`}
+                              data-testid={`tier-driver-${driver.profileId}`}
+                            >
+                              <Link href={`/profiles/${driver.profileId}`} className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold bg-white/10">
+                                  {index + 1}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold font-display text-primary">{driver.points}</span>
-                                  <span className="text-xs text-muted-foreground">pts</span>
-                                  {isPromotionZone && <ChevronUp className="w-4 h-4 text-green-500" />}
-                                  {isRelegationZone && <ChevronDown className="w-4 h-4 text-red-500" />}
-                                </div>
+                                <span className="font-medium">
+                                  <DriverNameWithIcons 
+                                    profileId={driver.profileId} 
+                                    name={driver.driverName || 'Unknown'} 
+                                    iconsMap={iconsMap}
+                                  />
+                                </span>
+                              </Link>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold font-display text-primary">{driver.points}</span>
+                                <span className="text-xs text-muted-foreground">pts</span>
+                                {isAdmin && (canPromote || canRelegate) && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-driver-menu-${driver.profileId}`}>
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {canPromote && promoteTier && (
+                                        <DropdownMenuItem 
+                                          onClick={() => moveDriverTier.mutate({
+                                            tieredLeagueId: tieredLeague.id,
+                                            profileId: driver.profileId,
+                                            newTierNumber: tier.tierNumber - 1
+                                          })}
+                                          data-testid={`button-promote-${driver.profileId}`}
+                                        >
+                                          <ChevronUp className="w-4 h-4 mr-2 text-green-500" />
+                                          Promote to {promoteTier.tierName}
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canRelegate && relegateTier && (
+                                        <DropdownMenuItem 
+                                          onClick={() => moveDriverTier.mutate({
+                                            tieredLeagueId: tieredLeague.id,
+                                            profileId: driver.profileId,
+                                            newTierNumber: tier.tierNumber + 1
+                                          })}
+                                          data-testid={`button-relegate-${driver.profileId}`}
+                                        >
+                                          <ChevronDown className="w-4 h-4 mr-2 text-orange-500" />
+                                          Relegate to {relegateTier.tierName}
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                                {!isAdmin && isPromotionZone && <ChevronUp className="w-4 h-4 text-green-500" />}
+                                {!isAdmin && isRelegationZone && <ChevronDown className="w-4 h-4 text-red-500" />}
                               </div>
-                            </Link>
+                            </div>
                           );
                         })}
                         {tier.standings.length === 0 && (

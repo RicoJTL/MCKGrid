@@ -591,8 +591,11 @@ export async function registerRoutes(
   });
 
   app.patch("/api/tiered-leagues/:id", requireAdmin, async (req: any, res) => {
-    const tieredLeague = await storage.updateTieredLeague(Number(req.params.id), req.body);
-    res.json(tieredLeague);
+    const { tierNames, ...data } = req.body;
+    const tieredLeague = await storage.updateTieredLeague(Number(req.params.id), data, tierNames);
+    // Return with updated tier names
+    const updatedTierNames = await storage.getTierNames(tieredLeague.id);
+    res.json({ ...tieredLeague, tierNames: updatedTierNames });
   });
 
   app.delete("/api/tiered-leagues/:id", requireAdmin, async (req: any, res) => {

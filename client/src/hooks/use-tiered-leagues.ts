@@ -198,6 +198,7 @@ export function useAssignDriverToTier() {
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'assignments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'standings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'active-tier'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
       toast({ title: "Driver assigned to tier" });
     },
     onError: (error: Error) => {
