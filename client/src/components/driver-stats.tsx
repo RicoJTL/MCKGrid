@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles, ArrowRight, Flag, Zap, Grid2x2, ArrowUp, Star, CircleDot } from "lucide-react";
+import { Trophy, Target, Timer, Award, TrendingUp, Medal, CheckCircle, XCircle, HelpCircle, Plus, Trash2, Calendar, Download, Copy, Check, ChevronDown, Lock, Sparkles, ArrowRight, Flag, Zap, Grid2x2, ArrowUp, Star, CircleDot, Users, Flame } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from "recharts";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -805,6 +806,20 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
     driver1Wins: number;
     driver2Wins: number;
     draws: number;
+    driver1Podiums: number;
+    driver2Podiums: number;
+    driver1Points: number;
+    driver2Points: number;
+    driver1AvgPosition: number;
+    driver2AvgPosition: number;
+    driver1AvgQuali: number | null;
+    driver2AvgQuali: number | null;
+    recentFormDriver1: number;
+    recentFormDriver2: number;
+    podiumDifferential: number;
+    pointsDifferential: number;
+    avgPositionGap: number;
+    avgQualiGap: number | null;
     races: any[];
   }>({
     queryKey: ['/api/head-to-head', profile.id, opponentId],
@@ -812,11 +827,21 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
   });
 
   const opponent = allProfiles.find(p => p.id === opponentId);
+  
+  const driver1Name = profile.driverName || 'You';
+  const driver2Name = opponent?.driverName || 'Opponent';
+
+  const chartData = h2h ? [
+    { name: 'Wins', driver1: h2h.driver1Wins, driver2: h2h.driver2Wins },
+    { name: 'Podiums', driver1: h2h.driver1Podiums, driver2: h2h.driver2Podiums },
+    { name: 'Points', driver1: h2h.driver1Points, driver2: h2h.driver2Points },
+    { name: 'Recent Form', driver1: h2h.recentFormDriver1, driver2: h2h.recentFormDriver2 },
+  ] : [];
 
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-bold font-display italic flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-red-500" /> Head-to-Head
+        <Users className="w-5 h-5 text-red-500" /> Head-to-Head
       </h3>
 
       <Select onValueChange={(v) => setOpponentId(Number(v))} value={opponentId ? String(opponentId) : ''}>
@@ -833,11 +858,11 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
       {isLoading && opponentId && <Skeleton className="h-32 rounded-xl" />}
 
       {h2h && opponent && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
               <div className="text-2xl font-bold text-green-400">{h2h.driver1Wins}</div>
-              <div className="text-xs text-muted-foreground">{profile.driverName || 'You'}</div>
+              <div className="text-xs text-muted-foreground">{driver1Name}</div>
             </div>
             <div className="p-4 rounded-xl bg-secondary/30 border border-white/5">
               <div className="text-2xl font-bold">{h2h.draws}</div>
@@ -847,15 +872,146 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
               <div className="text-2xl font-bold text-red-400">{h2h.driver2Wins}</div>
               <Link href={`/profiles/${opponent.id}`}>
                 <div className="text-xs text-muted-foreground hover:text-primary cursor-pointer transition-colors">
-                  {opponent.driverName || 'Opponent'}
+                  {driver2Name}
                 </div>
               </Link>
             </div>
           </div>
 
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg bg-secondary/30 border border-white/5">
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="w-4 h-4 text-orange-400" />
+                <span className="text-xs text-muted-foreground">Podium Differential</span>
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span className={h2h.driver1Podiums > h2h.driver2Podiums ? 'text-green-400 font-bold' : 'text-muted-foreground'}>{h2h.driver1Podiums}</span>
+                <span className="text-xs text-muted-foreground">vs</span>
+                <span className={h2h.driver2Podiums > h2h.driver1Podiums ? 'text-red-400 font-bold' : 'text-muted-foreground'}>{h2h.driver2Podiums}</span>
+              </div>
+              <div className={`text-xs text-center ${h2h.podiumDifferential > 0 ? 'text-green-400' : h2h.podiumDifferential < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                {h2h.podiumDifferential > 0 ? `+${h2h.podiumDifferential} ${driver1Name}` : h2h.podiumDifferential < 0 ? `+${Math.abs(h2h.podiumDifferential)} ${driver2Name}` : 'Even'}
+              </div>
+            </div>
+            
+            <div className="p-3 rounded-lg bg-secondary/30 border border-white/5">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
+                <span className="text-xs text-muted-foreground">Points Difference</span>
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span className={h2h.driver1Points > h2h.driver2Points ? 'text-green-400 font-bold' : 'text-muted-foreground'}>{h2h.driver1Points}</span>
+                <span className="text-xs text-muted-foreground">vs</span>
+                <span className={h2h.driver2Points > h2h.driver1Points ? 'text-red-400 font-bold' : 'text-muted-foreground'}>{h2h.driver2Points}</span>
+              </div>
+              <div className={`text-xs text-center ${h2h.pointsDifferential > 0 ? 'text-green-400' : h2h.pointsDifferential < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                {h2h.pointsDifferential > 0 ? `+${h2h.pointsDifferential} pts ${driver1Name}` : h2h.pointsDifferential < 0 ? `+${Math.abs(h2h.pointsDifferential)} pts ${driver2Name}` : 'Even'}
+              </div>
+            </div>
+            
+            <div className="p-3 rounded-lg bg-secondary/30 border border-white/5">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="w-4 h-4 text-purple-400" />
+                <span className="text-xs text-muted-foreground">Avg Finish Gap</span>
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span className={h2h.driver1AvgPosition < h2h.driver2AvgPosition ? 'text-green-400 font-bold' : 'text-muted-foreground'}>P{h2h.driver1AvgPosition}</span>
+                <span className="text-xs text-muted-foreground">vs</span>
+                <span className={h2h.driver2AvgPosition < h2h.driver1AvgPosition ? 'text-red-400 font-bold' : 'text-muted-foreground'}>P{h2h.driver2AvgPosition}</span>
+              </div>
+              <div className={`text-xs text-center ${h2h.avgPositionGap > 0 ? 'text-green-400' : h2h.avgPositionGap < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                {h2h.avgPositionGap > 0 ? `${h2h.avgPositionGap} pos better ${driver1Name}` : h2h.avgPositionGap < 0 ? `${Math.abs(h2h.avgPositionGap)} pos better ${driver2Name}` : 'Equal'}
+              </div>
+            </div>
+            
+            <div className="p-3 rounded-lg bg-secondary/30 border border-white/5">
+              <div className="flex items-center gap-2 mb-2">
+                <Grid2x2 className="w-4 h-4 text-yellow-400" />
+                <span className="text-xs text-muted-foreground">Avg Quali Gap</span>
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span className={h2h.driver1AvgQuali && h2h.driver2AvgQuali && h2h.driver1AvgQuali < h2h.driver2AvgQuali ? 'text-green-400 font-bold' : 'text-muted-foreground'}>
+                  {h2h.driver1AvgQuali ? `P${h2h.driver1AvgQuali}` : '--'}
+                </span>
+                <span className="text-xs text-muted-foreground">vs</span>
+                <span className={h2h.driver1AvgQuali && h2h.driver2AvgQuali && h2h.driver2AvgQuali < h2h.driver1AvgQuali ? 'text-red-400 font-bold' : 'text-muted-foreground'}>
+                  {h2h.driver2AvgQuali ? `P${h2h.driver2AvgQuali}` : '--'}
+                </span>
+              </div>
+              <div className={`text-xs text-center ${h2h.avgQualiGap !== null && h2h.avgQualiGap > 0 ? 'text-green-400' : h2h.avgQualiGap !== null && h2h.avgQualiGap < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                {h2h.avgQualiGap !== null ? (h2h.avgQualiGap > 0 ? `${h2h.avgQualiGap} pos better ${driver1Name}` : h2h.avgQualiGap < 0 ? `${Math.abs(h2h.avgQualiGap)} pos better ${driver2Name}` : 'Equal') : 'No data'}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-secondary/30 border border-white/5">
+            <div className="flex items-center gap-2 mb-3">
+              <Flame className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-medium">Momentum (Last 5 Races)</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{driver1Name}</span>
+                <span className={h2h.recentFormDriver1 > h2h.recentFormDriver2 ? 'text-lg font-bold text-green-400' : 'text-lg font-bold text-muted-foreground'}>
+                  {h2h.recentFormDriver1} wins
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={h2h.recentFormDriver2 > h2h.recentFormDriver1 ? 'text-lg font-bold text-red-400' : 'text-lg font-bold text-muted-foreground'}>
+                  {h2h.recentFormDriver2} wins
+                </span>
+                <Link href={`/profiles/${opponent.id}`}>
+                  <span className="text-sm text-muted-foreground hover:text-primary cursor-pointer transition-colors">{driver2Name}</span>
+                </Link>
+              </div>
+            </div>
+            {h2h.recentFormDriver1 > h2h.recentFormDriver2 && (
+              <p className="text-xs text-green-400 mt-2">{driver1Name} has the momentum!</p>
+            )}
+            {h2h.recentFormDriver2 > h2h.recentFormDriver1 && (
+              <p className="text-xs text-red-400 mt-2">{driver2Name} has the momentum!</p>
+            )}
+            {h2h.recentFormDriver1 === h2h.recentFormDriver2 && h2h.races.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">Both drivers are evenly matched recently</p>
+            )}
+          </div>
+
+          {chartData.length > 0 && (
+            <div className="p-4 rounded-xl bg-secondary/30 border border-white/5">
+              <p className="text-sm font-medium mb-4">Stats Comparison</p>
+              <div className="flex items-center gap-4 mb-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-green-500" />
+                  <span className="text-muted-foreground">{driver1Name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-red-500" />
+                  <span className="text-muted-foreground">{driver2Name}</span>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={chartData} layout="vertical" barGap={4}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--secondary))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Bar dataKey="driver1" fill="#22c55e" radius={[0, 4, 4, 0]} name={driver1Name} />
+                  <Bar dataKey="driver2" fill="#ef4444" radius={[0, 4, 4, 0]} name={driver2Name} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
           {h2h.races.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Race Results:</p>
+              <p className="text-sm text-muted-foreground">Recent Race Results:</p>
               {h2h.races.slice(0, 5).map((race: any, i: number) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-white/5">
                   <span className="text-sm font-medium">{race.name}</span>
@@ -873,7 +1029,7 @@ export function HeadToHead({ profile, allProfiles }: HeadToHeadProps) {
 
       {!opponentId && (
         <div className="p-8 rounded-xl bg-secondary/30 border border-white/5 text-center text-muted-foreground">
-          <Trophy className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
           <p>Select an opponent to compare records</p>
         </div>
       )}

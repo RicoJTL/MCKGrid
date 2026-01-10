@@ -164,6 +164,20 @@ export interface IStorage {
     driver1Wins: number;
     driver2Wins: number;
     draws: number;
+    driver1Podiums: number;
+    driver2Podiums: number;
+    driver1Points: number;
+    driver2Points: number;
+    driver1AvgPosition: number;
+    driver2AvgPosition: number;
+    driver1AvgQuali: number | null;
+    driver2AvgQuali: number | null;
+    recentFormDriver1: number;
+    recentFormDriver2: number;
+    podiumDifferential: number;
+    pointsDifferential: number;
+    avgPositionGap: number;
+    avgQualiGap: number | null;
     races: any[];
   }>;
   
@@ -1536,43 +1550,169 @@ export class DatabaseStorage implements IStorage {
     driver1Wins: number;
     driver2Wins: number;
     draws: number;
+    driver1Podiums: number;
+    driver2Podiums: number;
+    driver1Points: number;
+    driver2Points: number;
+    driver1AvgPosition: number;
+    driver2AvgPosition: number;
+    driver1AvgQuali: number | null;
+    driver2AvgQuali: number | null;
+    recentFormDriver1: number;
+    recentFormDriver2: number;
+    podiumDifferential: number;
+    pointsDifferential: number;
+    avgPositionGap: number;
+    avgQualiGap: number | null;
     races: any[];
   }> {
     const driver1Results = await db
-      .select({ raceId: results.raceId, position: results.position })
+      .select({ 
+        raceId: results.raceId, 
+        position: results.position, 
+        points: results.points,
+        qualifyingPosition: results.qualifyingPosition 
+      })
       .from(results)
       .where(eq(results.racerId, profileId1));
     
     const driver2Results = await db
-      .select({ raceId: results.raceId, position: results.position })
+      .select({ 
+        raceId: results.raceId, 
+        position: results.position, 
+        points: results.points,
+        qualifyingPosition: results.qualifyingPosition 
+      })
       .from(results)
       .where(eq(results.racerId, profileId2));
     
-    const driver2Map = new Map(driver2Results.map(r => [r.raceId, r.position]));
+    const driver2Map = new Map(driver2Results.map(r => [r.raceId, { 
+      position: r.position, 
+      points: r.points, 
+      qualifyingPosition: r.qualifyingPosition 
+    }]));
     
     let driver1Wins = 0;
     let driver2Wins = 0;
     let draws = 0;
+    let driver1Podiums = 0;
+    let driver2Podiums = 0;
+    let driver1Points = 0;
+    let driver2Points = 0;
+    let driver1TotalPosition = 0;
+    let driver2TotalPosition = 0;
+    let driver1QualiSum = 0;
+    let driver2QualiSum = 0;
+    let qualiCount1 = 0;
+    let qualiCount2 = 0;
     const sharedRaces: any[] = [];
     
     for (const r1 of driver1Results) {
-      const d2Pos = driver2Map.get(r1.raceId);
-      if (d2Pos !== undefined) {
+      const d2Data = driver2Map.get(r1.raceId);
+      if (d2Data !== undefined) {
         const race = await this.getRace(r1.raceId);
-        if (r1.position < d2Pos) {
+        
+        // Position totals for average
+        driver1TotalPosition += r1.position;
+        driver2TotalPosition += d2Data.position;
+        
+        // Points
+        driver1Points += r1.points;
+        driver2Points += d2Data.points;
+        
+        // Podiums (in races where they both competed)
+        if (r1.position <= 3) driver1Podiums++;
+        if (d2Data.position <= 3) driver2Podiums++;
+        
+        // Qualifying positions
+        if (r1.qualifyingPosition) {
+          driver1QualiSum += r1.qualifyingPosition;
+          qualiCount1++;
+        }
+        if (d2Data.qualifyingPosition) {
+          driver2QualiSum += d2Data.qualifyingPosition;
+          qualiCount2++;
+        }
+        
+        if (r1.position < d2Data.position) {
           driver1Wins++;
-          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 1 });
-        } else if (d2Pos < r1.position) {
+          sharedRaces.push({ 
+            ...race, 
+            driver1Position: r1.position, 
+            driver2Position: d2Data.position, 
+            driver1Points: r1.points,
+            driver2Points: d2Data.points,
+            driver1Quali: r1.qualifyingPosition,
+            driver2Quali: d2Data.qualifyingPosition,
+            winner: 1 
+          });
+        } else if (d2Data.position < r1.position) {
           driver2Wins++;
-          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 2 });
+          sharedRaces.push({ 
+            ...race, 
+            driver1Position: r1.position, 
+            driver2Position: d2Data.position, 
+            driver1Points: r1.points,
+            driver2Points: d2Data.points,
+            driver1Quali: r1.qualifyingPosition,
+            driver2Quali: d2Data.qualifyingPosition,
+            winner: 2 
+          });
         } else {
           draws++;
-          sharedRaces.push({ ...race, driver1Position: r1.position, driver2Position: d2Pos, winner: 0 });
+          sharedRaces.push({ 
+            ...race, 
+            driver1Position: r1.position, 
+            driver2Position: d2Data.position, 
+            driver1Points: r1.points,
+            driver2Points: d2Data.points,
+            driver1Quali: r1.qualifyingPosition,
+            driver2Quali: d2Data.qualifyingPosition,
+            winner: 0 
+          });
         }
       }
     }
     
-    return { driver1Wins, driver2Wins, draws, races: sharedRaces };
+    const totalSharedRaces = sharedRaces.length;
+    const driver1AvgPosition = totalSharedRaces > 0 ? Math.round((driver1TotalPosition / totalSharedRaces) * 10) / 10 : 0;
+    const driver2AvgPosition = totalSharedRaces > 0 ? Math.round((driver2TotalPosition / totalSharedRaces) * 10) / 10 : 0;
+    const driver1AvgQuali = qualiCount1 > 0 ? Math.round((driver1QualiSum / qualiCount1) * 10) / 10 : null;
+    const driver2AvgQuali = qualiCount2 > 0 ? Math.round((driver2QualiSum / qualiCount2) * 10) / 10 : null;
+    
+    // Calculate differentials
+    const podiumDifferential = driver1Podiums - driver2Podiums;
+    const pointsDifferential = driver1Points - driver2Points;
+    const avgPositionGap = Math.round((driver2AvgPosition - driver1AvgPosition) * 10) / 10; // Positive = driver1 better
+    const avgQualiGap = (driver1AvgQuali !== null && driver2AvgQuali !== null) 
+      ? Math.round((driver2AvgQuali - driver1AvgQuali) * 10) / 10 
+      : null;
+    
+    // Recent form: count wins in last 5 shared races
+    const recentRaces = sharedRaces.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+    const recentFormDriver1 = recentRaces.filter(r => r.winner === 1).length;
+    const recentFormDriver2 = recentRaces.filter(r => r.winner === 2).length;
+    
+    return { 
+      driver1Wins, 
+      driver2Wins, 
+      draws, 
+      driver1Podiums,
+      driver2Podiums,
+      driver1Points,
+      driver2Points,
+      driver1AvgPosition,
+      driver2AvgPosition,
+      driver1AvgQuali,
+      driver2AvgQuali,
+      recentFormDriver1,
+      recentFormDriver2,
+      podiumDifferential,
+      pointsDifferential,
+      avgPositionGap,
+      avgQualiGap,
+      races: sharedRaces 
+    };
   }
 
   // Quick Results
