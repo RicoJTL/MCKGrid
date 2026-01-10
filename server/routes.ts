@@ -955,7 +955,7 @@ export async function registerRoutes(
     if (!profile || profile.id !== Number(req.params.id)) {
       return res.status(403).json({ error: "Can only create your own goals" });
     }
-    const { leagueId, goalType, targetValue } = req.body;
+    const { leagueId, goalType, targetValue, targetTier } = req.body;
     
     // Check if the league has already started (any race with a valid date is in the past)
     const leagueRaces = await storage.getRacesByLeague(leagueId);
@@ -969,7 +969,7 @@ export async function registerRoutes(
       return res.status(403).json({ error: "Cannot add goals once the league has started" });
     }
     
-    const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue });
+    const goal = await storage.createSeasonGoal({ profileId: profile.id, leagueId, goalType, targetValue, targetTier });
     res.status(201).json(goal);
   });
 
