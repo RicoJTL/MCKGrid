@@ -1,7 +1,7 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles, Layers, ChevronUp, ChevronDown } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, AlertCircle, CheckCircle, Award, X, Sparkles, Layers, ChevronUp, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";
@@ -14,7 +14,7 @@ import { getIconComponent } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
-import { useDriverActiveTier, useTierMovementNotifications, useMarkTierMovementNotificationRead, useTierMovementHistory, type DriverActiveTier, type TierMovementHistory } from "@/hooks/use-tiered-leagues";
+import { useDriverActiveTier, useTierMovementNotifications, useMarkTierMovementNotificationRead, type DriverActiveTier } from "@/hooks/use-tiered-leagues";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -22,7 +22,6 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
 
   const { data: activeTier } = useDriverActiveTier(profile?.id);
-  const { data: tierHistory } = useTierMovementHistory(profile?.id || 0);
 
   const { data: allCompetitions } = useQuery<any[]>({
     queryKey: ['/api/competitions/active'],
@@ -641,60 +640,6 @@ export default function Dashboard() {
             </motion.div>
           </div>
         </Link>
-      )}
-
-      {/* Tier History - Promotion/Relegation Timeline */}
-      {tierHistory && tierHistory.length > 0 && (
-        <div className="p-5 rounded-2xl bg-secondary/30 border border-white/10 mt-4" data-testid="card-tier-history">
-          <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-primary" /> Tier History
-          </h3>
-          <div className="space-y-3">
-            {tierHistory.slice(0, 5).map((item, index) => {
-              const isPromotion = item.movement.movementType.includes('promotion');
-              const isRelegation = item.movement.movementType.includes('relegation');
-              const isInitial = item.movement.movementType === 'initial_assignment';
-              const date = new Date(item.movement.createdAt);
-              
-              return (
-                <motion.div
-                  key={item.movement.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/5"
-                  data-testid={`tier-history-${item.movement.id}`}
-                >
-                  <div className={`p-2 rounded-lg ${
-                    isPromotion ? 'bg-green-500/20' : 
-                    isRelegation ? 'bg-red-500/20' : 
-                    'bg-blue-500/20'
-                  }`}>
-                    {isPromotion ? (
-                      <ChevronUp className="w-4 h-4 text-green-500" />
-                    ) : isRelegation ? (
-                      <ChevronDown className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Layers className="w-4 h-4 text-blue-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">
-                      {isInitial ? (
-                        <>Joined <span className="text-primary font-bold">{item.toTierName}</span></>
-                      ) : isPromotion ? (
-                        <>Promoted from <span className="text-muted-foreground">{item.fromTierName}</span> to <span className="text-green-500 font-bold">{item.toTierName}</span></>
-                      ) : (
-                        <>Relegated from <span className="text-muted-foreground">{item.fromTierName}</span> to <span className="text-red-500 font-bold">{item.toTierName}</span></>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{item.tieredLeague.name} • {isValid(date) ? format(date, 'MMM d, yyyy') : 'Unknown date'}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
       )}
 
       {/* All Competitions - Scrollable */}

@@ -9,12 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords, Sparkles } from "lucide-react";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords, Sparkles, Layers, ChevronUp, ChevronDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useUpload } from "@/hooks/use-upload";
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync, DriverIconsSection } from "@/components/driver-stats";
+import { useTierMovementHistory, type TierMovementHistory } from "@/hooks/use-tiered-leagues";
+import { motion } from "framer-motion";
+import { isValid } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { DriverIconsDisplay } from "@/components/driver-icon-token";
 import type { Profile } from "@shared/schema";
@@ -62,7 +65,10 @@ export default function ProfilePage() {
     enabled: !!profile?.id,
   });
   
+  const { data: tierHistory } = useTierMovementHistory(profile?.id || 0);
+  
   const hasIcons = (profileIcons?.length ?? 0) > 0;
+  const hasTierHistory = (tierHistory?.length ?? 0) > 0;
   
   useEffect(() => {
     if (profile && !tabInitialized) {
@@ -233,6 +239,11 @@ export default function ProfilePage() {
               <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-history">
                 <Trophy className="w-4 h-4 mr-2" /> History
               </TabsTrigger>
+              {hasTierHistory && (
+                <TabsTrigger value="tier-history" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-tier-history">
+                  <TrendingUp className="w-4 h-4 mr-2" /> Tier History
+                </TabsTrigger>
+              )}
             </>
           )}
           <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-white" data-testid="tab-settings">
@@ -325,6 +336,59 @@ export default function ProfilePage() {
                 </div>
               )}
             </TabsContent>
+
+            {hasTierHistory && (
+              <TabsContent value="tier-history" className="space-y-6 mt-6">
+                <h2 className="text-xl font-display font-bold italic text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" /> Tier History
+                </h2>
+                <div className="space-y-3">
+                  {tierHistory?.map((item, index) => {
+                    const isPromotion = item.movement.movementType.includes('promotion');
+                    const isRelegation = item.movement.movementType.includes('relegation');
+                    const isInitial = item.movement.movementType === 'initial_assignment';
+                    const date = new Date(item.movement.createdAt);
+                    
+                    return (
+                      <motion.div
+                        key={item.movement.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-white/5"
+                        data-testid={`tier-history-${item.movement.id}`}
+                      >
+                        <div className={`p-3 rounded-lg ${
+                          isPromotion ? 'bg-green-500/20' : 
+                          isRelegation ? 'bg-red-500/20' : 
+                          'bg-blue-500/20'
+                        }`}>
+                          {isPromotion ? (
+                            <ChevronUp className="w-5 h-5 text-green-500" />
+                          ) : isRelegation ? (
+                            <ChevronDown className="w-5 h-5 text-red-500" />
+                          ) : (
+                            <Layers className="w-5 h-5 text-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">
+                            {isInitial ? (
+                              <>Joined <span className="text-primary font-bold">{item.toTierName}</span></>
+                            ) : isPromotion ? (
+                              <>Promoted from <span className="text-muted-foreground">{item.fromTierName}</span> to <span className="text-green-500 font-bold">{item.toTierName}</span></>
+                            ) : (
+                              <>Relegated from <span className="text-muted-foreground">{item.fromTierName}</span> to <span className="text-red-500 font-bold">{item.toTierName}</span></>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{item.tieredLeague.name} • {isValid(date) ? format(date, 'MMM d, yyyy') : 'Unknown date'}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            )}
           </>
         )}
 
