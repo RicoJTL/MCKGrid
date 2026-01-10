@@ -686,7 +686,16 @@ export async function registerRoutes(
   // === Tier Movement History ===
   app.get("/api/profiles/:id/tier-history", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
     const targetId = Number(req.params.id);
+    
+    const isOwner = profile?.id === targetId;
+    const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: "Can only view your own tier history" });
+    }
+    
     const history = await storage.getProfileTierMovementHistory(targetId);
     res.json(history);
   });
