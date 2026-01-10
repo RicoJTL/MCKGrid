@@ -1657,7 +1657,18 @@ export class DatabaseStorage implements IStorage {
               }
               break;
             case 'rankChampion':
-              newOutcome = tierStats.tierPosition === 1 ? 'achieved' : 'failed';
+              // Check if driver is champion of the specific tier (targetTier)
+              if (goal.targetTier !== null && tierStats.tieredLeagueId !== null) {
+                // Driver must be in the target tier AND be position 1
+                if (tierStats.currentTier === goal.targetTier && tierStats.tierPosition === 1) {
+                  newOutcome = 'achieved';
+                } else {
+                  newOutcome = 'failed';
+                }
+              } else {
+                // No target tier specified - fallback to current tier position
+                newOutcome = tierStats.tierPosition === 1 ? 'achieved' : 'failed';
+              }
               break;
           }
         }

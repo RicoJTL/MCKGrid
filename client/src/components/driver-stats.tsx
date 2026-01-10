@@ -367,13 +367,20 @@ const goalSchema = z.object({
   leagueId: z.number().min(1, "Please select a league"),
   goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend', 'getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'rankChampion']),
   targetValue: z.number().min(1).nullable().optional(),
+  targetTier: z.number().min(1).nullable().optional(),
 }).refine((data) => {
   // Target is required for goals that need it
   if (!noTargetGoals.includes(data.goalType)) {
     return data.targetValue !== null && data.targetValue !== undefined && data.targetValue >= 1;
   }
   return true;
-}, { message: "Target value is required", path: ["targetValue"] });
+}, { message: "Target value is required", path: ["targetValue"] }).refine((data) => {
+  // targetTier is required for rankChampion goal
+  if (data.goalType === 'rankChampion') {
+    return data.targetTier !== null && data.targetTier !== undefined && data.targetTier >= 1;
+  }
+  return true;
+}, { message: "Please select a tier", path: ["targetTier"] });
 
 interface SeasonGoalsProps extends DriverStatsProps {
   isReadOnly?: boolean;
@@ -445,8 +452,57 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
 
   const form = useForm<z.infer<typeof goalSchema>>({
     resolver: zodResolver(goalSchema),
-    defaultValues: { leagueId: 0, goalType: 'wins', targetValue: 1 }
+    defaultValues: { leagueId: 0, goalType: 'wins', targetValue: 1, targetTier: null }
   });
+  
+  const selectedLeagueId = form.watch('leagueId');
+  const selectedGoalType = form.watch('goalType');
+  
+  // Fetch tiered leagues for the selected league (to show tier options for rankChampion)
+  const { data: tieredLeaguesForGoal } = useQuery<{ tierNames: { tierNumber: number; name: string }[] }[]>({
+    queryKey: ['/api/leagues', selectedLeagueId, 'tiered-leagues'],
+    queryFn: async () => {
+      const res = await fetch(`/api/leagues/${selectedLeagueId}/tiered-leagues`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: selectedLeagueId > 0 && selectedGoalType === 'rankChampion',
+  });
+  
+  // Get tier names from the first tiered league (most leagues will only have one)
+  const tierOptions = tieredLeaguesForGoal?.[0]?.tierNames || [];
+  
+  // Fetch all tiered leagues (to display tier names for existing rankChampion goals)
+  const { data: allTieredLeagues } = useQuery<{ leagueId: number; tierNames: { tierNumber: number; name: string }[] }[]>({
+    queryKey: ['/api/tiered-leagues/all-with-tier-names'],
+    queryFn: async () => {
+      // Get all tiered leagues from all leagues
+      const leagueRes = await fetch('/api/leagues', { credentials: "include" });
+      if (!leagueRes.ok) return [];
+      const allLeagues = await leagueRes.json();
+      const results = await Promise.all(
+        allLeagues.map(async (league: { id: number }) => {
+          const res = await fetch(`/api/leagues/${league.id}/tiered-leagues`, { credentials: "include" });
+          if (!res.ok) return null;
+          const tieredLeagues = await res.json();
+          if (tieredLeagues.length > 0) {
+            return { leagueId: league.id, tierNames: tieredLeagues[0].tierNames };
+          }
+          return null;
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: goals?.some(g => g.goalType === 'rankChampion') ?? false,
+  });
+  
+  // Helper to get tier name for a goal's targetTier
+  const getTierNameForGoal = (goal: SeasonGoal): string | null => {
+    if (goal.goalType !== 'rankChampion' || goal.targetTier === null) return null;
+    const tieredLeague = allTieredLeagues?.find(tl => tl.leagueId === goal.leagueId);
+    const tierName = tieredLeague?.tierNames.find(t => t.tierNumber === goal.targetTier);
+    return tierName?.name || `Tier ${goal.targetTier}`;
+  };
 
   if (isLoading) {
     return <Skeleton className="h-48 rounded-xl" />;
@@ -598,6 +654,39 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                     );
                   }}
                 />
+                {/* Tier selection for rankChampion goal */}
+                {selectedGoalType === 'rankChampion' && (
+                  <FormField
+                    control={form.control}
+                    name="targetTier"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Which Tier?</FormLabel>
+                        {tierOptions.length > 0 ? (
+                          <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : ''}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-goal-tier">
+                                <SelectValue placeholder="Select a tier" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {tierOptions.map((tier) => (
+                                <SelectItem key={tier.tierNumber} value={String(tier.tierNumber)}>
+                                  {tier.name} (Tier {tier.tierNumber})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">
+                            No tiered leagues found for this league. Please select a league with a tiered championship first.
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <Button type="submit" className="w-full" disabled={addMutation.isPending} data-testid="button-save-goal">
                   {addMutation.isPending ? 'Saving...' : 'Save Goal'}
                 </Button>
@@ -686,7 +775,9 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                       )}
                       <div>
                         <p className={`font-medium ${outcomeDisplay.textClass}`}>
-                          {goalLabels[goal.goalType] || goal.goalType}
+                          {goal.goalType === 'rankChampion' && goal.targetTier !== null
+                            ? `${getTierNameForGoal(goal)} Champion`
+                            : (goalLabels[goal.goalType] || goal.goalType)}
                           {(goal.outcome || 'pending') !== 'pending' && (
                             <span className={`ml-2 text-xs ${outcomeDisplay.bgClass} ${outcomeDisplay.textClass} px-2 py-0.5 rounded-full`}>
                               {outcomeDisplay.label}

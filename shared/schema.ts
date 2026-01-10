@@ -175,6 +175,7 @@ export const seasonGoals = pgTable("season_goals", {
   leagueId: integer("league_id").references(() => leagues.id).notNull(),
   goalType: goalTypeEnum("goal_type").notNull(),
   targetValue: integer("target_value"),
+  targetTier: integer("target_tier"),
   currentValue: integer("current_value").default(0).notNull(),
   outcome: goalOutcomeEnum("outcome").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
