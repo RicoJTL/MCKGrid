@@ -42,7 +42,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { z } from "zod";
-import { useAllProfiles } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DriverNameWithIcons, useDriverIconsMap } from "@/components/driver-icon-token";
@@ -54,7 +53,6 @@ export default function CompetitionDetails() {
   const { data: races, isLoading: racesLoading } = useRaces(compId);
   const { data: standings, isLoading: standingsLoading } = useCompetitionStandings(compId);
   const { data: profile } = useProfile();
-  const { data: allProfiles, isLoading: profilesLoading } = useAllProfiles();
   const { data: tieredLeague } = useTieredLeagueByCompetition(compId);
   const { data: tierStandings, isLoading: tierStandingsLoading } = useTierStandings(tieredLeague?.id || 0);
   const moveDriverTier = useMoveDriverTier();
@@ -89,7 +87,6 @@ export default function CompetitionDetails() {
   
   // Handle tab switching via URL hash
   const getInitialTab = () => {
-    if (typeof window !== 'undefined' && window.location.hash === '#drivers') return 'drivers';
     if (typeof window !== 'undefined' && window.location.hash === '#races') return 'races';
     if (typeof window !== 'undefined' && window.location.hash === '#tiers') return 'tiers';
     return 'standings';
@@ -98,8 +95,7 @@ export default function CompetitionDetails() {
   
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash === '#drivers') setActiveTab('drivers');
-    else if (hash === '#races') setActiveTab('races');
+    if (hash === '#races') setActiveTab('races');
     else if (hash === '#tiers') setActiveTab('tiers');
   }, []);
   
@@ -371,10 +367,6 @@ export default function CompetitionDetails() {
           <TabsTrigger value="races" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             <Calendar className="w-4 h-4 mr-2" />
             Races
-          </TabsTrigger>
-          <TabsTrigger value="drivers" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-            <Users className="w-4 h-4 mr-2" />
-            Drivers
           </TabsTrigger>
           {tieredLeague && (
             <TabsTrigger value="tiers" className="data-[state=active]:bg-primary data-[state=active]:text-white">
@@ -685,79 +677,6 @@ export default function CompetitionDetails() {
               <p className="text-sm">Schedule races to build your championship calendar!</p>
             </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="drivers" className="mt-6">
-          {profilesLoading ? (
-            <Skeleton className="h-64 w-full rounded-xl" />
-          ) : (() => {
-            const driversFromStandings = standings?.map(s => ({
-              id: s.racerId,
-              name: s.driverName,
-              points: s.points
-            })) || [];
-
-            return (
-              <div className="space-y-6">
-                <div id="competitors" className="rounded-xl bg-secondary/30 border border-white/5 overflow-hidden scroll-mt-4">
-                  <div className="p-4 border-b border-white/5">
-                    <h3 className="font-bold text-lg flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Competitors ({driversFromStandings.length})
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Drivers are assigned to tiers in tiered leagues. Go to the league page to manage tier assignments.
-                    </p>
-                  </div>
-                  {driversFromStandings.length > 0 ? (
-                    <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {driversFromStandings.map((driver) => (
-                        <Link key={driver.id} href={`/profiles/${driver.id}`}>
-                          <div 
-                            className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                            data-testid={`competitor-${driver.id}`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold truncate">
-                                <DriverNameWithIcons 
-                                  profileId={driver.id} 
-                                  name={driver.name || 'Unknown'} 
-                                  iconsMap={iconsMap}
-                                />
-                              </p>
-                              <p className="text-sm text-muted-foreground">{driver.points} points</p>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <p>No drivers have competed in this competition yet.</p>
-                    </div>
-                  )}
-                </div>
-
-                {isAdmin && competition?.leagueId && (
-                  <div className="rounded-xl bg-secondary/30 border border-white/5 p-4">
-                    <div className="flex items-center gap-3">
-                      <Layers className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-bold">Manage Tier Assignments</p>
-                        <p className="text-sm text-muted-foreground">Assign drivers to tiers in the league settings</p>
-                      </div>
-                      <Link href={`/leagues/${competition.leagueId}`} className="ml-auto">
-                        <Button size="sm" variant="outline" data-testid="button-manage-tiers">
-                          <Layers className="w-4 h-4 mr-1" />
-                          Go to League
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
         </TabsContent>
 
         {/* Tiered League Standings Tab */}
