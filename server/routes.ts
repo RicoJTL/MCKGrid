@@ -810,6 +810,7 @@ export async function registerRoutes(
   app.post("/api/tier-movement-notifications/:id/mark-read", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const notificationId = Number(req.params.id);
+    if (isNaN(notificationId)) return res.status(400).json({ message: "Invalid notification ID" });
     await storage.markTierMovementNotificationRead(notificationId);
     res.sendStatus(204);
   });
