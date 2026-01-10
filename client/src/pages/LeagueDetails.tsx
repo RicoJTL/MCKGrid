@@ -648,21 +648,21 @@ export default function LeagueDetails() {
             {tieredLeagues?.map((tl) => {
               const parentComp = competitions?.find(c => c.id === tl.parentCompetitionId);
               return (
-                <div key={tl.id} className="p-6 rounded-xl bg-secondary/30 border border-white/5 hover:bg-white/5 transition-all">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                <div key={tl.id} className="p-4 sm:p-6 rounded-xl bg-secondary/30 border border-white/5 hover:bg-white/5 transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: `${tl.iconColor || "#eab308"}20` }}
                       >
                         {(() => {
                           const IconComponent = getIconComponent(tl.iconName || "Layers");
-                          return <IconComponent className="w-6 h-6" style={{ color: tl.iconColor || "#eab308" }} />;
+                          return <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: tl.iconColor || "#eab308" }} />;
                         })()}
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold font-display italic">{tl.name}</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold font-display italic truncate">{tl.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {tl.numberOfTiers} tiers, {tl.driversPerTier} drivers each | Shuffle after {tl.racesBeforeShuffle} races
                         </p>
                         {parentComp && (
@@ -672,15 +672,15 @@ export default function LeagueDetails() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Button 
                         size="sm" 
                         variant="outline"
                         onClick={() => setManagingTieredLeague(tl)}
                         data-testid={`button-manage-tiers-${tl.id}`}
                       >
-                        <Users className="w-4 h-4 mr-1" />
-                        Manage Drivers
+                        <Users className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Manage Drivers</span>
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
