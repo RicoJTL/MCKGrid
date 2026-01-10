@@ -1658,13 +1658,25 @@ export class DatabaseStorage implements IStorage {
               break;
             case 'rankChampion':
               // Check if driver is champion of the specific tier (targetTier)
-              if (goal.targetTier !== null && tierStats.tieredLeagueId !== null) {
-                // Driver must be in the target tier AND be position 1
-                if (tierStats.currentTier === goal.targetTier && tierStats.tierPosition === 1) {
-                  newOutcome = 'achieved';
+              if (goal.targetTier !== null && tierStats.tieredLeagueId !== null && tierStats.currentTier !== null) {
+                // If driver got promoted to a higher tier than the target, they exceeded the goal
+                // (lower tier number = higher tier, e.g., tier 1 = S rank is higher than tier 2 = A rank)
+                if (tierStats.currentTier < goal.targetTier) {
+                  newOutcome = 'exceeded'; // They got promoted beyond the target tier
+                } else if (tierStats.currentTier === goal.targetTier) {
+                  // They're still in the target tier - check if they're position 1
+                  if (tierStats.tierPosition === 1) {
+                    newOutcome = 'achieved';
+                  } else {
+                    newOutcome = 'failed';
+                  }
                 } else {
+                  // They're in a lower tier than the target - failed
                   newOutcome = 'failed';
                 }
+              } else if (goal.targetTier !== null && tierStats.currentTier === null) {
+                // Driver is not assigned to any tier
+                newOutcome = 'failed';
               } else {
                 // No target tier specified - fallback to current tier position
                 newOutcome = tierStats.tierPosition === 1 ? 'achieved' : 'failed';

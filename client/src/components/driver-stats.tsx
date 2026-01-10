@@ -23,6 +23,7 @@ import { useState, useMemo, memo } from "react";
 import { getIconComponent } from "@/components/icon-picker";
 import type { Profile, League, PersonalBest, SeasonGoal, Badge as BadgeType, DriverIcon, Race } from "@shared/schema";
 import { DriverIconToken } from "@/components/driver-icon-token";
+import { useTieredLeagues } from "@/hooks/use-tiered-leagues";
 
 interface DriverStatsProps {
   profile: Profile;
@@ -458,50 +459,22 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
   const selectedLeagueId = form.watch('leagueId');
   const selectedGoalType = form.watch('goalType');
   
-  // Fetch tiered leagues for the selected league (to show tier options for rankChampion)
-  const { data: tieredLeaguesForGoal } = useQuery<{ tierNames: { tierNumber: number; name: string }[] }[]>({
-    queryKey: ['/api/leagues', selectedLeagueId, 'tiered-leagues'],
-    queryFn: async () => {
-      const res = await fetch(`/api/leagues/${selectedLeagueId}/tiered-leagues`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: selectedLeagueId > 0 && selectedGoalType === 'rankChampion',
-  });
+  // Fetch tiered leagues for the selected league using existing hook
+  const { data: tieredLeaguesForGoal } = useTieredLeagues(selectedLeagueId > 0 && selectedGoalType === 'rankChampion' ? selectedLeagueId : 0);
   
   // Get tier names from the first tiered league (most leagues will only have one)
   const tierOptions = tieredLeaguesForGoal?.[0]?.tierNames || [];
   
-  // Fetch all tiered leagues (to display tier names for existing rankChampion goals)
-  const { data: allTieredLeagues } = useQuery<{ leagueId: number; tierNames: { tierNumber: number; name: string }[] }[]>({
-    queryKey: ['/api/tiered-leagues/all-with-tier-names'],
-    queryFn: async () => {
-      // Get all tiered leagues from all leagues
-      const leagueRes = await fetch('/api/leagues', { credentials: "include" });
-      if (!leagueRes.ok) return [];
-      const allLeagues = await leagueRes.json();
-      const results = await Promise.all(
-        allLeagues.map(async (league: { id: number }) => {
-          const res = await fetch(`/api/leagues/${league.id}/tiered-leagues`, { credentials: "include" });
-          if (!res.ok) return null;
-          const tieredLeagues = await res.json();
-          if (tieredLeagues.length > 0) {
-            return { leagueId: league.id, tierNames: tieredLeagues[0].tierNames };
-          }
-          return null;
-        })
-      );
-      return results.filter(Boolean);
-    },
-    enabled: goals?.some(g => g.goalType === 'rankChampion') ?? false,
-  });
-  
   // Helper to get tier name for a goal's targetTier
+  // Uses the fetched tier names if available, otherwise falls back to standard tier labels
   const getTierNameForGoal = (goal: SeasonGoal): string | null => {
     if (goal.goalType !== 'rankChampion' || goal.targetTier === null) return null;
-    const tieredLeague = allTieredLeagues?.find(tl => tl.leagueId === goal.leagueId);
-    const tierName = tieredLeague?.tierNames.find(t => t.tierNumber === goal.targetTier);
-    return tierName?.name || `Tier ${goal.targetTier}`;
+    // Check if we have tier names from the fetched tiered leagues
+    const tierName = tierOptions.find(t => t.tierNumber === goal.targetTier);
+    if (tierName) return tierName.name;
+    // Fallback to standard tier labels
+    const tierLabels: Record<number, string> = { 1: 'S', 2: 'A', 3: 'B', 4: 'C', 5: 'D' };
+    return tierLabels[goal.targetTier] || `Tier ${goal.targetTier}`;
   };
 
   if (isLoading) {
