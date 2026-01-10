@@ -246,6 +246,8 @@ export function useMoveDriverTier() {
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'standings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'active-tier'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'badges'] });
       toast({ title: "Driver tier updated" });
     },
     onError: (error: Error) => {
