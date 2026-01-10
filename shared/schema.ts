@@ -102,6 +102,8 @@ export const tieredLeagues = pgTable("tiered_leagues", {
   promotionSpots: integer("promotion_spots").default(1).notNull(),
   relegationSpots: integer("relegation_spots").default(1).notNull(),
   racesCompleted: integer("races_completed").default(0).notNull(),
+  iconName: text("icon_name").default("Layers"),
+  iconColor: text("icon_color").default("#eab308"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

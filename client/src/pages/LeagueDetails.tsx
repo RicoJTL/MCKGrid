@@ -96,6 +96,8 @@ export default function LeagueDetails() {
   const [promotionSpots, setPromotionSpots] = useState(1);
   const [relegationSpots, setRelegationSpots] = useState(1);
   const [tierNames, setTierNames] = useState<string[]>(["S Tier", "A Tier", "B Tier", "C Tier"]);
+  const [tieredLeagueIconName, setTieredLeagueIconName] = useState("Layers");
+  const [tieredLeagueIconColor, setTieredLeagueIconColor] = useState("#eab308");
   
   // Tiered league hooks
   const { data: tieredLeagues } = useTieredLeagues(leagueId);
@@ -187,6 +189,8 @@ export default function LeagueDetails() {
     setPromotionSpots(1);
     setRelegationSpots(1);
     setTierNames(["S Tier", "A Tier", "B Tier", "C Tier"]);
+    setTieredLeagueIconName("Layers");
+    setTieredLeagueIconColor("#eab308");
   };
 
   const handleCreateTieredLeague = () => {
@@ -201,6 +205,8 @@ export default function LeagueDetails() {
       promotionSpots,
       relegationSpots,
       tierNames: tierNames.slice(0, numberOfTiers),
+      iconName: tieredLeagueIconName,
+      iconColor: tieredLeagueIconColor,
     }, {
       onSuccess: () => {
         setOpenCreateTieredLeague(false);
@@ -229,6 +235,8 @@ export default function LeagueDetails() {
         promotionSpots,
         relegationSpots,
         tierNames: tierNames.slice(0, numberOfTiers),
+        iconName: tieredLeagueIconName,
+        iconColor: tieredLeagueIconColor,
       }
     }, {
       onSuccess: () => {
@@ -614,6 +622,12 @@ export default function LeagueDetails() {
                       ))}
                     </div>
                   </div>
+                  <IconPicker
+                    selectedIcon={tieredLeagueIconName}
+                    selectedColor={tieredLeagueIconColor}
+                    onIconChange={setTieredLeagueIconName}
+                    onColorChange={setTieredLeagueIconColor}
+                  />
                   <Button 
                     onClick={handleCreateTieredLeague} 
                     className="w-full bg-primary font-bold" 
@@ -635,8 +649,14 @@ export default function LeagueDetails() {
                 <div key={tl.id} className="p-6 rounded-xl bg-secondary/30 border border-white/5 hover:bg-white/5 transition-all">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                        <Layers className="w-6 h-6 text-primary" />
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: `${tl.iconColor || "#eab308"}20` }}
+                      >
+                        {(() => {
+                          const IconComponent = getIconComponent(tl.iconName || "Layers");
+                          return <IconComponent className="w-6 h-6" style={{ color: tl.iconColor || "#eab308" }} />;
+                        })()}
                       </div>
                       <div>
                         <h3 className="text-lg font-bold font-display italic">{tl.name}</h3>
@@ -677,6 +697,8 @@ export default function LeagueDetails() {
                             setPromotionSpots(tl.promotionSpots);
                             setRelegationSpots(tl.relegationSpots);
                             setTierNames(tl.tierNames?.sort((a, b) => a.tierNumber - b.tierNumber).map(t => t.name) || []);
+                            setTieredLeagueIconName(tl.iconName || "Layers");
+                            setTieredLeagueIconColor(tl.iconColor || "#eab308");
                           }}>
                             <Pencil className="w-4 h-4 mr-2" /> Edit
                           </DropdownMenuItem>
@@ -971,6 +993,12 @@ export default function LeagueDetails() {
                 ))}
               </div>
             </div>
+            <IconPicker
+              selectedIcon={tieredLeagueIconName}
+              selectedColor={tieredLeagueIconColor}
+              onIconChange={setTieredLeagueIconName}
+              onColorChange={setTieredLeagueIconColor}
+            />
             <Button 
               onClick={handleUpdateTieredLeague} 
               className="w-full bg-primary font-bold" 

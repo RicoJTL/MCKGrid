@@ -127,11 +127,14 @@ export function useCreateTieredLeague() {
       promotionSpots?: number;
       relegationSpots?: number;
       tierNames: string[];
+      iconName?: string;
+      iconColor?: string;
     }) => {
       return apiRequest("POST", `/api/tiered-leagues`, data);
     },
     onSuccess: (_, { leagueId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', leagueId, 'tiered-leagues'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
       toast({ title: "Tiered league created successfully" });
     },
     onError: (error: Error) => {
@@ -154,6 +157,7 @@ export function useUpdateTieredLeague() {
     onSuccess: (_, { id, leagueId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', id] });
       queryClient.invalidateQueries({ queryKey: ['/api/leagues', leagueId, 'tiered-leagues'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
       toast({ title: "Tiered league updated successfully" });
     },
     onError: (error: Error) => {

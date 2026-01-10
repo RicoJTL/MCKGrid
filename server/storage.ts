@@ -1050,6 +1050,8 @@ export class DatabaseStorage implements IStorage {
         leagueId: tieredLeagues.leagueId,
         leagueName: leagues.name,
         parentCompetitionId: tieredLeagues.parentCompetitionId,
+        iconName: tieredLeagues.iconName,
+        iconColor: tieredLeagues.iconColor,
         createdAt: tieredLeagues.createdAt,
       })
       .from(tieredLeagues)
@@ -1066,8 +1068,8 @@ export class DatabaseStorage implements IStorage {
       ...t,
       entityType: 'tiered_league' as const,
       isMain: false,
-      iconName: 'Layers',
-      iconColor: '#eab308',
+      iconName: t.iconName || 'Layers',
+      iconColor: t.iconColor || '#eab308',
       type: 'tiered',
     }));
     

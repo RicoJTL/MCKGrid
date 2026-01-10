@@ -573,7 +573,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/tiered-leagues", requireAdmin, async (req: any, res) => {
-    const { name, leagueId, parentCompetitionId, numberOfTiers, driversPerTier, racesBeforeShuffle, promotionSpots, relegationSpots, tierNames } = req.body;
+    const { name, leagueId, parentCompetitionId, numberOfTiers, driversPerTier, racesBeforeShuffle, promotionSpots, relegationSpots, tierNames, iconName, iconColor } = req.body;
     if (!name || !leagueId || !parentCompetitionId || !tierNames || tierNames.length === 0) {
       return res.status(400).json({ error: "name, leagueId, parentCompetitionId, and tierNames required" });
     }
@@ -586,6 +586,8 @@ export async function registerRoutes(
       racesBeforeShuffle: racesBeforeShuffle || 3,
       promotionSpots: promotionSpots || 1,
       relegationSpots: relegationSpots || 1,
+      iconName: iconName || "Layers",
+      iconColor: iconColor || "#eab308",
     }, tierNames);
     res.status(201).json(tieredLeague);
   });
