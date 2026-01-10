@@ -20,18 +20,11 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        // Unregister old service workers first to clear stale cache
-        navigator.serviceWorker.getRegistrations().then(regs => {
-          regs.forEach(reg => reg.unregister());
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW registration failed:', err));
         });
-        // Only register SW in production (not on replit.dev)
-        if (!window.location.hostname.includes('replit.dev')) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-              .then(reg => console.log('SW registered:', reg.scope))
-              .catch(err => console.log('SW registration failed:', err));
-          });
-        }
       }
     </script>
   </body>

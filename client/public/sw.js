@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mck-grid-v2';
+const CACHE_NAME = 'mck-grid-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -34,7 +34,6 @@ self.addEventListener('fetch', (event) => {
   
   const url = new URL(event.request.url);
   
-  // Skip caching for API requests
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
@@ -45,14 +44,6 @@ self.addEventListener('fetch', (event) => {
           });
         })
     );
-    return;
-  }
-
-  // Skip caching for Vite dev server resources to prevent "504 Outdated Optimize Dep" errors
-  if (url.pathname.startsWith('/node_modules/') || 
-      url.pathname.startsWith('/@') || 
-      url.pathname.includes('.vite/') ||
-      url.pathname.startsWith('/src/')) {
     return;
   }
 
