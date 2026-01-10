@@ -854,6 +854,35 @@ export class DatabaseStorage implements IStorage {
       movementId: movement.id,
     });
     
+    // Award 'first_promotion' badge if this is a promotion
+    if (movementType === 'admin_promotion' || movementType === 'automatic_promotion') {
+      // Check if driver already has the first_promotion badge
+      const firstPromotionBadge = await db
+        .select({ id: badges.id })
+        .from(badges)
+        .where(eq(badges.slug, 'first_promotion'))
+        .limit(1);
+      
+      if (firstPromotionBadge.length > 0) {
+        const badgeId = firstPromotionBadge[0].id;
+        const existingBadge = await db
+          .select()
+          .from(profileBadges)
+          .where(and(
+            eq(profileBadges.profileId, profileId),
+            eq(profileBadges.badgeId, badgeId)
+          ))
+          .limit(1);
+        
+        if (existingBadge.length === 0) {
+          // Award the badge
+          await db.insert(profileBadges).values({ profileId, badgeId });
+          // Create badge notification
+          await db.insert(badgeNotifications).values({ profileId, badgeId });
+        }
+      }
+    }
+    
     return movement;
   }
 
