@@ -772,7 +772,7 @@ export default function LeagueDetails() {
                       const relegateTier = canRelegate ? assignmentsByTier[tierIndex + 1] : null;
                       
                       return (
-                        <DropdownMenu key={assignment.id} modal={false}>
+                        <DropdownMenu key={assignment.id}>
                           <DropdownMenuTrigger asChild>
                             <button 
                               type="button"
@@ -783,7 +783,7 @@ export default function LeagueDetails() {
                               <MoreVertical className="w-3 h-3 ml-1" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="z-[200]" sideOffset={5}>
+                          <DropdownMenuContent sideOffset={5}>
                             {canPromote && promoteTier && (
                               <DropdownMenuItem 
                                 onClick={() => moveDriverTier.mutate({
