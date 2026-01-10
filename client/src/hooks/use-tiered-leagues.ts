@@ -258,8 +258,14 @@ export function useMoveDriverTier() {
   });
 }
 
+export interface TierMovementNotification {
+  notification: { id: number; profileId: number; movementId: number; isRead: boolean; createdAt: string };
+  movement: { id: number; tieredLeagueId: number; profileId: number; fromTier: number | null; toTier: number; movementType: string; afterRaceNumber: number; createdAt: string };
+  tieredLeague: { id: number; name: string; leagueId: number; parentCompetitionId: number; numberOfTiers: number };
+}
+
 export function useTierMovementNotifications() {
-  return useQuery<Array<{ id: number; movementId: number; isRead: boolean; movement: any }>>({
+  return useQuery<TierMovementNotification[]>({
     queryKey: ['/api/tier-movement-notifications'],
     queryFn: async () => {
       const res = await fetch(`/api/tier-movement-notifications`, { credentials: "include" });

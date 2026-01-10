@@ -126,13 +126,13 @@ export default function Dashboard() {
   const [dismissedTierMovementIds, setDismissedTierMovementIds] = useState<Set<number>>(new Set());
 
   const handleDismissAllTierMovementNotifications = () => {
-    const currentIds = (tierMovementNotifications || []).map(n => n.id);
+    const currentIds = (tierMovementNotifications || []).map(n => n.notification.id);
     setDismissedTierMovementIds(new Set(currentIds));
     currentIds.forEach(id => markTierMovementReadMutation.mutate(id));
   };
 
   const visibleTierMovementNotifications = (tierMovementNotifications || []).filter(
-    n => !dismissedTierMovementIds.has(n.id)
+    n => !dismissedTierMovementIds.has(n.notification.id)
   );
 
   // Fetch check-in status for all upcoming races (only for racers)
