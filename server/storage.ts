@@ -88,6 +88,7 @@ export interface IStorage {
   
   // Tier Movement History
   getProfileTierMovementHistory(profileId: number): Promise<{ movement: TierMovement; tieredLeague: TieredLeague; fromTierName: string | null; toTierName: string }[]>;
+  deleteProfileTierHistory(profileId: number): Promise<void>;
   getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
   getAllActiveCompetitions(): Promise<any[]>;
   getAllUpcomingRaces(): Promise<any[]>;
@@ -1013,6 +1014,22 @@ export class DatabaseStorage implements IStorage {
     }));
     
     return result;
+  }
+
+  async deleteProfileTierHistory(profileId: number): Promise<void> {
+    // First delete any notifications for movements by this profile
+    const movementIds = await db
+      .select({ id: tierMovements.id })
+      .from(tierMovements)
+      .where(eq(tierMovements.profileId, profileId));
+    
+    if (movementIds.length > 0) {
+      await db.delete(tierMovementNotifications)
+        .where(inArray(tierMovementNotifications.movementId, movementIds.map(m => m.id)));
+    }
+    
+    // Then delete the movements themselves
+    await db.delete(tierMovements).where(eq(tierMovements.profileId, profileId));
   }
 
   async getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]> {

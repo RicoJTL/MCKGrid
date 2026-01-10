@@ -693,6 +693,13 @@ export async function registerRoutes(
     res.json(history);
   });
 
+  // Admin: Delete a driver's tier movement history
+  app.delete("/api/profiles/:id/tier-history", requireAdmin, async (req: any, res) => {
+    const targetId = Number(req.params.id);
+    await storage.deleteProfileTierHistory(targetId);
+    res.sendStatus(204);
+  });
+
   // === Personal Bests (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/personal-bests", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

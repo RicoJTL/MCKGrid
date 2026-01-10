@@ -327,3 +327,27 @@ export function useTierMovementHistory(profileId: number) {
     enabled: profileId > 0,
   });
 }
+
+export function useDeleteTierHistory() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (profileId: number) => {
+      return apiRequest("DELETE", `/api/profiles/${profileId}/tier-history`);
+    },
+    onSuccess: (_data, profileId) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'tier-history'] });
+      toast({
+        title: "Tier history deleted",
+        description: "The driver's tier movement history has been cleared.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to delete tier history",
+        description: "There was an error deleting the tier history. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+}

@@ -9,7 +9,9 @@ import { format, isValid } from "date-fns";
 import { DriverStatsDashboard, RecentResults, BadgesSection, DriverIconsSection, SeasonGoals } from "@/components/driver-stats";
 import { useProfile } from "@/hooks/use-profile";
 import { DriverIconsDisplay } from "@/components/driver-icon-token";
-import { useTierMovementHistory } from "@/hooks/use-tiered-leagues";
+import { useTierMovementHistory, useDeleteTierHistory } from "@/hooks/use-tiered-leagues";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Profile } from "@shared/schema";
 
@@ -45,6 +47,7 @@ export default function PublicProfilePage() {
   });
 
   const { data: tierHistory } = useTierMovementHistory(profileId);
+  const deleteTierHistory = useDeleteTierHistory();
   
   const hasIcons = (profileIcons?.length ?? 0) > 0;
   const hasTierHistory = (tierHistory?.length ?? 0) > 0;
@@ -258,9 +261,38 @@ export default function PublicProfilePage() {
 
               {hasTierHistory && (
                 <TabsContent value="tier-history" className="space-y-6 mt-6">
-                  <h2 className="text-xl font-display font-bold italic text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" /> Tier History
-                  </h2>
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <h2 className="text-xl font-display font-bold italic text-white flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" /> Tier History
+                    </h2>
+                    {isAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" data-testid="button-delete-public-tier-history">
+                            <Trash2 className="w-4 h-4 mr-2" /> Clear History
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Tier History</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete all tier movement history for this driver. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteTierHistory.mutate(profileId)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              data-testid="button-confirm-delete-public-tier-history"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   <div className="space-y-3">
                     {tierHistory?.map((item, index) => {
                       const isPromotion = item.movement.movementType.includes('promotion');
