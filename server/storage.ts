@@ -1042,7 +1042,36 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(leagues, eq(competitions.leagueId, leagues.id))
       .where(eq(leagues.status, 'active'))
       .orderBy(leagues.name, competitions.name);
-    return allCompetitions;
+    
+    const allTieredLeagues = await db
+      .select({
+        id: tieredLeagues.id,
+        name: tieredLeagues.name,
+        leagueId: tieredLeagues.leagueId,
+        leagueName: leagues.name,
+        parentCompetitionId: tieredLeagues.parentCompetitionId,
+        createdAt: tieredLeagues.createdAt,
+      })
+      .from(tieredLeagues)
+      .innerJoin(leagues, eq(tieredLeagues.leagueId, leagues.id))
+      .where(eq(leagues.status, 'active'))
+      .orderBy(leagues.name, tieredLeagues.name);
+    
+    const competitionsWithType = allCompetitions.map(c => ({
+      ...c,
+      entityType: 'competition' as const,
+    }));
+    
+    const tieredLeaguesWithType = allTieredLeagues.map(t => ({
+      ...t,
+      entityType: 'tiered_league' as const,
+      isMain: false,
+      iconName: 'Layers',
+      iconColor: '#eab308',
+      type: 'tiered',
+    }));
+    
+    return [...competitionsWithType, ...tieredLeaguesWithType];
   }
 
   async getAllUpcomingRaces(): Promise<any[]> {

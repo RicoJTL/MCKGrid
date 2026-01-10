@@ -706,16 +706,21 @@ export default function Dashboard() {
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-2">
               {sortedAllCompetitions.map((comp, index) => {
+                const isTieredLeague = comp.entityType === 'tiered_league';
                 const CompIcon = getIconComponent(comp.iconName) || Flag;
                 const iconColor = comp.iconColor || "#3b82f6";
+                const linkHref = isTieredLeague 
+                  ? `/competitions/${comp.parentCompetitionId}#tiers`
+                  : `/competitions/${comp.id}`;
+                const uniqueKey = isTieredLeague ? `tier-${comp.id}` : `comp-${comp.id}`;
                 return (
-                  <Link key={comp.id} href={`/competitions/${comp.id}`}>
+                  <Link key={uniqueKey} href={linkHref}>
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
                       className="flex items-center gap-4 px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-white/10 transition-all cursor-pointer min-w-[200px]"
-                      data-testid={`card-all-competition-${comp.id}`}
+                      data-testid={isTieredLeague ? `card-tiered-league-${comp.id}` : `card-all-competition-${comp.id}`}
                     >
                       <div 
                         className="p-2 rounded-lg"
