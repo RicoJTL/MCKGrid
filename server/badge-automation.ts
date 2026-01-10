@@ -885,3 +885,255 @@ export async function syncSeasonEndBadgesForLeague(leagueId: number): Promise<vo
     }
   }
 }
+
+// Tier badge automation - called after each tier shuffle
+export async function checkTierBadgesAfterShuffle(
+  tieredLeagueId: number,
+  shuffleResult: {
+    movements: Array<{
+      profileId: number;
+      fromTier: number;
+      toTier: number;
+      movementType: 'promotion' | 'relegation';
+    }>;
+  },
+  tierStandings: Array<{
+    tierNumber: number;
+    standings: Array<{ profileId: number; points: number }>;
+  }>,
+  tieredLeagueConfig: {
+    numberOfTiers: number;
+    relegationSpots: number;
+  }
+): Promise<Map<number, string[]>> {
+  const { tierMovements } = await import("@shared/schema");
+  const awardedMap = new Map<number, string[]>();
+
+  // Get all movements for this tiered league to analyze history
+  const allMovements = await db
+    .select()
+    .from(tierMovements)
+    .where(eq(tierMovements.tieredLeagueId, tieredLeagueId))
+    .orderBy(tierMovements.afterRaceNumber);
+
+  // Check badges for drivers involved in this shuffle
+  const affectedDrivers = new Set<number>();
+  
+  // Add drivers from movements
+  for (const movement of shuffleResult.movements) {
+    affectedDrivers.add(movement.profileId);
+  }
+  
+  // Add all drivers in tier standings (for checking top of tier, held the line, relegation survivor)
+  for (const tier of tierStandings) {
+    for (const driver of tier.standings) {
+      affectedDrivers.add(driver.profileId);
+    }
+  }
+
+  // Helper to check if movement type is a promotion (exact match, not substring)
+  const isPromotion = (type: string) => type === 'promotion' || type === 'automatic_promotion' || type === 'admin_promotion';
+  const isRelegation = (type: string) => type === 'relegation' || type === 'automatic_relegation' || type === 'admin_relegation';
+
+  for (const profileId of Array.from(affectedDrivers)) {
+    const existingBadges = await getExistingBadges(profileId);
+    const awarded: string[] = [];
+    
+    // Get this driver's movement history (excluding initial_assignment for badge logic)
+    const driverMovements = allMovements.filter(m => m.profileId === profileId);
+    const shuffleMovements = driverMovements.filter(m => m.movementType !== 'initial_assignment');
+    const latestMovement = shuffleMovements[shuffleMovements.length - 1];
+    
+    // Check for promotion-related badges (only if the latest movement is a promotion)
+    if (latestMovement && isPromotion(latestMovement.movementType)) {
+      // Back on the Up: Promoted after previously being relegated
+      const hasBeenRelegated = shuffleMovements.some(m => isRelegation(m.movementType));
+      if (hasBeenRelegated) {
+        if (await awardBadgeIfNotExists(profileId, "back_on_the_up", existingBadges)) {
+          awarded.push("back_on_the_up");
+        }
+      }
+      
+      // Double Jump: Promoted twice in consecutive shuffles
+      if (shuffleMovements.length >= 2) {
+        const previousMovement = shuffleMovements[shuffleMovements.length - 2];
+        if (isPromotion(previousMovement.movementType)) {
+          if (await awardBadgeIfNotExists(profileId, "double_jump", existingBadges)) {
+            awarded.push("double_jump");
+          }
+        }
+      }
+      
+      // Bounced Back: Promoted within one shuffle after relegation
+      if (shuffleMovements.length >= 2) {
+        const previousMovement = shuffleMovements[shuffleMovements.length - 2];
+        if (isRelegation(previousMovement.movementType)) {
+          if (await awardBadgeIfNotExists(profileId, "bounced_back", existingBadges)) {
+            awarded.push("bounced_back");
+          }
+        }
+      }
+      
+      // Top Tier Material: Got promoted to the highest tier (tier 1)
+      if (latestMovement.toTier === 1) {
+        if (await awardBadgeIfNotExists(profileId, "top_tier_material", existingBadges)) {
+          awarded.push("top_tier_material");
+        }
+      }
+    }
+    
+    // Check for drivers who stayed in the same tier (Held the Line)
+    // Requires: driver was not promoted/relegated in this shuffle AND has been through at least one prior shuffle
+    const wasInCurrentShuffle = shuffleResult.movements.some(m => m.profileId === profileId);
+    const hasHadPriorShuffle = shuffleMovements.length >= 1; // At least one prior promotion/relegation exists
+    if (!wasInCurrentShuffle && hasHadPriorShuffle) {
+      if (await awardBadgeIfNotExists(profileId, "held_the_line", existingBadges)) {
+        awarded.push("held_the_line");
+      }
+    }
+    
+    // Top of the Tier: Finish 1st in your tier's standings after a shuffle
+    for (const tier of tierStandings) {
+      if (tier.standings.length > 0 && tier.standings[0].profileId === profileId) {
+        if (await awardBadgeIfNotExists(profileId, "top_of_the_tier", existingBadges)) {
+          awarded.push("top_of_the_tier");
+        }
+        break;
+      }
+    }
+    
+    // Relegation Survivor: Avoid relegation while finishing in the relegation zone
+    // Must have finished in relegation spots (bottom N where N = relegationSpots) but wasn't relegated
+    const wasRelegated = shuffleResult.movements.some(
+      m => m.profileId === profileId && m.movementType === 'relegation'
+    );
+    if (!wasRelegated) {
+      for (const tier of tierStandings) {
+        const driverIndex = tier.standings.findIndex(s => s.profileId === profileId);
+        if (driverIndex !== -1) {
+          const tierSize = tier.standings.length;
+          const relegationZoneStart = tierSize - tieredLeagueConfig.relegationSpots;
+          const isInRelegationZone = driverIndex >= relegationZoneStart;
+          // Only count if tier has relegation spots and is not the bottom tier
+          if (isInRelegationZone && tieredLeagueConfig.relegationSpots > 0 && tier.tierNumber < tieredLeagueConfig.numberOfTiers) {
+            if (await awardBadgeIfNotExists(profileId, "relegation_survivor", existingBadges)) {
+              awarded.push("relegation_survivor");
+            }
+          }
+          break;
+        }
+      }
+    }
+    
+    if (awarded.length > 0) {
+      awardedMap.set(profileId, awarded);
+    }
+  }
+  
+  return awardedMap;
+}
+
+// Season-end tier badges - called when a league is marked complete
+export async function checkSeasonEndTierBadges(tieredLeagueId: number, leagueId: number): Promise<Map<number, string[]>> {
+  const { tierMovements, tierAssignments, tieredLeagues: tieredLeaguesTable, tierNames: tierNamesTable } = await import("@shared/schema");
+  const { storage } = await import("./storage");
+  
+  const awardedMap = new Map<number, string[]>();
+  
+  // Get the tiered league config
+  const [tieredLeague] = await db.select().from(tieredLeaguesTable).where(eq(tieredLeaguesTable.id, tieredLeagueId));
+  if (!tieredLeague) return awardedMap;
+  
+  // Get tier names to identify S, A, B ranks
+  const tierNamesData = await db.select().from(tierNamesTable).where(eq(tierNamesTable.tieredLeagueId, tieredLeagueId));
+  const tierNameMap = new Map(tierNamesData.map(t => [t.tierNumber, t.name]));
+  
+  // Get tier standings
+  const tierStandings = await storage.getTierStandings(tieredLeagueId);
+  
+  // Get all tier movements for this tiered league
+  const allMovements = await db
+    .select()
+    .from(tierMovements)
+    .where(eq(tierMovements.tieredLeagueId, tieredLeagueId));
+  
+  // Get all current tier assignments
+  const assignments = await db
+    .select()
+    .from(tierAssignments)
+    .where(eq(tierAssignments.tieredLeagueId, tieredLeagueId));
+  
+  // Build a map of profileId -> their tier movements
+  const driverMovements = new Map<number, typeof allMovements>();
+  for (const movement of allMovements) {
+    if (!driverMovements.has(movement.profileId)) {
+      driverMovements.set(movement.profileId, []);
+    }
+    driverMovements.get(movement.profileId)!.push(movement);
+  }
+  
+  // Helper functions to check movement types (exact match, not substring)
+  const isPromotion = (type: string) => type === 'promotion' || type === 'automatic_promotion' || type === 'admin_promotion';
+  const isRelegation = (type: string) => type === 'relegation' || type === 'automatic_relegation' || type === 'admin_relegation';
+
+  // Check each driver
+  for (const assignment of assignments) {
+    const profileId = assignment.profileId;
+    const existingBadges = await getExistingBadges(profileId);
+    const awarded: string[] = [];
+    const movements = driverMovements.get(profileId) || [];
+    
+    const promotions = movements.filter(m => isPromotion(m.movementType));
+    const relegations = movements.filter(m => isRelegation(m.movementType));
+    
+    // S/A/B Rank Champion: Finish 1st in their tier
+    // Use tier number deterministically: tier 1 = S, tier 2 = A, tier 3 = B
+    const tierStanding = tierStandings.find(t => t.tierNumber === assignment.tierNumber);
+    if (tierStanding && tierStanding.standings.length > 0 && tierStanding.standings[0].profileId === profileId) {
+      if (assignment.tierNumber === 1) {
+        if (await awardBadgeIfNotExists(profileId, "s_rank_champion", existingBadges, leagueId)) {
+          awarded.push("s_rank_champion");
+        }
+      } else if (assignment.tierNumber === 2) {
+        if (await awardBadgeIfNotExists(profileId, "a_rank_champion", existingBadges, leagueId)) {
+          awarded.push("a_rank_champion");
+        }
+      } else if (assignment.tierNumber === 3) {
+        if (await awardBadgeIfNotExists(profileId, "b_rank_champion", existingBadges, leagueId)) {
+          awarded.push("b_rank_champion");
+        }
+      }
+    }
+    
+    // Safe Hands: Finished outside relegation spots for entire season (no relegations)
+    if (relegations.length === 0 && movements.length > 0) {
+      if (await awardBadgeIfNotExists(profileId, "safe_hands", existingBadges, leagueId)) {
+        awarded.push("safe_hands");
+      }
+    }
+    
+    // Untouchable: Stayed in S Rank (tier 1) for full season with no relegations
+    if (assignment.tierNumber === 1 && relegations.length === 0) {
+      // Check if they started in tier 1
+      const initialAssignment = movements.find(m => m.movementType === 'initial_assignment');
+      if (initialAssignment && initialAssignment.toTier === 1) {
+        if (await awardBadgeIfNotExists(profileId, "untouchable", existingBadges, leagueId)) {
+          awarded.push("untouchable");
+        }
+      }
+    }
+    
+    // Elevator Operator: Had both promotion and relegation in the season
+    if (promotions.length > 0 && relegations.length > 0) {
+      if (await awardBadgeIfNotExists(profileId, "elevator_operator", existingBadges, leagueId)) {
+        awarded.push("elevator_operator");
+      }
+    }
+    
+    if (awarded.length > 0) {
+      awardedMap.set(profileId, awarded);
+    }
+  }
+  
+  return awardedMap;
+}

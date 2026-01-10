@@ -2,6 +2,7 @@ import { db } from "./db";
 import { tieredLeagues, tierAssignments, tierMovements, tierMovementNotifications, tierNames, results, races, raceCompetitions } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { storage } from "./storage";
+import { checkTierBadgesAfterShuffle } from "./badge-automation";
 
 interface TierStanding {
   profileId: number;
@@ -47,6 +48,18 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
       const result = await processShuffleForTieredLeague(tieredLeague, raceCount);
       if (result.movements.length > 0) {
         shuffleResults.push(result);
+        
+        // Check and award tier-related badges after the shuffle
+        const tierStandings = await storage.getTierStandings(tieredLeague.id);
+        await checkTierBadgesAfterShuffle(
+          tieredLeague.id,
+          result,
+          tierStandings,
+          {
+            numberOfTiers: tieredLeague.numberOfTiers,
+            relegationSpots: tieredLeague.relegationSpots,
+          }
+        );
       }
     }
   }

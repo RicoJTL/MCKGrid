@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mck-grid-v2';
+const CACHE_NAME = 'mck-grid-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

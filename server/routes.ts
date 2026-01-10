@@ -376,8 +376,14 @@ export async function registerRoutes(
     const updated = await storage.updateLeague(leagueId, data);
     
     if (wasActive && status === 'completed') {
-      const { checkSeasonEndBadges } = await import("./badge-automation");
+      const { checkSeasonEndBadges, checkSeasonEndTierBadges } = await import("./badge-automation");
       await checkSeasonEndBadges(leagueId);
+      
+      // Check tier-related season-end badges for any tiered leagues in this league
+      const tieredLeaguesInLeague = await storage.getTieredLeagues(leagueId);
+      for (const tieredLeague of tieredLeaguesInLeague) {
+        await checkSeasonEndTierBadges(tieredLeague.id, leagueId);
+      }
     }
     
     res.json(updated);
