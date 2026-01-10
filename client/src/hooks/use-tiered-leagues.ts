@@ -316,7 +316,7 @@ export interface TierMovementHistory {
   toTierName: string;
 }
 
-export function useTierMovementHistory(profileId: number) {
+export function useTierMovementHistory(profileId: number | undefined) {
   return useQuery<TierMovementHistory[]>({
     queryKey: ['/api/profiles', profileId, 'tier-history'],
     queryFn: async () => {
@@ -324,7 +324,7 @@ export function useTierMovementHistory(profileId: number) {
       if (!res.ok) throw new Error("Failed to fetch tier history");
       return res.json();
     },
-    enabled: profileId > 0,
+    enabled: !!profileId && profileId > 0,
   });
 }
 

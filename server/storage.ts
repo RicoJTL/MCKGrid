@@ -1427,7 +1427,7 @@ export class DatabaseStorage implements IStorage {
     }>();
     
     // Check if any goals are tier-related
-    const tierGoalTypes = ['getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'topOfTier', 'rankChampion'];
+    const tierGoalTypes = ['getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'rankChampion'];
     const hasTierGoals = goals.some(g => tierGoalTypes.includes(g.goalType));
     
     if (hasTierGoals) {
@@ -1581,55 +1581,107 @@ export class DatabaseStorage implements IStorage {
           newValue = tierStats.promotions;
           break;
         case 'reachSRank':
-          // 1 if currently in tier 1 (S rank), 0 otherwise
-          newValue = tierStats.currentTier === 1 ? 1 : 0;
-          break;
         case 'reachARank':
-          // 1 if currently in tier 1 or 2 (reached A rank or higher)
-          newValue = (tierStats.currentTier !== null && tierStats.currentTier <= 2) ? 1 : 0;
-          break;
         case 'reachBRank':
-          // 1 if currently in tier 1, 2, or 3 (reached B rank or higher)
-          newValue = (tierStats.currentTier !== null && tierStats.currentTier <= 3) ? 1 : 0;
-          break;
         case 'avoidRelegation':
-          // 1 if no relegations occurred (tentative success until league completes)
-          newValue = tierStats.relegations === 0 ? 1 : 0;
-          break;
         case 'stayInSRank':
-          // 1 if started in S rank (tier 1) and still there
-          if (tierStats.initialTier === 1 && tierStats.currentTier === 1) {
-            newValue = 1;
-          }
-          break;
         case 'stayInARank':
-          // 1 if started in A rank (tier 2) or higher and still at tier 2 or higher
-          if (tierStats.initialTier !== null && tierStats.initialTier <= 2 && 
-              tierStats.currentTier !== null && tierStats.currentTier <= 2) {
-            newValue = 1;
-          }
-          break;
         case 'stayInBRank':
-          // 1 if started in B rank (tier 3) or higher and still at tier 3 or higher
-          if (tierStats.initialTier !== null && tierStats.initialTier <= 3 && 
-              tierStats.currentTier !== null && tierStats.currentTier <= 3) {
-            newValue = 1;
-          }
-          break;
-        case 'topOfTier':
-          // 1 if currently position 1 in their tier
-          newValue = tierStats.tierPosition === 1 ? 1 : 0;
-          break;
         case 'rankChampion':
-          // 1 if #1 in their tier (tentative until league completes)
-          newValue = tierStats.tierPosition === 1 ? 1 : 0;
+          // These are end-of-season goals - outcome only set when league completes
+          // currentValue stays 0 during season, we track progress via outcome field
           break;
       }
       
-      // Only update if value changed
-      if (goal.currentValue !== newValue) {
+      // Calculate outcome for end-of-season tier goals
+      let newOutcome: 'pending' | 'achieved' | 'failed' | 'exceeded' = goal.outcome as any;
+      const isLeagueCompleted = leagueStatus === 'completed';
+      const endOfSeasonGoals = ['reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'rankChampion'];
+      
+      if (endOfSeasonGoals.includes(goal.goalType)) {
+        if (!isLeagueCompleted) {
+          newOutcome = 'pending';
+        } else {
+          // League is completed, determine final outcome
+          switch (goal.goalType) {
+            case 'reachSRank':
+              newOutcome = tierStats.currentTier === 1 ? 'achieved' : 'failed';
+              break;
+            case 'reachARank':
+              newOutcome = (tierStats.currentTier !== null && tierStats.currentTier <= 2) ? 'achieved' : 'failed';
+              break;
+            case 'reachBRank':
+              newOutcome = (tierStats.currentTier !== null && tierStats.currentTier <= 3) ? 'achieved' : 'failed';
+              break;
+            case 'avoidRelegation':
+              newOutcome = tierStats.relegations === 0 ? 'achieved' : 'failed';
+              break;
+            case 'stayInSRank':
+              // Started in S (tier 1): promoted = exceeded (can't promote from S), stayed = achieved, relegated = failed
+              if (tierStats.initialTier === 1) {
+                if (tierStats.currentTier === 1) {
+                  newOutcome = 'achieved';
+                } else if (tierStats.currentTier !== null && tierStats.currentTier > 1) {
+                  newOutcome = 'failed'; // Relegated
+                }
+              } else {
+                newOutcome = 'failed'; // Didn't start in S rank
+              }
+              break;
+            case 'stayInARank':
+              // Started in A (tier 2) or higher: promoted = exceeded, stayed/higher = achieved, relegated = failed
+              if (tierStats.initialTier !== null && tierStats.initialTier <= 2) {
+                if (tierStats.currentTier !== null && tierStats.currentTier < tierStats.initialTier) {
+                  newOutcome = 'exceeded'; // Got promoted
+                } else if (tierStats.currentTier !== null && tierStats.currentTier <= 2) {
+                  newOutcome = 'achieved'; // Stayed at A or higher
+                } else {
+                  newOutcome = 'failed'; // Relegated below A
+                }
+              } else {
+                newOutcome = 'failed'; // Didn't start in A rank or higher
+              }
+              break;
+            case 'stayInBRank':
+              // Started in B (tier 3) or higher: promoted = exceeded, stayed/higher = achieved, relegated = failed
+              if (tierStats.initialTier !== null && tierStats.initialTier <= 3) {
+                if (tierStats.currentTier !== null && tierStats.currentTier < tierStats.initialTier) {
+                  newOutcome = 'exceeded'; // Got promoted
+                } else if (tierStats.currentTier !== null && tierStats.currentTier <= 3) {
+                  newOutcome = 'achieved'; // Stayed at B or higher
+                } else {
+                  newOutcome = 'failed'; // Relegated below B
+                }
+              } else {
+                newOutcome = 'failed'; // Didn't start in B rank or higher
+              }
+              break;
+            case 'rankChampion':
+              newOutcome = tierStats.tierPosition === 1 ? 'achieved' : 'failed';
+              break;
+          }
+        }
+      } else {
+        // For countable goals (wins, podiums, points, etc.), determine outcome from current vs target
+        if (goal.targetValue !== null) {
+          if (goal.goalType === 'position') {
+            // Position goal: lower is better (1st place is best)
+            if (isLeagueCompleted) {
+              newOutcome = newValue > 0 && newValue <= goal.targetValue ? 'achieved' : 'failed';
+            } else {
+              newOutcome = 'pending';
+            }
+          } else {
+            // Regular countable goals: achieved when currentValue >= targetValue
+            newOutcome = newValue >= goal.targetValue ? 'achieved' : 'pending';
+          }
+        }
+      }
+      
+      // Only update if value or outcome changed
+      if (goal.currentValue !== newValue || goal.outcome !== newOutcome) {
         await db.update(seasonGoals)
-          .set({ currentValue: newValue })
+          .set({ currentValue: newValue, outcome: newOutcome })
           .where(eq(seasonGoals.id, goal.id));
       }
     }

@@ -360,11 +360,20 @@ export function BadgesSection({ profile, isOwnProfile = false, isAdmin = false }
   );
 }
 
+// Goals that don't require a target value (end-of-season binary outcomes)
+const noTargetGoals = ['getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'rankChampion'];
+
 const goalSchema = z.object({
   leagueId: z.number().min(1, "Please select a league"),
-  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend', 'getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'topOfTier', 'rankChampion']),
-  targetValue: z.number().min(1),
-});
+  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend', 'getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'rankChampion']),
+  targetValue: z.number().min(1).nullable().optional(),
+}).refine((data) => {
+  // Target is required for goals that need it
+  if (!noTargetGoals.includes(data.goalType)) {
+    return data.targetValue !== null && data.targetValue !== undefined && data.targetValue >= 1;
+  }
+  return true;
+}, { message: "Target value is required", path: ["targetValue"] });
 
 interface SeasonGoalsProps extends DriverStatsProps {
   isReadOnly?: boolean;
@@ -459,12 +468,25 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
     reachSRank: 'Reach S Rank',
     reachARank: 'Reach A Rank',
     reachBRank: 'Reach B Rank',
-    avoidRelegation: 'Avoid Relegation',
+    avoidRelegation: 'Avoid Relegation All Season',
     stayInSRank: 'Stay in S Rank',
     stayInARank: 'Stay in A Rank',
     stayInBRank: 'Stay in B Rank',
-    topOfTier: 'Top of Tier',
     rankChampion: 'Rank Champion',
+  };
+
+  // Helper to get outcome display info
+  const getOutcomeDisplay = (outcome: string) => {
+    switch (outcome) {
+      case 'achieved':
+        return { label: 'Achieved!', bgClass: 'bg-green-500/20', textClass: 'text-green-400', borderClass: 'border-green-500/30' };
+      case 'failed':
+        return { label: 'Failed', bgClass: 'bg-red-500/20', textClass: 'text-red-400', borderClass: 'border-red-500/30' };
+      case 'exceeded':
+        return { label: 'Exceeded!', bgClass: 'bg-amber-500/20', textClass: 'text-amber-400', borderClass: 'border-amber-500/30' };
+      default:
+        return { label: 'In Progress', bgClass: 'bg-muted/20', textClass: 'text-muted-foreground', borderClass: 'border-white/5' };
+    }
   };
 
   return (
@@ -535,6 +557,18 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                   render={({ field }) => {
                     const goalType = form.watch('goalType');
                     const isPositionGoal = goalType === 'position';
+                    const needsTarget = !noTargetGoals.includes(goalType);
+                    
+                    if (!needsTarget) {
+                      return (
+                        <FormItem>
+                          <p className="text-sm text-muted-foreground italic">
+                            This goal will be evaluated at the end of the season.
+                          </p>
+                        </FormItem>
+                      );
+                    }
+                    
                     return (
                       <FormItem>
                         <FormLabel>
@@ -549,7 +583,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                               type="number" 
                               min={1} 
                               className={isPositionGoal ? "pl-8" : ""}
-                              {...field} 
+                              value={field.value ?? 1}
                               onChange={(e) => field.onChange(Number(e.target.value))} 
                               data-testid="input-goal-target" 
                             />
@@ -578,30 +612,41 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
         <div className="space-y-3">
           {(() => {
             const completedCount = goals.filter(g => {
+              // For tier goals, use the outcome field (default to 'pending' if undefined)
+              if (noTargetGoals.includes(g.goalType)) {
+                const outcome = g.outcome || 'pending';
+                return outcome === 'achieved' || outcome === 'exceeded';
+              }
               const isPositionGoal = g.goalType === 'position';
               const goalLeague = leagues?.find(l => l.id === g.leagueId);
               const isLeagueCompleted = goalLeague?.status === 'completed';
+              const targetValue = g.targetValue ?? 0;
               const meetsTarget = isPositionGoal 
-                ? (g.currentValue > 0 && g.currentValue <= g.targetValue)
-                : g.currentValue >= g.targetValue;
-              // Position goals require league completion to count as "completed"
+                ? (g.currentValue > 0 && g.currentValue <= targetValue)
+                : g.currentValue >= targetValue;
               return isPositionGoal ? (meetsTarget && isLeagueCompleted) : meetsTarget;
             }).length;
-            return completedCount > 0 && (
+            const exceededCount = goals.filter(g => (g.outcome || 'pending') === 'exceeded').length;
+            return (completedCount > 0 || exceededCount > 0) && (
               <div className="p-3 rounded-xl bg-secondary/30 border border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-green-500" />
                   <span className="text-sm font-medium">
                     {completedCount}/{goals.length} goal{goals.length !== 1 ? 's' : ''} achieved
+                    {exceededCount > 0 && <span className="text-amber-400 ml-1">({exceededCount} exceeded!)</span>}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: goals.length }).map((_, i) => (
-                    <div 
-                      key={i}
-                      className={`w-2 h-2 rounded-full ${i < completedCount ? 'bg-green-500' : 'bg-muted/30'}`}
-                    />
-                  ))}
+                  {goals.map((g, i) => {
+                    const isAchieved = g.outcome === 'achieved' || (g.targetValue !== null && g.currentValue >= g.targetValue);
+                    const isExceeded = g.outcome === 'exceeded';
+                    return (
+                      <div 
+                        key={i}
+                        className={`w-2 h-2 rounded-full ${isExceeded ? 'bg-amber-500' : isAchieved ? 'bg-green-500' : 'bg-muted/30'}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -610,18 +655,78 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
             const league = leagues?.find(l => l.id === goal.leagueId);
             const isPositionGoal = goal.goalType === 'position';
             const isLeagueCompleted = league?.status === 'completed';
-            // Position goals can ONLY be achieved when the league is completed
-            // Other goals are achieved immediately when target is met
+            const isTierGoal = noTargetGoals.includes(goal.goalType);
+            const targetValue = goal.targetValue ?? 0;
+            
+            // For tier goals, use outcome field (default to 'pending' if undefined)
+            if (isTierGoal) {
+              const outcomeDisplay = getOutcomeDisplay(goal.outcome || 'pending');
+              return (
+                <div 
+                  key={goal.id} 
+                  className={`p-4 rounded-xl border transition-all ${outcomeDisplay.bgClass} ${outcomeDisplay.borderClass}`}
+                  data-testid={`goal-card-${goal.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {(goal.outcome || 'pending') === 'achieved' && (
+                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center" data-testid={`goal-completed-${goal.id}`}>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        </div>
+                      )}
+                      {(goal.outcome || 'pending') === 'exceeded' && (
+                        <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center" data-testid={`goal-exceeded-${goal.id}`}>
+                          <Star className="w-4 h-4 text-amber-500" />
+                        </div>
+                      )}
+                      {(goal.outcome || 'pending') === 'failed' && (
+                        <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center" data-testid={`goal-failed-${goal.id}`}>
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        </div>
+                      )}
+                      <div>
+                        <p className={`font-medium ${outcomeDisplay.textClass}`}>
+                          {goalLabels[goal.goalType] || goal.goalType}
+                          {(goal.outcome || 'pending') !== 'pending' && (
+                            <span className={`ml-2 text-xs ${outcomeDisplay.bgClass} ${outcomeDisplay.textClass} px-2 py-0.5 rounded-full`}>
+                              {outcomeDisplay.label}
+                            </span>
+                          )}
+                        </p>
+                        {league && <p className="text-xs text-muted-foreground">{league.name}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(goal.outcome || 'pending') === 'pending' && (
+                        <span className="text-xs text-muted-foreground italic">Awaiting season end</span>
+                      )}
+                      {!isReadOnly && !hasLeagueStarted(goal.leagueId) && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => deleteMutation.mutate(goal.id)}
+                          data-testid={`button-delete-goal-${goal.id}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            // Regular goals with targets
             const meetsTarget = isPositionGoal 
-              ? (goal.currentValue > 0 && goal.currentValue <= goal.targetValue)
-              : goal.currentValue >= goal.targetValue;
+              ? (goal.currentValue > 0 && goal.currentValue <= targetValue)
+              : goal.currentValue >= targetValue;
             const isCompleted = isPositionGoal 
-              ? (meetsTarget && isLeagueCompleted)  // Position goals REQUIRE league completion
-              : meetsTarget;  // Other goals are complete once target is met
-            const isCountGoal = ['wins', 'podiums', 'races', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend'].includes(goal.goalType);
+              ? (meetsTarget && isLeagueCompleted)
+              : meetsTarget;
             const progress = isPositionGoal 
-              ? (goal.currentValue > 0 ? Math.min(100, (goal.targetValue / goal.currentValue) * 100) : 0)
-              : Math.min(100, (goal.currentValue / goal.targetValue) * 100);
+              ? (goal.currentValue > 0 && targetValue > 0 ? Math.min(100, (targetValue / goal.currentValue) * 100) : 0)
+              : (targetValue > 0 ? Math.min(100, (goal.currentValue / targetValue) * 100) : 0);
 
             return (
               <div 
@@ -674,7 +779,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                           goal.currentValue === 2 ? 'bg-gray-400/20 text-gray-300' :
                           goal.currentValue === 3 ? 'bg-orange-600/20 text-orange-400' :
                           isCompleted ? 'bg-green-500/20 text-green-400' :
-                          goal.currentValue <= goal.targetValue ? 'bg-primary/20 text-primary' :
+                          goal.currentValue <= targetValue ? 'bg-primary/20 text-primary' :
                           'bg-red-500/20 text-red-400'
                         }`}>
                           {goal.currentValue > 0 ? `P${goal.currentValue}` : '—'}
@@ -684,7 +789,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-1">Target</p>
                         <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center font-bold font-display italic text-lg text-primary">
-                          P{goal.targetValue}
+                          P{targetValue}
                         </div>
                       </div>
                     </div>
@@ -693,22 +798,22 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                         <span className="text-sm text-muted-foreground">Season not started</span>
                       ) : isCompleted ? (
                         <span className="text-sm text-green-400 font-medium">Goal achieved!</span>
-                      ) : goal.currentValue <= goal.targetValue ? (
+                      ) : goal.currentValue <= targetValue ? (
                         <span className="text-sm text-muted-foreground">
-                          {isLeagueCompleted ? 'Goal achieved!' : `Currently P${goal.currentValue} (Target: P${goal.targetValue})`}
+                          {isLeagueCompleted ? 'Goal achieved!' : `Currently P${goal.currentValue} (Target: P${targetValue})`}
                         </span>
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          {goal.currentValue - goal.targetValue} position{goal.currentValue - goal.targetValue !== 1 ? 's' : ''} to go
+                          {goal.currentValue - targetValue} position{goal.currentValue - targetValue !== 1 ? 's' : ''} to go
                         </span>
                       )}
                     </div>
                   </div>
-                ) : isCountGoal ? (
+                ) : ['wins', 'podiums', 'races', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend'].includes(goal.goalType) ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: goal.targetValue }).map((_, i) => {
+                        {Array.from({ length: targetValue }).map((_, i) => {
                           const isAchieved = i < goal.currentValue;
                           const IconComponent = goal.goalType === 'wins' ? Trophy : 
                                                goal.goalType === 'podiums' ? Medal :
@@ -745,27 +850,27 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                         })}
                       </div>
                       <span className="text-sm font-bold">
-                        {goal.currentValue}/{goal.targetValue}
+                        {goal.currentValue}/{targetValue}
                       </span>
                     </div>
-                    {!isCompleted && goal.currentValue > 0 && (
+                    {!isCompleted && goal.currentValue > 0 && targetValue > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {goal.targetValue - goal.currentValue} more to go!
+                        {targetValue - goal.currentValue} more to go!
                       </p>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{goal.currentValue} / {goal.targetValue} pts</span>
+                      <span className="text-muted-foreground">{goal.currentValue} / {targetValue} pts</span>
                       <span className={`font-medium ${isCompleted ? 'text-green-400' : ''}`}>
                         {Math.round(progress)}%
                       </span>
                     </div>
                     <Progress value={progress} className={`h-2 ${isCompleted ? '[&>div]:bg-green-500' : ''}`} />
-                    {!isCompleted && goal.currentValue > 0 && (
+                    {!isCompleted && goal.currentValue > 0 && targetValue > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {goal.targetValue - goal.currentValue} points to go!
+                        {targetValue - goal.currentValue} points to go!
                       </p>
                     )}
                   </div>
@@ -775,10 +880,15 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
           })}
 
           {goals.some(g => {
+            if (noTargetGoals.includes(g.goalType)) {
+              const outcome = g.outcome || 'pending';
+              return outcome === 'achieved' || outcome === 'exceeded';
+            }
             const isPositionGoal = g.goalType === 'position';
+            const tv = g.targetValue ?? 0;
             return isPositionGoal 
-              ? (g.currentValue > 0 && g.currentValue <= g.targetValue)
-              : g.currentValue >= g.targetValue;
+              ? (g.currentValue > 0 && g.currentValue <= tv)
+              : g.currentValue >= tv;
           }) && (
             <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-500/20 text-center">
               <div className="flex items-center justify-center gap-2 text-green-400 font-medium">

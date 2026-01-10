@@ -11,7 +11,8 @@ export const competitionTypeEnum = pgEnum("competition_type", ["series", "single
 export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "cancelled"]);
 export const leagueStatusEnum = pgEnum("league_status", ["active", "completed"]);
 export const checkinStatusEnum = pgEnum("checkin_status", ["confirmed", "maybe", "not_attending"]);
-export const goalTypeEnum = pgEnum("goal_type", ["wins", "podiums", "points", "races", "position", "top5", "top10", "poles", "frontRow", "gridClimber", "perfectWeekend", "getPromoted", "reachSRank", "reachARank", "reachBRank", "avoidRelegation", "stayInSRank", "stayInARank", "stayInBRank", "topOfTier", "rankChampion"]);
+export const goalTypeEnum = pgEnum("goal_type", ["wins", "podiums", "points", "races", "position", "top5", "top10", "poles", "frontRow", "gridClimber", "perfectWeekend", "getPromoted", "reachSRank", "reachARank", "reachBRank", "avoidRelegation", "stayInSRank", "stayInARank", "stayInBRank", "rankChampion"]);
+export const goalOutcomeEnum = pgEnum("goal_outcome", ["pending", "achieved", "failed", "exceeded"]);
 export const badgeCategoryEnum = pgEnum("badge_category", [
   "getting_started", 
   "milestones", 
@@ -173,8 +174,9 @@ export const seasonGoals = pgTable("season_goals", {
   profileId: integer("profile_id").references(() => profiles.id).notNull(),
   leagueId: integer("league_id").references(() => leagues.id).notNull(),
   goalType: goalTypeEnum("goal_type").notNull(),
-  targetValue: integer("target_value").notNull(),
+  targetValue: integer("target_value"),
   currentValue: integer("current_value").default(0).notNull(),
+  outcome: goalOutcomeEnum("outcome").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -358,7 +360,7 @@ export const insertTierMovementSchema = createInsertSchema(tierMovements).omit({
 export const insertTierMovementNotificationSchema = createInsertSchema(tierMovementNotifications).omit({ id: true, isRead: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, sortOrder: true });
 export const insertProfileBadgeSchema = createInsertSchema(profileBadges).omit({ id: true });
-export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, createdAt: true });
+export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, outcome: true, createdAt: true });
 export const insertRaceCheckinSchema = createInsertSchema(raceCheckins).omit({ id: true, checkedInAt: true });
 export const insertPersonalBestSchema = createInsertSchema(personalBests).omit({ id: true, achievedAt: true });
 export const insertBadgeNotificationSchema = createInsertSchema(badgeNotifications).omit({ id: true, isRead: true, createdAt: true });

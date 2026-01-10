@@ -67,7 +67,7 @@ export default function ProfilePage() {
     enabled: !!profile?.id,
   });
   
-  const { data: tierHistory } = useTierMovementHistory(profile?.id || 0);
+  const { data: tierHistory } = useTierMovementHistory(profile?.id);
   const deleteTierHistory = useDeleteTierHistory();
   
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
