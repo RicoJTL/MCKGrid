@@ -163,9 +163,9 @@ export const DEFAULT_COLORS = [
 ];
 
 export function getIconComponent(iconName: string | null | undefined) {
-  if (!iconName) return null;
+  if (!iconName) return Trophy; // Default fallback
   const found = AVAILABLE_ICONS.find(i => i.name === iconName);
-  return found?.icon || null;
+  return found?.icon || Trophy; // Default fallback
 }
 
 interface IconPickerProps {

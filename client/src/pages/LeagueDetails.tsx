@@ -623,10 +623,12 @@ export default function LeagueDetails() {
                     </div>
                   </div>
                   <IconPicker
-                    selectedIcon={tieredLeagueIconName}
-                    selectedColor={tieredLeagueIconColor}
-                    onIconChange={setTieredLeagueIconName}
-                    onColorChange={setTieredLeagueIconColor}
+                    value={tieredLeagueIconName}
+                    color={tieredLeagueIconColor}
+                    onChange={(name, color) => {
+                      setTieredLeagueIconName(name);
+                      setTieredLeagueIconColor(color);
+                    }}
                   />
                   <Button 
                     onClick={handleCreateTieredLeague} 
@@ -994,10 +996,12 @@ export default function LeagueDetails() {
               </div>
             </div>
             <IconPicker
-              selectedIcon={tieredLeagueIconName}
-              selectedColor={tieredLeagueIconColor}
-              onIconChange={setTieredLeagueIconName}
-              onColorChange={setTieredLeagueIconColor}
+              value={tieredLeagueIconName}
+              color={tieredLeagueIconColor}
+              onChange={(name, color) => {
+                setTieredLeagueIconName(name);
+                setTieredLeagueIconColor(color);
+              }}
             />
             <Button 
               onClick={handleUpdateTieredLeague} 
