@@ -538,13 +538,36 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h3 className="font-bold text-blue-300">
-                    Tier Update{visibleTierMovementNotifications.length > 1 ? 's' : ''}!
+                    {(() => {
+                      const firstMovement = visibleTierMovementNotifications[0]?.movement;
+                      if (!firstMovement) return 'Tier Update!';
+                      const type = firstMovement.movementType;
+                      if (type === 'initial_assignment') return 'Tier Assigned!';
+                      if (type === 'admin_promotion' || type === 'automatic_promotion') return 'Promoted!';
+                      if (type === 'admin_relegation' || type === 'automatic_relegation') return 'Relegated!';
+                      return 'Tier Update!';
+                    })()}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {visibleTierMovementNotifications.length === 1 
-                      ? `Your tier has been updated! Click to dismiss.`
-                      : `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`
-                    }
+                    {(() => {
+                      if (visibleTierMovementNotifications.length > 1) {
+                        return `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`;
+                      }
+                      const n = visibleTierMovementNotifications[0];
+                      if (!n) return 'Click to dismiss.';
+                      const type = n.movement.movementType;
+                      const tierName = n.tieredLeague?.name || 'Tiered League';
+                      if (type === 'initial_assignment') {
+                        return `You've been assigned to a tier in ${tierName}!`;
+                      }
+                      if (type === 'admin_promotion' || type === 'automatic_promotion') {
+                        return `You've been promoted in ${tierName}!`;
+                      }
+                      if (type === 'admin_relegation' || type === 'automatic_relegation') {
+                        return `You've been relegated in ${tierName}.`;
+                      }
+                      return 'Your tier has been updated!';
+                    })()}
                   </p>
                 </div>
               </div>
