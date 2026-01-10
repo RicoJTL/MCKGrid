@@ -182,6 +182,7 @@ const BADGE_CATEGORY_LABELS: Record<string, string> = {
   season_heroes: "Season Heroes",
   legends: "Legends",
   league_laughs: "League Laughs",
+  tier_achievements: "Tier Achievements",
 };
 
 const BADGE_CATEGORY_ORDER = [
@@ -190,6 +191,7 @@ const BADGE_CATEGORY_ORDER = [
   "race_highlights",
   "hot_streaks",
   "season_heroes",
+  "tier_achievements",
   "legends",
   "league_laughs",
 ];
