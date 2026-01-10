@@ -1,5 +1,5 @@
 import { Switch, Route, Redirect } from "wouter";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, Component, type ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,12 +8,14 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
-// Eager load frequently accessed pages
+// Eager load main pages for fast initial load
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 
-// Lazy load less frequently accessed pages
+// Lazy load other pages
 const LeaguesPage = lazy(() => import("@/pages/LeaguesPage"));
 const LeagueDetails = lazy(() => import("@/pages/LeagueDetails"));
 const CompetitionDetails = lazy(() => import("@/pages/CompetitionDetails"));
@@ -32,6 +34,40 @@ function PageLoader() {
   );
 }
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <h2 className="text-lg font-semibold">Something went wrong</h2>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Refresh Page
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -40,9 +76,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   return (
     <Layout>
-      <Suspense fallback={<PageLoader />}>
-        <Component />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Component />
+        </Suspense>
+      </ErrorBoundary>
     </Layout>
   );
 }
