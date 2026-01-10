@@ -535,6 +535,8 @@ export default function Dashboard() {
           const iconTextClass = isPromotion ? 'text-green-400' : isRelegation ? 'text-red-400' : 'text-blue-400';
           const titleClass = isPromotion ? 'text-green-300' : isRelegation ? 'text-red-300' : 'text-blue-300';
           
+          const competitionId = visibleTierMovementNotifications[0]?.tieredLeague?.parentCompetitionId;
+          
           return (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -543,7 +545,10 @@ export default function Dashboard() {
               className={`p-4 rounded-2xl border cursor-pointer transition-colors ${bgClass}`}
               data-testid="banner-tier-movement-notifications"
               onClick={() => { 
-                handleDismissAllTierMovementNotifications(); 
+                handleDismissAllTierMovementNotifications();
+                if (competitionId) {
+                  setLocation(`/competitions/${competitionId}#tiers`);
+                }
               }}
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -561,21 +566,21 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">
                       {(() => {
                         if (visibleTierMovementNotifications.length > 1) {
-                          return `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`;
+                          return `You have ${visibleTierMovementNotifications.length} tier updates. Click to view.`;
                         }
                         const n = visibleTierMovementNotifications[0];
-                        if (!n) return 'Click to dismiss.';
+                        if (!n) return 'Click to view.';
                         const tierName = n.tieredLeague?.name || 'Tiered League';
                         if (movementType === 'initial_assignment') {
-                          return `You've been assigned to a tier in ${tierName}!`;
+                          return `You've been assigned to a tier in ${tierName}! Click to view.`;
                         }
                         if (isPromotion) {
-                          return `You've been promoted in ${tierName}!`;
+                          return `You've been promoted in ${tierName}! Click to view.`;
                         }
                         if (isRelegation) {
-                          return `You've been relegated in ${tierName}.`;
+                          return `You've been relegated in ${tierName}. Click to view.`;
                         }
-                        return 'Your tier has been updated!';
+                        return 'Your tier has been updated! Click to view.';
                       })()}
                     </p>
                   </div>
