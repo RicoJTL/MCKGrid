@@ -1,7 +1,7 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles, Layers } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, TrendingUp, AlertCircle, CheckCircle, Award, X, Sparkles, Layers, ChevronUp, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";
@@ -275,7 +275,7 @@ export default function Dashboard() {
   const leader = standings[0];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold italic text-white mb-2">
@@ -520,72 +520,82 @@ export default function Dashboard() {
         )}
 
         {/* Tier Movement Notifications Banner */}
-        {visibleTierMovementNotifications.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 cursor-pointer hover:border-blue-500/50 transition-colors"
-            data-testid="banner-tier-movement-notifications"
-            onClick={() => { 
-              handleDismissAllTierMovementNotifications(); 
-            }}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <Layers className="w-6 h-6 text-blue-400" />
+        {visibleTierMovementNotifications.length > 0 && (() => {
+          const firstMovement = visibleTierMovementNotifications[0]?.movement;
+          const movementType = firstMovement?.movementType || '';
+          const isPromotion = movementType === 'admin_promotion' || movementType === 'automatic_promotion';
+          const isRelegation = movementType === 'admin_relegation' || movementType === 'automatic_relegation';
+          
+          const bgClass = isPromotion 
+            ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30 hover:border-green-500/50'
+            : isRelegation 
+            ? 'bg-gradient-to-r from-red-500/20 to-rose-500/20 border-red-500/30 hover:border-red-500/50'
+            : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-500/30 hover:border-blue-500/50';
+          const iconBgClass = isPromotion ? 'bg-green-500/20' : isRelegation ? 'bg-red-500/20' : 'bg-blue-500/20';
+          const iconTextClass = isPromotion ? 'text-green-400' : isRelegation ? 'text-red-400' : 'text-blue-400';
+          const titleClass = isPromotion ? 'text-green-300' : isRelegation ? 'text-red-300' : 'text-blue-300';
+          
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={`p-4 rounded-2xl border cursor-pointer transition-colors ${bgClass}`}
+              data-testid="banner-tier-movement-notifications"
+              onClick={() => { 
+                handleDismissAllTierMovementNotifications(); 
+              }}
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${iconBgClass}`}>
+                    {isPromotion ? <ChevronUp className={`w-6 h-6 ${iconTextClass}`} /> : 
+                     isRelegation ? <ChevronDown className={`w-6 h-6 ${iconTextClass}`} /> : 
+                     <Layers className={`w-6 h-6 ${iconTextClass}`} />}
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${titleClass}`}>
+                      {isPromotion ? 'PROMOTED!' : isRelegation ? 'RELEGATED!' : 
+                       movementType === 'initial_assignment' ? 'Tier Assigned!' : 'Tier Update!'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {(() => {
+                        if (visibleTierMovementNotifications.length > 1) {
+                          return `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`;
+                        }
+                        const n = visibleTierMovementNotifications[0];
+                        if (!n) return 'Click to dismiss.';
+                        const tierName = n.tieredLeague?.name || 'Tiered League';
+                        if (movementType === 'initial_assignment') {
+                          return `You've been assigned to a tier in ${tierName}!`;
+                        }
+                        if (isPromotion) {
+                          return `You've been promoted in ${tierName}!`;
+                        }
+                        if (isRelegation) {
+                          return `You've been relegated in ${tierName}.`;
+                        }
+                        return 'Your tier has been updated!';
+                      })()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-blue-300">
-                    {(() => {
-                      const firstMovement = visibleTierMovementNotifications[0]?.movement;
-                      if (!firstMovement) return 'Tier Update!';
-                      const type = firstMovement.movementType;
-                      if (type === 'initial_assignment') return 'Tier Assigned!';
-                      if (type === 'admin_promotion' || type === 'automatic_promotion') return 'Promoted!';
-                      if (type === 'admin_relegation' || type === 'automatic_relegation') return 'Relegated!';
-                      return 'Tier Update!';
-                    })()}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      if (visibleTierMovementNotifications.length > 1) {
-                        return `You have ${visibleTierMovementNotifications.length} tier updates. Click to dismiss.`;
-                      }
-                      const n = visibleTierMovementNotifications[0];
-                      if (!n) return 'Click to dismiss.';
-                      const type = n.movement.movementType;
-                      const tierName = n.tieredLeague?.name || 'Tiered League';
-                      if (type === 'initial_assignment') {
-                        return `You've been assigned to a tier in ${tierName}!`;
-                      }
-                      if (type === 'admin_promotion' || type === 'automatic_promotion') {
-                        return `You've been promoted in ${tierName}!`;
-                      }
-                      if (type === 'admin_relegation' || type === 'automatic_relegation') {
-                        return `You've been relegated in ${tierName}.`;
-                      }
-                      return 'Your tier has been updated!';
-                    })()}
-                  </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={titleClass}
+                    onClick={(e) => { e.stopPropagation(); handleDismissAllTierMovementNotifications(); }}
+                    disabled={markTierMovementReadMutation.isPending}
+                    data-testid="button-dismiss-tier-movement-notifications"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-blue-300"
-                  onClick={(e) => { e.stopPropagation(); handleDismissAllTierMovementNotifications(); }}
-                  disabled={markTierMovementReadMutation.isPending}
-                  data-testid="button-dismiss-tier-movement-notifications"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* My Tier - Current tier assignment */}
