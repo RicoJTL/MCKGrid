@@ -1086,8 +1086,8 @@ export async function checkSeasonEndTierBadges(tieredLeagueId: number, leagueId:
     const promotions = movements.filter(m => isPromotion(m.movementType));
     const relegations = movements.filter(m => isRelegation(m.movementType));
     
-    // S/A/B Rank Champion: Finish 1st in their tier
-    // Use tier number deterministically: tier 1 = S, tier 2 = A, tier 3 = B
+    // S/A/B/C Rank Champion: Finish 1st in their tier
+    // Use tier number deterministically: tier 1 = S, tier 2 = A, tier 3 = B, tier 4 = C
     const tierStanding = tierStandings.find(t => t.tierNumber === assignment.tierNumber);
     if (tierStanding && tierStanding.standings.length > 0 && tierStanding.standings[0].profileId === profileId) {
       if (assignment.tierNumber === 1) {
@@ -1101,6 +1101,10 @@ export async function checkSeasonEndTierBadges(tieredLeagueId: number, leagueId:
       } else if (assignment.tierNumber === 3) {
         if (await awardBadgeIfNotExists(profileId, "b_rank_champion", existingBadges, leagueId)) {
           awarded.push("b_rank_champion");
+        }
+      } else if (assignment.tierNumber === 4) {
+        if (await awardBadgeIfNotExists(profileId, "c_rank_champion", existingBadges, leagueId)) {
+          awarded.push("c_rank_champion");
         }
       }
     }
