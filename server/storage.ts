@@ -1528,7 +1528,14 @@ export class DatabaseStorage implements IStorage {
         top5: 0, top10: 0, poles: 0, frontRow: 0, 
         gridClimber: 0, perfectWeekend: 0
       };
-      const tierStats = tierStatsMap.get(goal.leagueId);
+      const tierStats = tierStatsMap.get(goal.leagueId) || {
+        promotions: 0,
+        relegations: 0,
+        currentTier: null,
+        initialTier: null,
+        tierPosition: 0,
+        tieredLeagueId: null,
+      };
       const leagueStatus = leagueStatusMap.get(goal.leagueId);
       let newValue = 0;
       
@@ -1568,64 +1575,54 @@ export class DatabaseStorage implements IStorage {
           newValue = stats.perfectWeekend;
           break;
         
-        // Tier-related goals
+        // Tier-related goals (tierStats is always defined with defaults)
         case 'getPromoted':
           // Count how many times driver was promoted
-          newValue = tierStats?.promotions ?? 0;
+          newValue = tierStats.promotions;
           break;
         case 'reachSRank':
           // 1 if currently in tier 1 (S rank), 0 otherwise
-          newValue = tierStats?.currentTier === 1 ? 1 : 0;
+          newValue = tierStats.currentTier === 1 ? 1 : 0;
           break;
         case 'reachARank':
           // 1 if currently in tier 1 or 2 (reached A rank or higher)
-          newValue = (tierStats && tierStats.currentTier !== null && tierStats.currentTier <= 2) ? 1 : 0;
+          newValue = (tierStats.currentTier !== null && tierStats.currentTier <= 2) ? 1 : 0;
           break;
         case 'reachBRank':
           // 1 if currently in tier 1, 2, or 3 (reached B rank or higher)
-          newValue = (tierStats && tierStats.currentTier !== null && tierStats.currentTier <= 3) ? 1 : 0;
+          newValue = (tierStats.currentTier !== null && tierStats.currentTier <= 3) ? 1 : 0;
           break;
         case 'avoidRelegation':
-          // 1 if league is completed and no relegations occurred
-          if (leagueStatus === 'completed' && tierStats) {
-            newValue = tierStats.relegations === 0 ? 1 : 0;
-          } else {
-            // In progress - show 1 if no relegations yet (tentative success)
-            newValue = (tierStats?.relegations ?? 0) === 0 ? 1 : 0;
-          }
+          // 1 if no relegations occurred (tentative success until league completes)
+          newValue = tierStats.relegations === 0 ? 1 : 0;
           break;
         case 'stayInSRank':
           // 1 if started in S rank (tier 1) and still there
-          if (tierStats?.initialTier === 1 && tierStats?.currentTier === 1) {
+          if (tierStats.initialTier === 1 && tierStats.currentTier === 1) {
             newValue = 1;
           }
           break;
         case 'stayInARank':
           // 1 if started in A rank (tier 2) or higher and still at tier 2 or higher
-          if (tierStats && tierStats.initialTier !== null && tierStats.initialTier <= 2 && 
+          if (tierStats.initialTier !== null && tierStats.initialTier <= 2 && 
               tierStats.currentTier !== null && tierStats.currentTier <= 2) {
             newValue = 1;
           }
           break;
         case 'stayInBRank':
           // 1 if started in B rank (tier 3) or higher and still at tier 3 or higher
-          if (tierStats && tierStats.initialTier !== null && tierStats.initialTier <= 3 && 
+          if (tierStats.initialTier !== null && tierStats.initialTier <= 3 && 
               tierStats.currentTier !== null && tierStats.currentTier <= 3) {
             newValue = 1;
           }
           break;
         case 'topOfTier':
           // 1 if currently position 1 in their tier
-          newValue = tierStats?.tierPosition === 1 ? 1 : 0;
+          newValue = tierStats.tierPosition === 1 ? 1 : 0;
           break;
         case 'rankChampion':
-          // 1 if league completed and was #1 in their tier
-          if (leagueStatus === 'completed' && tierStats?.tierPosition === 1) {
-            newValue = 1;
-          } else if (tierStats?.tierPosition === 1) {
-            // In progress - show tentative success
-            newValue = 1;
-          }
+          // 1 if #1 in their tier (tentative until league completes)
+          newValue = tierStats.tierPosition === 1 ? 1 : 0;
           break;
       }
       
