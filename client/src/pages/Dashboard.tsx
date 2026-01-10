@@ -1,7 +1,7 @@
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
-import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, AlertCircle, CheckCircle, Award, X, Sparkles, Layers, ChevronUp, ChevronDown } from "lucide-react";
+import { Trophy, Calendar, User, ArrowRight, Crown, Medal, MapPin, Flag, Clock, AlertCircle, CheckCircle, Award, X, Sparkles, Layers, ChevronUp, ChevronDown, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";

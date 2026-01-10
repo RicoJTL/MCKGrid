@@ -259,9 +259,13 @@ export default function RaceDetails() {
               </TableHeader>
               <TableBody>
                 {results?.map((result) => (
-                  <TableRow key={result.id} className="border-white/5 hover:bg-white/5">
+                  <TableRow key={result.id} className={`border-white/5 hover:bg-white/5 ${result.dnf ? 'bg-destructive/5' : ''}`}>
                     <TableCell className="font-display font-bold text-lg italic">
-                      {result.position === 1 ? <span className="text-yellow-500">1st</span> :
+                      {result.dnf ? (
+                        <span className="text-destructive flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4" /> DNF
+                        </span>
+                      ) : result.position === 1 ? <span className="text-yellow-500">1st</span> :
                        result.position === 2 ? <span className="text-gray-400">2nd</span> :
                        result.position === 3 ? <span className="text-amber-700">3rd</span> :
                        `${result.position}th`}
@@ -280,7 +284,7 @@ export default function RaceDetails() {
                     <TableCell className="text-muted-foreground">
                       {result.qualifyingPosition ? `P${result.qualifyingPosition}` : "-"}
                     </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{result.raceTime || "--:--"}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{result.dnf ? '--' : (result.raceTime || "--:--")}</TableCell>
                     <TableCell className="text-right font-bold text-lg text-primary">{result.points}</TableCell>
                   </TableRow>
                 ))}
