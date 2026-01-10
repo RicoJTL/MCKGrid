@@ -583,10 +583,31 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
   async deleteProfile(id: number): Promise<void> {
-    // First delete all tier assignments for this driver
+    // Delete all related data before deleting the profile
+    
+    // Tier-related data
+    await db.delete(tierMovementNotifications).where(eq(tierMovementNotifications.profileId, id));
+    await db.delete(tierMovements).where(eq(tierMovements.profileId, id));
     await db.delete(tierAssignments).where(eq(tierAssignments.profileId, id));
-    // Then delete all race results for this driver
+    
+    // Badge-related data
+    await db.delete(badgeNotifications).where(eq(badgeNotifications.profileId, id));
+    await db.delete(profileBadges).where(eq(profileBadges.profileId, id));
+    
+    // Driver icon-related data - null out references before deleting
+    await db.update(driverIcons).set({ createdByProfileId: null }).where(eq(driverIcons.createdByProfileId, id));
+    await db.update(profileDriverIcons).set({ awardedByProfileId: null }).where(eq(profileDriverIcons.awardedByProfileId, id));
+    await db.delete(driverIconNotifications).where(eq(driverIconNotifications.profileId, id));
+    await db.delete(profileDriverIcons).where(eq(profileDriverIcons.profileId, id));
+    
+    // Race-related data
+    await db.delete(raceCheckins).where(eq(raceCheckins.profileId, id));
+    await db.delete(personalBests).where(eq(personalBests.profileId, id));
     await db.delete(results).where(eq(results.racerId, id));
+    
+    // Season goals
+    await db.delete(seasonGoals).where(eq(seasonGoals.profileId, id));
+    
     // Finally delete the profile
     await db.delete(profiles).where(eq(profiles.id, id));
   }
