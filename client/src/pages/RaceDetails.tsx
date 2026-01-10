@@ -553,69 +553,75 @@ function ResultsEditor({
     <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">
       <div className="space-y-3">
         {entries.map((entry, i) => (
-          <div key={i} className={`flex items-center gap-3 p-4 rounded-lg ${entry.dnf ? 'bg-destructive/10 border border-destructive/30' : 'bg-white/5'}`}>
-            <div className={`w-12 text-center font-bold text-lg ${entry.dnf ? 'text-destructive' : ''}`}>
-              {entry.dnf ? 'DNF' : `P${entry.position}`}
+          <div key={i} className={`p-4 rounded-lg space-y-3 ${entry.dnf ? 'bg-destructive/10 border border-destructive/30' : 'bg-white/5'}`}>
+            {/* Row 1: Position, Driver, Actions */}
+            <div className="flex items-center gap-2">
+              <div className={`w-12 text-center font-bold text-lg shrink-0 ${entry.dnf ? 'text-destructive' : ''}`}>
+                {entry.dnf ? 'DNF' : `P${entry.position}`}
+              </div>
+              <Select value={entry.racerId} onValueChange={(v) => updateEntry(i, 'racerId', v)}>
+                <SelectTrigger className="flex-1 bg-secondary/30" data-testid={`select-driver-${i}`}>
+                  <SelectValue placeholder="Select Driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {racers.length === 0 ? (
+                    <SelectItem value="no-drivers" disabled>No drivers available</SelectItem>
+                  ) : (
+                    racers.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.driverName || `Driver ${p.id}`}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant={entry.dnf ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => toggleDnf(i)}
+                className="shrink-0"
+                data-testid={`button-dnf-${i}`}
+              >
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                DNF
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => removeEntry(i)}
+                className="text-destructive hover:bg-destructive/10 shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
-            <Select value={entry.racerId} onValueChange={(v) => updateEntry(i, 'racerId', v)}>
-              <SelectTrigger className="flex-1 bg-secondary/30" data-testid={`select-driver-${i}`}>
-                <SelectValue placeholder="Select Driver" />
-              </SelectTrigger>
-              <SelectContent>
-                {racers.length === 0 ? (
-                  <SelectItem value="no-drivers" disabled>No drivers available</SelectItem>
-                ) : (
-                  racers.map(p => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.driverName || `Driver ${p.id}`}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            <Input 
-              placeholder="Qualified" 
-              type="number"
-              value={entry.qualifyingPosition} 
-              onChange={(e) => updateEntry(i, 'qualifyingPosition', e.target.value)}
-              className="w-16 bg-secondary/30"
-              data-testid={`input-quali-${i}`}
-            />
-            <Input 
-              placeholder="Race Time" 
-              value={entry.raceTime} 
-              onChange={(e) => updateEntry(i, 'raceTime', e.target.value)}
-              className="w-32 bg-secondary/30"
-              data-testid={`input-racetime-${i}`}
-              disabled={entry.dnf}
-            />
-            <Input 
-              placeholder="Points" 
-              type="number"
-              value={entry.points} 
-              onChange={(e) => updateEntry(i, 'points', e.target.value)}
-              className="w-20 bg-secondary/30"
-              data-testid={`input-points-${i}`}
-              disabled={entry.dnf}
-            />
-            <Button 
-              variant={entry.dnf ? "destructive" : "outline"}
-              size="sm"
-              onClick={() => toggleDnf(i)}
-              className="text-xs"
-              data-testid={`button-dnf-${i}`}
-            >
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              DNF
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => removeEntry(i)}
-              className="text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {/* Row 2: Quali, Time, Points */}
+            <div className="flex items-center gap-2 pl-14">
+              <Input 
+                placeholder="Quali" 
+                type="number"
+                value={entry.qualifyingPosition} 
+                onChange={(e) => updateEntry(i, 'qualifyingPosition', e.target.value)}
+                className="w-16 bg-secondary/30"
+                data-testid={`input-quali-${i}`}
+              />
+              <Input 
+                placeholder="Race Time" 
+                value={entry.raceTime} 
+                onChange={(e) => updateEntry(i, 'raceTime', e.target.value)}
+                className="flex-1 bg-secondary/30"
+                data-testid={`input-racetime-${i}`}
+                disabled={entry.dnf}
+              />
+              <Input 
+                placeholder="Pts" 
+                type="number"
+                value={entry.points} 
+                onChange={(e) => updateEntry(i, 'points', e.target.value)}
+                className="w-16 bg-secondary/30"
+                data-testid={`input-points-${i}`}
+                disabled={entry.dnf}
+              />
+            </div>
           </div>
         ))}
       </div>
