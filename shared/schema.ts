@@ -11,7 +11,7 @@ export const competitionTypeEnum = pgEnum("competition_type", ["series", "single
 export const raceStatusEnum = pgEnum("race_status", ["scheduled", "completed", "cancelled"]);
 export const leagueStatusEnum = pgEnum("league_status", ["active", "completed"]);
 export const checkinStatusEnum = pgEnum("checkin_status", ["confirmed", "maybe", "not_attending"]);
-export const goalTypeEnum = pgEnum("goal_type", ["wins", "podiums", "points", "races", "position", "top5", "top10", "poles", "frontRow", "gridClimber", "perfectWeekend"]);
+export const goalTypeEnum = pgEnum("goal_type", ["wins", "podiums", "points", "races", "position", "top5", "top10", "poles", "frontRow", "gridClimber", "perfectWeekend", "getPromoted", "reachSRank", "reachARank", "reachBRank", "avoidRelegation", "stayInSRank", "stayInARank", "stayInBRank", "topOfTier", "rankChampion"]);
 export const badgeCategoryEnum = pgEnum("badge_category", [
   "getting_started", 
   "milestones", 

@@ -362,7 +362,7 @@ export function BadgesSection({ profile, isOwnProfile = false, isAdmin = false }
 
 const goalSchema = z.object({
   leagueId: z.number().min(1, "Please select a league"),
-  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend']),
+  goalType: z.enum(['wins', 'podiums', 'points', 'races', 'position', 'top5', 'top10', 'poles', 'frontRow', 'gridClimber', 'perfectWeekend', 'getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'topOfTier', 'rankChampion']),
   targetValue: z.number().min(1),
 });
 
@@ -455,6 +455,16 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
     frontRow: 'Front Row Starts',
     gridClimber: 'Grid Climber (Finish Higher Than Start)',
     perfectWeekend: 'Perfect Weekends (Pole + Win)',
+    getPromoted: 'Get Promoted',
+    reachSRank: 'Reach S Rank',
+    reachARank: 'Reach A Rank',
+    reachBRank: 'Reach B Rank',
+    avoidRelegation: 'Avoid Relegation',
+    stayInSRank: 'Stay in S Rank',
+    stayInARank: 'Stay in A Rank',
+    stayInBRank: 'Stay in B Rank',
+    topOfTier: 'Top of Tier',
+    rankChampion: 'Rank Champion',
   };
 
   return (
