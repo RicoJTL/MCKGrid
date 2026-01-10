@@ -774,16 +774,16 @@ export default function LeagueDetails() {
                       return (
                         <DropdownMenu key={assignment.id} modal={false}>
                           <DropdownMenuTrigger asChild>
-                            <Badge 
-                              variant="secondary"
-                              className="flex items-center gap-1 pr-1 cursor-pointer hover:bg-secondary/80"
+                            <button 
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md border border-transparent bg-secondary text-secondary-foreground text-xs font-semibold cursor-pointer hover:bg-secondary/80 transition-colors"
                               data-testid={`driver-badge-${assignment.profileId}`}
                             >
                               {assignment.profile?.driverName || assignment.profile?.fullName || 'Unknown'}
                               <MoreVertical className="w-3 h-3 ml-1" />
-                            </Badge>
+                            </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="z-[100]">
+                          <DropdownMenuContent className="z-[200]" sideOffset={5}>
                             {canPromote && promoteTier && (
                               <DropdownMenuItem 
                                 onClick={() => moveDriverTier.mutate({
