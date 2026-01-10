@@ -199,6 +199,7 @@ export function useAssignDriverToTier() {
       queryClient.invalidateQueries({ queryKey: ['/api/tiered-leagues', tieredLeagueId, 'standings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'active-tier'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'tier-history'] });
       toast({ title: "Driver assigned to tier" });
     },
     onError: (error: Error) => {
@@ -248,6 +249,7 @@ export function useMoveDriverTier() {
       queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/badge-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'badges'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles', profileId, 'tier-history'] });
       toast({ title: "Driver tier updated" });
     },
     onError: (error: Error) => {
@@ -286,5 +288,38 @@ export function useMarkTierMovementNotificationRead() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tier-movement-notifications'] });
     },
+  });
+}
+
+export interface TierMovementHistory {
+  movement: {
+    id: number;
+    tieredLeagueId: number;
+    profileId: number;
+    fromTier: number;
+    toTier: number;
+    movementType: string;
+    afterRaceNumber: number;
+    createdAt: string;
+  };
+  tieredLeague: {
+    id: number;
+    name: string;
+    leagueId: number;
+    parentCompetitionId: number;
+  };
+  fromTierName: string | null;
+  toTierName: string;
+}
+
+export function useTierMovementHistory(profileId: number) {
+  return useQuery<TierMovementHistory[]>({
+    queryKey: ['/api/profiles', profileId, 'tier-history'],
+    queryFn: async () => {
+      const res = await fetch(`/api/profiles/${profileId}/tier-history`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch tier history");
+      return res.json();
+    },
+    enabled: profileId > 0,
   });
 }

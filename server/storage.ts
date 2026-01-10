@@ -85,6 +85,9 @@ export interface IStorage {
   // Tier Movement Notifications
   getUnreadTierMovementNotifications(profileId: number): Promise<{ notification: TierMovementNotification; movement: TierMovement; tieredLeague: TieredLeague }[]>;
   markTierMovementNotificationRead(notificationId: number): Promise<void>;
+  
+  // Tier Movement History
+  getProfileTierMovementHistory(profileId: number): Promise<{ movement: TierMovement; tieredLeague: TieredLeague; fromTierName: string | null; toTierName: string }[]>;
   getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]>;
   getAllActiveCompetitions(): Promise<any[]>;
   getAllUpcomingRaces(): Promise<any[]>;
@@ -949,6 +952,32 @@ export class DatabaseStorage implements IStorage {
     await db.update(tierMovementNotifications)
       .set({ isRead: true })
       .where(eq(tierMovementNotifications.id, notificationId));
+  }
+
+  async getProfileTierMovementHistory(profileId: number): Promise<{ movement: TierMovement; tieredLeague: TieredLeague; fromTierName: string | null; toTierName: string }[]> {
+    const movements = await db
+      .select({
+        movement: tierMovements,
+        tieredLeague: tieredLeagues,
+      })
+      .from(tierMovements)
+      .innerJoin(tieredLeagues, eq(tierMovements.tieredLeagueId, tieredLeagues.id))
+      .where(eq(tierMovements.profileId, profileId))
+      .orderBy(desc(tierMovements.createdAt));
+    
+    const result = await Promise.all(movements.map(async (m) => {
+      const tierNamesList = await this.getTierNames(m.tieredLeague.id);
+      const fromTierName = m.movement.fromTier === 0 ? null : tierNamesList.find(t => t.tierNumber === m.movement.fromTier)?.name || `Tier ${m.movement.fromTier}`;
+      const toTierName = tierNamesList.find(t => t.tierNumber === m.movement.toTier)?.name || `Tier ${m.movement.toTier}`;
+      return {
+        movement: m.movement,
+        tieredLeague: m.tieredLeague,
+        fromTierName,
+        toTierName,
+      };
+    }));
+    
+    return result;
   }
 
   async getProfileRaceHistoryByCompetition(profileId: number): Promise<any[]> {

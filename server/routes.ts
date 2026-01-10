@@ -683,6 +683,14 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  // === Tier Movement History ===
+  app.get("/api/profiles/:id/tier-history", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const targetId = Number(req.params.id);
+    const history = await storage.getProfileTierMovementHistory(targetId);
+    res.json(history);
+  });
+
   // === Personal Bests (only accessible to profile owner or admins) ===
   app.get("/api/profiles/:id/personal-bests", async (req: any, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
