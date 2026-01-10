@@ -1415,6 +1415,112 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
+    // Fetch tier-related data for tier goals
+    // Map: leagueId -> tier stats for this profile
+    const tierStatsMap = new Map<number, {
+      promotions: number;
+      relegations: number;
+      currentTier: number | null;
+      initialTier: number | null;
+      tierPosition: number;
+      tieredLeagueId: number | null;
+    }>();
+    
+    // Check if any goals are tier-related
+    const tierGoalTypes = ['getPromoted', 'reachSRank', 'reachARank', 'reachBRank', 'avoidRelegation', 'stayInSRank', 'stayInARank', 'stayInBRank', 'topOfTier', 'rankChampion'];
+    const hasTierGoals = goals.some(g => tierGoalTypes.includes(g.goalType));
+    
+    if (hasTierGoals) {
+      // Get tiered leagues for all goal leagues
+      for (const lid of uniqueLeagueIds) {
+        // Find tiered league for this league
+        const [tieredLeague] = await db.select().from(tieredLeagues)
+          .where(eq(tieredLeagues.leagueId, lid));
+        
+        if (!tieredLeague) {
+          tierStatsMap.set(lid, {
+            promotions: 0,
+            relegations: 0,
+            currentTier: null,
+            initialTier: null,
+            tierPosition: 0,
+            tieredLeagueId: null,
+          });
+          continue;
+        }
+        
+        // Get current tier assignment
+        const [currentAssignment] = await db.select().from(tierAssignments)
+          .where(and(
+            eq(tierAssignments.tieredLeagueId, tieredLeague.id),
+            eq(tierAssignments.profileId, profileId)
+          ));
+        
+        // Get all tier movements for this profile in this tiered league
+        const movements = await db.select().from(tierMovements)
+          .where(and(
+            eq(tierMovements.tieredLeagueId, tieredLeague.id),
+            eq(tierMovements.profileId, profileId)
+          ))
+          .orderBy(tierMovements.createdAt);
+        
+        // Count promotions (toTier < fromTier = moving to higher tier)
+        const promotions = movements.filter(m => 
+          m.movementType === 'automatic_promotion' || m.movementType === 'admin_promotion'
+        ).length;
+        
+        // Count relegations
+        const relegations = movements.filter(m => 
+          m.movementType === 'automatic_relegation' || m.movementType === 'admin_relegation'
+        ).length;
+        
+        // Get initial tier (first movement's fromTier or current assignment if no movements)
+        let initialTier: number | null = null;
+        if (movements.length > 0) {
+          // Find initial assignment movement
+          const initialMove = movements.find(m => m.movementType === 'initial_assignment');
+          if (initialMove) {
+            initialTier = initialMove.toTier;
+          } else {
+            initialTier = movements[0].fromTier;
+          }
+        } else if (currentAssignment) {
+          initialTier = currentAssignment.tierNumber;
+        }
+        
+        // Calculate tier position (rank within tier)
+        let tierPosition = 0;
+        if (currentAssignment) {
+          // Get tier standings (returns all tiers)
+          const allTierStandings = await this.getTierStandings(tieredLeague.id);
+          // Find the specific tier's standings
+          const tierData = allTierStandings.find(t => t.tierNumber === currentAssignment.tierNumber);
+          if (tierData) {
+            const driverIndex = tierData.standings.findIndex(s => s.profileId === profileId);
+            tierPosition = driverIndex >= 0 ? driverIndex + 1 : 0;
+          }
+        }
+        
+        tierStatsMap.set(lid, {
+          promotions,
+          relegations,
+          currentTier: currentAssignment?.tierNumber ?? null,
+          initialTier,
+          tierPosition,
+          tieredLeagueId: tieredLeague.id,
+        });
+      }
+    }
+    
+    // Get league status for tier goals that require league completion
+    const leagueStatusMap = new Map<number, string>();
+    for (const lid of uniqueLeagueIds) {
+      const [league] = await db.select().from(leagues).where(eq(leagues.id, lid));
+      if (league) {
+        leagueStatusMap.set(lid, league.status);
+      }
+    }
+
     // Update each goal's currentValue based on type
     for (const goal of goals) {
       const stats = leagueStats.get(goal.leagueId) || { 
@@ -1422,6 +1528,8 @@ export class DatabaseStorage implements IStorage {
         top5: 0, top10: 0, poles: 0, frontRow: 0, 
         gridClimber: 0, perfectWeekend: 0
       };
+      const tierStats = tierStatsMap.get(goal.leagueId);
+      const leagueStatus = leagueStatusMap.get(goal.leagueId);
       let newValue = 0;
       
       switch (goal.goalType) {
@@ -1458,6 +1566,66 @@ export class DatabaseStorage implements IStorage {
           break;
         case 'perfectWeekend':
           newValue = stats.perfectWeekend;
+          break;
+        
+        // Tier-related goals
+        case 'getPromoted':
+          // Count how many times driver was promoted
+          newValue = tierStats?.promotions ?? 0;
+          break;
+        case 'reachSRank':
+          // 1 if currently in tier 1 (S rank), 0 otherwise
+          newValue = tierStats?.currentTier === 1 ? 1 : 0;
+          break;
+        case 'reachARank':
+          // 1 if currently in tier 1 or 2 (reached A rank or higher)
+          newValue = (tierStats && tierStats.currentTier !== null && tierStats.currentTier <= 2) ? 1 : 0;
+          break;
+        case 'reachBRank':
+          // 1 if currently in tier 1, 2, or 3 (reached B rank or higher)
+          newValue = (tierStats && tierStats.currentTier !== null && tierStats.currentTier <= 3) ? 1 : 0;
+          break;
+        case 'avoidRelegation':
+          // 1 if league is completed and no relegations occurred
+          if (leagueStatus === 'completed' && tierStats) {
+            newValue = tierStats.relegations === 0 ? 1 : 0;
+          } else {
+            // In progress - show 1 if no relegations yet (tentative success)
+            newValue = (tierStats?.relegations ?? 0) === 0 ? 1 : 0;
+          }
+          break;
+        case 'stayInSRank':
+          // 1 if started in S rank (tier 1) and still there
+          if (tierStats?.initialTier === 1 && tierStats?.currentTier === 1) {
+            newValue = 1;
+          }
+          break;
+        case 'stayInARank':
+          // 1 if started in A rank (tier 2) or higher and still at tier 2 or higher
+          if (tierStats && tierStats.initialTier !== null && tierStats.initialTier <= 2 && 
+              tierStats.currentTier !== null && tierStats.currentTier <= 2) {
+            newValue = 1;
+          }
+          break;
+        case 'stayInBRank':
+          // 1 if started in B rank (tier 3) or higher and still at tier 3 or higher
+          if (tierStats && tierStats.initialTier !== null && tierStats.initialTier <= 3 && 
+              tierStats.currentTier !== null && tierStats.currentTier <= 3) {
+            newValue = 1;
+          }
+          break;
+        case 'topOfTier':
+          // 1 if currently position 1 in their tier
+          newValue = tierStats?.tierPosition === 1 ? 1 : 0;
+          break;
+        case 'rankChampion':
+          // 1 if league completed and was #1 in their tier
+          if (leagueStatus === 'completed' && tierStats?.tierPosition === 1) {
+            newValue = 1;
+          } else if (tierStats?.tierPosition === 1) {
+            // In progress - show tentative success
+            newValue = 1;
+          }
           break;
       }
       
