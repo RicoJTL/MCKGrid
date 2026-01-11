@@ -1056,20 +1056,7 @@ export async function registerRoutes(
       return res.status(404).json({ error: "Race not found" });
     }
     
-    // Check if this league uses tiered leagues
-    const tieredLeagues = await storage.getTieredLeagues(race.leagueId);
-    
-    if (tieredLeagues && tieredLeagues.length > 0) {
-      // League has tiered leagues - require tier assignment
-      const driverTier = await storage.getDriverActiveTier(profile.id);
-      if (!driverTier) {
-        return res.status(403).json({ error: "You must be assigned to a tier to confirm attendance" });
-      }
-      if (driverTier.tieredLeague.leagueId !== race.leagueId) {
-        return res.status(403).json({ error: "You must be in this league to confirm attendance" });
-      }
-    }
-    // If no tiered leagues configured, allow all racers to check in
+    // All drivers can check in to any race - no tier restriction
     
     const { status } = req.body;
     if (!['confirmed', 'maybe', 'not_attending'].includes(status)) {
