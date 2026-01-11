@@ -254,6 +254,7 @@ export default function RaceDetails() {
                   <TableHead className="text-white font-bold">Driver</TableHead>
                   <TableHead className="text-white font-bold">Qualified</TableHead>
                   <TableHead className="text-white font-bold">Race Time</TableHead>
+                  <TableHead className="text-white font-bold">Best Lap</TableHead>
                   <TableHead className="text-right text-white font-bold">Points</TableHead>
                 </TableRow>
               </TableHeader>
@@ -285,12 +286,13 @@ export default function RaceDetails() {
                       {result.qualifyingPosition ? `P${result.qualifyingPosition}` : "-"}
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">{result.dnf ? '--' : (result.raceTime || "--:--")}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{result.dnf ? '--' : (result.bestLapTime || "--:--")}</TableCell>
                     <TableCell className="text-right font-bold text-lg text-primary">{result.points}</TableCell>
                   </TableRow>
                 ))}
                 {(!results || results.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                       No results entered yet.
                     </TableCell>
                   </TableRow>
@@ -454,6 +456,7 @@ interface ResultEntry {
   position: string;
   qualifyingPosition: string;
   raceTime: string;
+  bestLapTime: string;
   points: string;
   dnf: boolean;
 }
@@ -485,17 +488,18 @@ function ResultsEditor({
         position: String(r.position),
         qualifyingPosition: r.qualifyingPosition ? String(r.qualifyingPosition) : "",
         raceTime: r.raceTime || "",
+        bestLapTime: r.bestLapTime || "",
         points: String(r.points),
         dnf: r.dnf || false
       }));
     }
-    return [{ racerId: "", position: "1", qualifyingPosition: "", raceTime: "", points: "25", dnf: false }];
+    return [{ racerId: "", position: "1", qualifyingPosition: "", raceTime: "", bestLapTime: "", points: "25", dnf: false }];
   });
 
   const addEntry = () => {
     const nextPos = entries.length + 1;
     const defaultPoints = nextPos === 1 ? 25 : nextPos === 2 ? 18 : nextPos === 3 ? 15 : 10;
-    setEntries([...entries, { racerId: "", position: String(nextPos), qualifyingPosition: "", raceTime: "", points: String(defaultPoints), dnf: false }]);
+    setEntries([...entries, { racerId: "", position: String(nextPos), qualifyingPosition: "", raceTime: "", bestLapTime: "", points: String(defaultPoints), dnf: false }]);
   };
 
   const removeEntry = (index: number) => {
@@ -525,6 +529,7 @@ function ResultsEditor({
         position: parseInt(e.position),
         qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
         raceTime: e.raceTime || null,
+        bestLapTime: e.bestLapTime || null,
         points: parseInt(e.points),
         dnf: e.dnf
       }));
@@ -594,8 +599,8 @@ function ResultsEditor({
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
-            {/* Row 2: Quali, Time, Points */}
-            <div className="flex items-center gap-2 pl-14">
+            {/* Row 2: Quali, Race Time, Best Lap, Points */}
+            <div className="flex items-center gap-2 pl-14 flex-wrap">
               <Input 
                 placeholder="Quali" 
                 type="number"
@@ -608,8 +613,16 @@ function ResultsEditor({
                 placeholder="Race Time" 
                 value={entry.raceTime} 
                 onChange={(e) => updateEntry(i, 'raceTime', e.target.value)}
-                className="flex-1 bg-secondary/30"
+                className="flex-1 min-w-[100px] bg-secondary/30"
                 data-testid={`input-racetime-${i}`}
+                disabled={entry.dnf}
+              />
+              <Input 
+                placeholder="Best Lap" 
+                value={entry.bestLapTime} 
+                onChange={(e) => updateEntry(i, 'bestLapTime', e.target.value)}
+                className="flex-1 min-w-[100px] bg-secondary/30"
+                data-testid={`input-bestlap-${i}`}
                 disabled={entry.dnf}
               />
               <Input 

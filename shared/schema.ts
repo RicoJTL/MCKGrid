@@ -90,6 +90,7 @@ export const results = pgTable("results", {
   qualifyingPosition: integer("qualifying_position"),
   points: integer("points").notNull(),
   raceTime: text("race_time"),
+  bestLapTime: text("best_lap_time"),
   dnf: boolean("dnf").default(false),
 });
 
