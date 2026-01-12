@@ -645,7 +645,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                             <SelectContent>
                               {tierOptions.map((tier) => (
                                 <SelectItem key={tier.tierNumber} value={String(tier.tierNumber)}>
-                                  {tier.name} Rank Champion
+                                  {tier.name} Champion
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -749,7 +749,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                       <div>
                         <p className={`font-medium ${outcomeDisplay.textClass}`}>
                           {goal.goalType === 'rankChampion' && goal.targetTier !== null
-                            ? `${getTierNameForGoal(goal)} Rank Champion`
+                            ? `${getTierNameForGoal(goal)} Champion`
                             : (goalLabels[goal.goalType] || goal.goalType)}
                           {(goal.outcome || 'pending') !== 'pending' && (
                             <span className={`ml-2 text-xs ${outcomeDisplay.bgClass} ${outcomeDisplay.textClass} px-2 py-0.5 rounded-full`}>
@@ -812,7 +812,7 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
                     <div>
                       <p className={`font-medium ${isCompleted ? 'text-green-400' : ''}`}>
                         {goal.goalType === 'rankChampion' && goal.targetTier !== null
-                          ? `${getTierNameForGoal(goal)} Rank Champion`
+                          ? `${getTierNameForGoal(goal)} Champion`
                           : (goalLabels[goal.goalType] || goal.goalType)}
                         {isCompleted && <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Achieved!</span>}
                       </p>
