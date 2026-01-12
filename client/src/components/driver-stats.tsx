@@ -431,8 +431,8 @@ export function SeasonGoals({ profile, isReadOnly = false }: SeasonGoalsProps) {
     });
   };
 
-  // Filter leagues that haven't started yet for the dropdown
-  const availableLeagues = leagues?.filter(l => l.status === 'active' && !hasLeagueStarted(l.id)) || [];
+  // Filter to show all active leagues for the dropdown (drivers can set goals anytime during active seasons)
+  const availableLeagues = leagues?.filter(l => l.status === 'active') || [];
 
   const addMutation = useMutation({
     mutationFn: (data: z.infer<typeof goalSchema>) =>
