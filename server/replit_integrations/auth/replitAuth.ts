@@ -34,7 +34,7 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
+  const sessionTtl = 90 * 24 * 60 * 60 * 1000; // 90 days
   
   // Check for required environment variables
   if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) {
