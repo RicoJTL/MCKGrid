@@ -2,58 +2,45 @@
 
 ## Design Approach: Modern Racing Data Platform
 
-**Reference Inspiration**: F1 TV app + Gran Turismo Sport menus + Apple Sports app - combining sleek data visualization with motorsport energy and modern polish.
+**Reference Inspiration**: F1 TV app + Gran Turismo Sport menus + Apple Sports app
 
 **Core Principles**:
-- Performance dashboard aesthetic with vibrant green accent energy
-- Proper contrast: dark text on light backgrounds, light text on dark backgrounds
+- Dark navy theme for motorsport atmosphere
+- Green primary accent for energy and success states
+- Light text on dark backgrounds for readability
 - Data-dense but scannable championship layouts
-- Visual hierarchy emphasizing competitive positioning
 
 ---
 
 ## Color System
 
-**Primary Palette (Green Focus)**:
-- Primary Green: `#00cc66` (vibrant green) - CTAs, active states, success, wins, promotion
-- Dark Green: `#006633` - hover states, darker accents, emphasis
+**Single Dark Theme**:
+- Background: Deep navy (#000d29)
+- Text: Light/off-white for readability
+- Cards: Slightly lighter navy with subtle borders
 
-**Secondary Palette (Blues)**:
-- Accent Blue: `#6666ff` (blue-purple) - highlights, tier badges, special accents
-- Royal Blue: `#0033cc` - links, secondary actions, data points
-- Deep Navy: `#000099` - sidebar backgrounds, dark mode base
+**Primary Accent (Green)**:
+- Primary: `#00cc66` - CTAs, buttons, success states, promotion zones, wins
+- Dark Green: `#006633` - hover states, emphasis
 
-**Contrast Rules (CRITICAL)**:
-- Light mode: Light/white backgrounds with dark navy text
-- Dark mode: Navy/dark backgrounds with light/white text
-- Primary green buttons: Use dark text for accessibility compliance (≥4.5:1 contrast)
-- Accent elements on bright colors must use dark foreground text
+**Secondary Accent (Blues)**:
+- Accent: `#6666ff` (blue-purple) - highlights, tier badges, special elements
+- Royal Blue: `#0033cc` - links, secondary actions
 
-**Application Strategy**:
-
-*Light Mode*:
-- Backgrounds: White/light gray (#fafafa)
-- Text: Dark navy (primary), gray-600 (secondary)
-- Borders: Light gray
-- Cards: White with subtle shadow
+**Color Usage**:
+- Backgrounds: Dark navy tones
+- Text: Light/white (primary), gray-400 (secondary/muted)
+- Borders: Subtle navy borders
+- Cards: Slightly elevated navy with border
 - Primary buttons: Green background with dark text
-- Success/promotion: Green accents
-
-*Dark Mode*:
-- Backgrounds: Deep navy (#000d29 to #001a4d range)
-- Text: Light (near-white primary, gray-400 secondary)
-- Borders: Navy-700/800
-- Cards: Dark navy with subtle border
-- Primary buttons: Bright green with dark text
-- Accents pop more against dark backgrounds
+- Success/promotion zones: Green left border or background
 
 **Special Treatments**:
 - Position #1: Gold gradient badge
 - Position #2: Silver gradient badge
 - Position #3: Bronze gradient badge
-- Promotion zone: Left border `#00cc66`, 4px width
-- Relegation zone: Left border red-500, 4px width
-- Fastest lap: Badge with accent blue background
+- Promotion zone: Left border `#00cc66`
+- Relegation zone: Left border red
 
 ---
 
@@ -63,9 +50,9 @@
 
 **Hierarchy**:
 - Page Titles: text-5xl font-black tracking-tight
-- Section Headers: text-3xl font-bold  
+- Section Headers: text-3xl font-bold
 - Card Titles: text-xl font-semibold
-- Championship Stats: text-4xl font-black tabular-nums
+- Stats: text-4xl font-black tabular-nums
 - Body: text-base
 - Labels: text-xs uppercase tracking-wider text-muted-foreground
 
@@ -77,45 +64,41 @@
 
 **Container Strategy**:
 - Dashboard: max-w-screen-2xl mx-auto px-6
-- Sidebar: Fixed dark navy, light text for contrast
+- Sidebar: Dark navy, lighter text
 
 **Grid Patterns**:
 - Driver cards: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6
 - Standings table: Full-width with sticky header
-- Stats dashboard: grid-cols-2 lg:grid-cols-4 gap-6 for metric cards
+- Stats dashboard: grid-cols-2 lg:grid-cols-4 gap-6
 
 ---
 
 ## Component Library
 
 **Navigation**:
-- Sidebar: Dark navy background, light text for maximum contrast
+- Sidebar: Darker navy background with light text
 - Active state: Green left border + subtle background tint
-- Hover states: Subtle elevation, no dramatic color shifts
 
 **Data Components**:
-- Championship Table: Alternating rows, position badges (1-3 special), promotion/relegation borders
-- Driver Cards: Avatar circle, driver info, stats grid, badges
+- Championship Table: Alternating rows, position badges, promotion/relegation borders
+- Driver Cards: Avatar, driver info, stats grid, badges
 - Stat Cards: Large number, label, trend arrow (green up, red down)
-- Race Results: Position badges, driver name, team, time/gap, points
 
 **Interactive Elements**:
-- Primary Button: bg-green with dark text (accessibility compliant)
-- Secondary Button: Blue outline/background with appropriate text contrast
-- Success states: Green accents throughout
-- Focus rings: Green outline
+- Primary Button: Green background with dark text
+- Secondary Button: Blue or outline style
+- Success states: Green accents
 
 **Badge System**:
 - Achievement badges: Rounded containers with icon + title
 - Earned: Full color with green or blue accent
-- Locked: Grayscale opacity-40 with lock icon
+- Locked: Grayscale with lock icon
 
 ---
 
 ## Key Rules
 
-1. **Never use light text on light backgrounds**
-2. **Never use dark text on dark backgrounds**
-3. **Green buttons always have dark text**
-4. **Sidebar is always dark with light text**
-5. **Respect WCAG contrast ratios (≥4.5:1 for text)**
+1. **Always light text on dark backgrounds**
+2. **Green is the primary action/success color**
+3. **Blue-purple for special highlights and accents**
+4. **Consistent dark navy throughout the app**
