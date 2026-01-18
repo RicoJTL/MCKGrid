@@ -1,52 +1,137 @@
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&family=Inter:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Racing Theme - Dark & Fast */
-  --background: 224 71% 4%;
-  --foreground: 213 31% 91%;
+  /* MCK Grid Racing Theme - Blue & Green */
+  /* Light Mode */
+  --background: 220 20% 97%;
+  --foreground: 240 100% 30%;
   
-  --card: 224 71% 4%;
-  --card-foreground: 213 31% 91%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 40% 20%;
+  --card-border: 220 20% 88%;
   
-  --popover: 224 71% 4%;
-  --popover-foreground: 215 20.2% 65.1%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 40% 20%;
+  --popover-border: 220 20% 88%;
   
-  --primary: 346 100% 58%; /* Speed Red */
+  /* Primary: #6666ff (vibrant blue-purple) */
+  --primary: 240 100% 70%;
   --primary-foreground: 0 0% 100%;
+  --primary-border: 240 100% 60%;
   
-  --secondary: 222 47% 11%;
-  --secondary-foreground: 210 40% 98%;
+  /* Secondary: #0033cc (royal blue) */
+  --secondary: 220 100% 40%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-border: 220 100% 35%;
   
-  --muted: 223 47% 11%;
-  --muted-foreground: 215.4 16.3% 56.9%;
+  --muted: 220 20% 92%;
+  --muted-foreground: 220 15% 45%;
+  --muted-border: 220 20% 85%;
   
-  --accent: 216 34% 17%;
-  --accent-foreground: 210 40% 98%;
+  /* Accent uses the green theme: #00cc66 */
+  --accent: 150 100% 40%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 150 100% 35%;
   
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: 0 72% 45%;
 
-  --border: 216 34% 17%;
-  --input: 216 34% 17%;
-  --ring: 346 100% 58%;
+  --border: 220 20% 88%;
+  --input: 220 20% 88%;
+  --ring: 240 100% 70%;
   
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   
-  --sidebar-background: 224 71% 4%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Chart colors using theme */
+  --chart-1: 240 100% 70%;
+  --chart-2: 150 100% 40%;
+  --chart-3: 220 100% 40%;
+  --chart-4: 150 100% 20%;
+  --chart-5: 240 100% 30%;
   
-  --font-display: 'Exo 2', sans-serif;
+  /* Sidebar - Light mode */
+  --sidebar: 240 100% 30%;
+  --sidebar-background: 240 100% 30%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 240 100% 70%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-border: 240 100% 60%;
+  --sidebar-accent: 220 100% 40%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-accent-border: 220 100% 35%;
+  --sidebar-border: 240 100% 25%;
+  --sidebar-ring: 240 100% 70%;
+  
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'Fira Code', monospace;
   --font-body: 'Inter', sans-serif;
+}
+
+.dark {
+  /* Dark Mode - Deep navy base: #000099 */
+  --background: 240 100% 8%;
+  --foreground: 220 20% 95%;
+  
+  --card: 240 100% 12%;
+  --card-foreground: 220 20% 95%;
+  --card-border: 240 60% 25%;
+  
+  --popover: 240 100% 12%;
+  --popover-foreground: 220 20% 95%;
+  --popover-border: 240 60% 25%;
+  
+  /* Primary: #6666ff (vibrant blue-purple) */
+  --primary: 240 100% 70%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: 240 100% 60%;
+  
+  /* Secondary: #0033cc (royal blue) */
+  --secondary: 220 100% 45%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-border: 220 100% 40%;
+  
+  --muted: 240 50% 18%;
+  --muted-foreground: 220 20% 65%;
+  --muted-border: 240 50% 25%;
+  
+  /* Accent uses the green theme: #00cc66 */
+  --accent: 150 100% 40%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 150 100% 35%;
+  
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: 0 72% 45%;
+
+  --border: 240 60% 25%;
+  --input: 240 60% 25%;
+  --ring: 240 100% 70%;
+  
+  /* Chart colors using theme */
+  --chart-1: 240 100% 70%;
+  --chart-2: 150 100% 45%;
+  --chart-3: 220 100% 50%;
+  --chart-4: 150 100% 25%;
+  --chart-5: 240 100% 40%;
+  
+  /* Sidebar - Dark mode */
+  --sidebar: 240 100% 6%;
+  --sidebar-background: 240 100% 6%;
+  --sidebar-foreground: 220 20% 90%;
+  --sidebar-primary: 240 100% 70%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-border: 240 100% 60%;
+  --sidebar-accent: 220 100% 45%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-accent-border: 220 100% 40%;
+  --sidebar-border: 240 60% 20%;
+  --sidebar-ring: 240 100% 70%;
 }
 
 @layer base {
@@ -59,17 +144,17 @@
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight uppercase italic;
+    @apply font-semibold tracking-tight;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-orange-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
   }
   
   .glass-card {
-    @apply bg-secondary/50 backdrop-blur-md border border-white/5;
+    @apply bg-card/80 backdrop-blur-md border border-border;
   }
 
   .racing-stripe {
@@ -77,9 +162,61 @@
       -45deg,
       transparent,
       transparent 10px,
-      rgba(255, 255, 255, 0.03) 10px,
-      rgba(255, 255, 255, 0.03) 20px
+      rgba(102, 102, 255, 0.05) 10px,
+      rgba(102, 102, 255, 0.05) 20px
     );
+  }
+  
+  /* Position badge colors */
+  .position-1 {
+    @apply bg-gradient-to-r from-yellow-400 to-primary text-white;
+  }
+  .position-2 {
+    @apply bg-gradient-to-r from-gray-300 to-gray-400 text-gray-900;
+  }
+  .position-3 {
+    @apply bg-gradient-to-r from-amber-600 to-amber-700 text-white;
+  }
+  .position-other {
+    @apply bg-primary/20 text-primary;
+  }
+  
+  /* Promotion/Relegation zone indicators */
+  .promotion-zone {
+    @apply border-l-4 border-l-accent;
+  }
+  .relegation-zone {
+    @apply border-l-4 border-l-destructive;
+  }
+  
+  /* Success state using green theme */
+  .success-badge {
+    @apply bg-accent text-accent-foreground;
+  }
+  
+  /* Hover elevation utilities */
+  .hover-elevate {
+    @apply transition-all duration-200 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5;
+  }
+  
+  .active-elevate-2 {
+    @apply transition-all duration-100 active:translate-y-0 active:shadow-md;
+  }
+  
+  /* Toggle elevation for active states */
+  .toggle-elevate {
+    @apply transition-all duration-200;
+  }
+  .toggle-elevated {
+    @apply shadow-lg shadow-primary/25 ring-2 ring-primary/50;
+  }
+  
+  /* Remove default hover/active on components that have it */
+  .no-default-hover-elevate {
+    @apply hover:shadow-none hover:translate-y-0;
+  }
+  .no-default-active-elevate {
+    @apply active:shadow-none active:translate-y-0;
   }
 }
 
@@ -97,4 +234,10 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
+}
+
+/* Focus ring styling */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }

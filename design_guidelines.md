@@ -1,111 +1,139 @@
-# MCK Grid - Design Guidelines
+# MCK Grid - Design Guidelines v2
 
-## Design Approach: Racing/Motorsport Digital Experience
+## Design Approach: Modern Racing Data Platform
 
-**Reference Inspiration**: F1 TV app, iRacing dashboard, Gran Turismo Sport menus - combining sleek data presentation with motorsport energy.
+**Reference Inspiration**: F1 TV app + Gran Turismo Sport menus + Apple Sports app - combining sleek data visualization with motorsport energy and modern polish.
 
 **Core Principles**:
-- Performance dashboard aesthetic with competitive edge
-- High-contrast dark theme with accent color energy bursts
-- Data-dense but scannable layouts
-- Championship prestige through visual hierarchy
+- Performance dashboard aesthetic with vibrant accent energy
+- Dual-mode design (light and dark) with consistent color psychology
+- Data-dense but scannable championship layouts
+- Visual hierarchy emphasizing competitive positioning
+
+---
+
+## Color System
+
+**Primary Palette**:
+- Primary Accent: `#6666ff` (vibrant blue-purple) - CTAs, active states, championship highlights
+- Secondary Blue: `#0033cc` (royal blue) - links, secondary actions, data points
+- Deep Navy: `#000099` (dark navy) - dark mode backgrounds, emphasis text, headers
+
+**Success/Promotion States**:
+- Bright Green: `#00cc66` - promotion zones, wins, positive trends, success badges
+- Forest Green: `#006633` - darker green accents, hover states on success elements
+
+**Application Strategy**:
+
+*Light Mode*:
+- Backgrounds: White/gray-50
+- Text: gray-900 primary, gray-600 secondary
+- Borders: gray-200/300
+- Cards: white with subtle shadow
+- Accent usage: Primary actions, position indicators (#1-3), active navigation
+- Success green: Promotion zone borders, win indicators, achievement badges
+
+*Dark Mode*:
+- Backgrounds: `#000099` for main, gray-900 for cards
+- Text: white primary, gray-300 secondary  
+- Borders: gray-700/800
+- Cards: gray-800/900 with border glow
+- Accent usage: Amplified on interactive elements, position badges get gradient treatments
+- Green accents pop more against dark backgrounds
+
+**Special Treatments**:
+- Position #1: Gold-to-`#6666ff` gradient badge
+- Position #2-3: `#6666ff` solid badges  
+- Promotion zone: Left border `#00cc66`, 4px width
+- Relegation zone: Left border red-500, 4px width
+- Fastest lap: Badge with `#6666ff` background
 
 ---
 
 ## Typography System
 
-**Font Stack**: 
-- Headers: Inter Bold/Black (geometric, technical precision)
-- Body: Inter Regular/Medium (optimal data readability)
-- Numbers/Stats: Inter Tabular (monospaced figures for alignment)
+**Font Stack**: Inter (via Google Fonts CDN)
 
 **Hierarchy**:
-- Page Titles: text-4xl/5xl font-black tracking-tight
-- Section Headers: text-2xl/3xl font-bold
-- Card Titles: text-lg/xl font-semibold
-- Stats/Numbers: text-3xl/4xl font-black tabular-nums
-- Body Text: text-sm/base
-- Labels/Meta: text-xs/sm text-muted-foreground uppercase tracking-wide
+- Page Titles: text-5xl font-black tracking-tight
+- Section Headers: text-3xl font-bold  
+- Card Titles: text-xl font-semibold
+- Championship Stats: text-4xl font-black tabular-nums
+- Body: text-base
+- Labels: text-xs uppercase tracking-wider text-muted-foreground
 
 ---
 
-## Layout & Spacing System
+## Layout & Spacing
 
-**Spacing Scale**: Tailwind units of 4, 6, 8, 12, 16 (p-4, gap-6, mb-8, py-12, mt-16)
+**Spacing Scale**: Tailwind units of 4, 6, 8, 12, 16
 
 **Container Strategy**:
-- Dashboard layouts: max-w-screen-2xl mx-auto px-6
-- Content sections: Flexible grid systems, never single-column on desktop
-- Sidebar navigation: Fixed 240px-280px width on desktop, collapsible mobile
+- Dashboard: max-w-screen-2xl mx-auto px-6
+- Sidebar: Fixed 280px desktop, collapsible mobile overlay
 
 **Grid Patterns**:
-- Championship standings: Full-width tables with sticky headers
 - Driver cards: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6
-- Race results: Mixed 2-column desktop (results table + race info sidebar)
-- Stats dashboard: 3-4 column metric cards (grid-cols-2 lg:grid-cols-4)
+- Standings table: Full-width with sticky header, position + driver + team + points columns
+- Stats dashboard: grid-cols-2 lg:grid-cols-4 gap-6 for metric cards
+- Race results: 2-column desktop split (main results table 8/12, race info sidebar 4/12)
 
 ---
 
 ## Component Library
 
 **Navigation**:
-- Top bar: Championship/season selector + profile dropdown
-- Sidebar: Collapsible with icons (Home, Standings, Races, Drivers, Settings)
-- Active state: Border-left accent + background tint
+- Top bar: Championship selector dropdown + user profile
+- Sidebar: Icons + labels (Dashboard, Standings, Races, Drivers, Teams, Badges, Settings)
+- Active state: `#6666ff` border-left-4 + background tint
 
-**Data Display**:
-- Championship Table: Striped rows, position indicators with colored badges (#1-3 special treatment), points in bold tabular
-- Race Results Grid: Position, driver name with flag icon, team, fastest lap indicator (purple badge), points
-- Driver Cards: Avatar + name + number, stats grid (races/wins/podiums/points), badge collection showcase
-- Stat Cards: Large number + label + trend indicator (↑↓ with color)
+**Data Components**:
+- Championship Table: Striped rows (alternating background), position badges (1-3 special), tabular points, promotion/relegation borders
+- Driver Cards: Avatar circle (120px), driver number badge overlay, name + team, stats grid (4 metrics: races/wins/podiums/points), earned badges row
+- Stat Cards: Large number (text-4xl), label below, trend arrow with color (`#00cc66` up, red down), icon top-right
+- Race Results: Position column with colored badges, driver name + flag icon, team, time/gap, fastest lap purple indicator, points bold
 
 **Interactive Elements**:
-- Primary CTA: Full button with accent color, medium shadow
-- Secondary: Outline button with border-accent
-- Tabs: Underlined active state with accent border-b-2
-- Filters/Sorting: Dropdown menus with icons
+- Primary Button: bg-`#6666ff` text-white with shadow
+- Secondary Button: border-2 border-`#6666ff` text-`#6666ff`
+- Success Button: bg-`#00cc66` for positive actions (confirm win, promote)
+- Tabs: border-b-2 border-`#6666ff` for active
+- Filters: Dropdown menus with `#0033cc` icons
 
-**Promotion/Relegation Indicators**:
-- Green border-left for promotion zone positions
-- Red border-left for relegation zone
-- Visual separators between zones in standings tables
+**Badge System**:
+- Achievement badges: Rounded-lg containers with icon + title
+- Earned: Full color with `#6666ff` or `#00cc66` accent glow
+- Locked: Grayscale opacity-40 with lock icon
 
-**Badges System**:
-- Achievement badges: Icon + title in rounded containers (pole position, fastest lap, clean race, champion)
-- Earned badges: Full color accent
-- Locked badges: Grayscale with lock icon overlay
-
-**Season Goals**:
-- Progress bars with percentage + target (e.g., "15/20 races completed")
-- Goal cards: Icon + description + status indicator
-- Completion celebration visual treatment (glow effect on completed goals)
+**Progress Indicators**:
+- Season goals: Progress bar with `#6666ff` fill, percentage + target label
+- Race completion: Checkered flag icons with `#00cc66` on completion
 
 ---
 
 ## Images
 
 **Hero Section**: 
-- Full-width dynamic racing imagery (1920x600px)
-- Kart racing action shot - preferably motion blur background with sharp foreground kart
-- Overlay: Gradient from bottom (dark) to transparent
-- Hero content: Centered or left-aligned with current championship name, tagline, and blurred-background primary CTA button
+- Full-width kart racing action (1920x600px), motion-blur background with sharp foreground kart
+- Dark gradient overlay bottom-to-transparent
+- Hero content: Championship name (text-5xl font-black), tagline, primary CTA button with blurred background (backdrop-blur-md bg-white/20 dark:bg-gray-900/40)
 
 **Additional Images**:
-- Track thumbnails for race cards (400x225px, 16:9 ratio)
-- Driver avatars: Circular 80px-120px (profile photos or helmet shots)
-- Championship trophy/podium imagery for season completion states
-- Background texture: Subtle carbon fiber or track tarmac pattern at 5-10% opacity for dashboard sections
+- Track thumbnails: Race schedule cards (400x225px, 16:9)
+- Driver avatars: Circular 120px (profile photos or helmet shots)
+- Championship trophy: Season completion modals
+- Background: Subtle carbon fiber texture overlay at 5% opacity for dashboard sections
 
-**Placement Strategy**:
-- Hero: Top of dashboard/home page
-- Track images: Race schedule cards and individual race detail headers
-- Driver photos: Profile pages, leaderboard rows (small avatars), team rosters
-- Trophy/achievement graphics: Season wrap-up modals, championship winner announcements
+**Placement**:
+- Hero: Top of home/dashboard
+- Track images: Race cards, race detail headers
+- Driver photos: Leaderboard rows (60px avatars), profile pages (large), team rosters
+- Trophy graphics: Winner announcements, season wrap banners
 
 ---
 
-**Visual Enhancement Notes**:
-- Use subtle racing stripe accents (2px borders) on championship leaders
-- Implement position number badges (1st, 2nd, 3rd) with metallic gradient treatments (gold/silver/bronze)
-- Add checkered flag iconography sparingly for race completion indicators
-- Grid pattern overlays for section backgrounds (very subtle, 2-3% opacity)
+**Enhancement Details**:
+- Position number badges: Circular with gradient (gold #1, silver #2, bronze #3, `#6666ff` 4+)
+- Racing stripe accents: 2px `#6666ff` borders on championship leaders
+- Grid pattern overlays: 2% opacity for section backgrounds
+- Card hover states: Lift with shadow increase, border glow with `#6666ff` in dark mode
