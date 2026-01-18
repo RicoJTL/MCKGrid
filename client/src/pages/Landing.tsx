@@ -43,21 +43,14 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => { 
-                const loginUrl = window.location.origin + "/api/login";
-                if (window.top) {
-                  window.top.location.href = loginUrl;
-                } else {
-                  window.location.href = loginUrl;
-                }
-              }}
+            <a 
+              href="/api/login"
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-xl bg-primary text-white hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/25 group"
               data-testid="button-login"
             >
               Start Your Engine
               <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </a>
           </div>
         </motion.div>
 
