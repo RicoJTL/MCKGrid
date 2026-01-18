@@ -8,63 +8,64 @@
   /* MCK Grid Racing Theme - Light Mode */
   /* Light backgrounds with dark text */
   --background: 220 20% 98%;
-  --foreground: 240 100% 15%;
+  --foreground: 240 100% 12%;
   
   --card: 0 0% 100%;
-  --card-foreground: 240 100% 15%;
-  --card-border: 220 20% 90%;
+  --card-foreground: 240 100% 12%;
+  --card-border: 220 20% 88%;
   
   --popover: 0 0% 100%;
-  --popover-foreground: 240 100% 15%;
-  --popover-border: 220 20% 90%;
+  --popover-foreground: 240 100% 12%;
+  --popover-border: 220 20% 88%;
   
-  /* Primary: Green #00cc66 */
+  /* Primary: Green #00cc66 - dark text for accessibility */
   --primary: 150 100% 40%;
-  --primary-foreground: 0 0% 100%;
-  --primary-border: 150 100% 35%;
+  --primary-foreground: 240 100% 10%;
+  --primary-border: 150 100% 20%;
+  --primary-hover: 150 100% 20%;
   
   /* Secondary: Royal Blue #0033cc */
   --secondary: 220 100% 40%;
   --secondary-foreground: 0 0% 100%;
-  --secondary-border: 220 100% 35%;
+  --secondary-border: 220 100% 30%;
   
   --muted: 220 20% 94%;
-  --muted-foreground: 220 20% 40%;
-  --muted-border: 220 20% 88%;
+  --muted-foreground: 220 30% 35%;
+  --muted-border: 220 20% 85%;
   
-  /* Accent: Blue-purple #6666ff */
+  /* Accent: Blue-purple #6666ff - dark text for accessibility */
   --accent: 240 100% 70%;
-  --accent-foreground: 0 0% 100%;
-  --accent-border: 240 100% 60%;
+  --accent-foreground: 240 100% 10%;
+  --accent-border: 240 100% 55%;
   
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: 0 72% 45%;
+  --destructive-border: 0 72% 40%;
 
-  --border: 220 20% 88%;
-  --input: 220 20% 88%;
-  --ring: 150 100% 40%;
+  --border: 220 20% 85%;
+  --input: 220 20% 85%;
+  --ring: 150 100% 35%;
   
   --radius: 0.5rem;
   
   /* Chart colors using theme */
-  --chart-1: 150 100% 40%;
-  --chart-2: 240 100% 70%;
+  --chart-1: 150 100% 35%;
+  --chart-2: 240 100% 65%;
   --chart-3: 220 100% 40%;
-  --chart-4: 150 100% 25%;
+  --chart-4: 150 100% 20%;
   --chart-5: 240 100% 50%;
   
-  /* Sidebar - Light mode with dark navy background */
-  --sidebar: 240 100% 15%;
-  --sidebar-background: 240 100% 15%;
-  --sidebar-foreground: 0 0% 95%;
+  /* Sidebar - Dark navy background with light text */
+  --sidebar: 240 100% 12%;
+  --sidebar-background: 240 100% 12%;
+  --sidebar-foreground: 220 20% 92%;
   --sidebar-primary: 150 100% 45%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-primary-border: 150 100% 40%;
+  --sidebar-primary-foreground: 240 100% 8%;
+  --sidebar-primary-border: 150 100% 35%;
   --sidebar-accent: 240 100% 70%;
   --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-accent-border: 240 100% 60%;
-  --sidebar-border: 240 80% 20%;
+  --sidebar-border: 240 60% 20%;
   --sidebar-ring: 150 100% 40%;
   
   --font-sans: 'Inter', system-ui, sans-serif;
@@ -75,62 +76,63 @@
 
 .dark {
   /* Dark Mode - Navy backgrounds with light text */
-  --background: 240 100% 8%;
-  --foreground: 220 20% 95%;
+  --background: 240 100% 6%;
+  --foreground: 220 20% 92%;
   
-  --card: 240 80% 12%;
-  --card-foreground: 220 20% 95%;
-  --card-border: 240 60% 22%;
+  --card: 240 60% 10%;
+  --card-foreground: 220 20% 92%;
+  --card-border: 240 40% 20%;
   
-  --popover: 240 80% 12%;
-  --popover-foreground: 220 20% 95%;
-  --popover-border: 240 60% 22%;
+  --popover: 240 60% 10%;
+  --popover-foreground: 220 20% 92%;
+  --popover-border: 240 40% 20%;
   
-  /* Primary: Green #00cc66 - brighter for dark mode */
+  /* Primary: Green #00cc66 - brighter for dark mode, dark text */
   --primary: 150 100% 45%;
-  --primary-foreground: 0 0% 100%;
-  --primary-border: 150 100% 40%;
+  --primary-foreground: 240 100% 8%;
+  --primary-border: 150 100% 35%;
+  --primary-hover: 150 100% 35%;
   
-  /* Secondary: Royal Blue #0033cc */
-  --secondary: 220 100% 50%;
+  /* Secondary: Royal Blue #0033cc - brighter for dark mode */
+  --secondary: 220 100% 55%;
   --secondary-foreground: 0 0% 100%;
   --secondary-border: 220 100% 45%;
   
-  --muted: 240 50% 18%;
-  --muted-foreground: 220 20% 70%;
-  --muted-border: 240 50% 25%;
+  --muted: 240 40% 16%;
+  --muted-foreground: 220 20% 65%;
+  --muted-border: 240 40% 24%;
   
   /* Accent: Blue-purple #6666ff */
-  --accent: 240 100% 70%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 240 100% 72%;
+  --accent-foreground: 240 100% 8%;
   --accent-border: 240 100% 60%;
   
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: 0 72% 50%;
+  --destructive-border: 0 72% 45%;
 
-  --border: 240 60% 22%;
-  --input: 240 60% 22%;
+  --border: 240 40% 20%;
+  --input: 240 40% 20%;
   --ring: 150 100% 45%;
   
   /* Chart colors using theme */
   --chart-1: 150 100% 45%;
-  --chart-2: 240 100% 70%;
+  --chart-2: 240 100% 72%;
   --chart-3: 220 100% 55%;
   --chart-4: 150 100% 30%;
   --chart-5: 240 100% 55%;
   
-  /* Sidebar - Dark mode */
-  --sidebar: 240 100% 6%;
-  --sidebar-background: 240 100% 6%;
-  --sidebar-foreground: 220 20% 90%;
+  /* Sidebar - Darker navy for dark mode */
+  --sidebar: 240 100% 5%;
+  --sidebar-background: 240 100% 5%;
+  --sidebar-foreground: 220 20% 88%;
   --sidebar-primary: 150 100% 45%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-primary-border: 150 100% 40%;
-  --sidebar-accent: 240 100% 70%;
+  --sidebar-primary-foreground: 240 100% 8%;
+  --sidebar-primary-border: 150 100% 35%;
+  --sidebar-accent: 240 100% 72%;
   --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-accent-border: 240 100% 60%;
-  --sidebar-border: 240 60% 18%;
+  --sidebar-border: 240 50% 15%;
   --sidebar-ring: 150 100% 45%;
 }
 
@@ -217,6 +219,11 @@
   }
   .no-default-active-elevate {
     @apply active:shadow-none active:translate-y-0;
+  }
+  
+  /* Dark green accent for hover states */
+  .btn-primary-hover {
+    background-color: hsl(150 100% 20%);
   }
 }
 
