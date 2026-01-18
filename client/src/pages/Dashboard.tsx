@@ -607,7 +607,7 @@ export default function Dashboard() {
       {activeTier && (
         <Link href={`/competitions/${activeTier.tieredLeague.parentCompetitionId}#tiers`}>
           <div 
-            className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-secondary/30 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer mt-4"
+            className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/25 to-secondary/30 border border-yellow-500/40 hover:border-yellow-500/60 transition-colors cursor-pointer mt-4"
             data-testid="card-my-tier"
           >
             <h3 className="text-lg font-bold font-display italic flex items-center gap-2 mb-4">

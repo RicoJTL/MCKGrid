@@ -741,8 +741,8 @@ export default function CompetitionDetails() {
                             <div 
                               key={driver.profileId}
                               className={`flex items-center justify-between p-3 hover:bg-white/5 transition-colors ${
-                                isPromotionZone ? 'bg-green-500/10 border-l-2 border-green-500' :
-                                isRelegationZone ? 'bg-red-500/10 border-l-2 border-red-500' : ''
+                                isPromotionZone ? 'bg-green-500/20 border-l-4 border-green-500' :
+                                isRelegationZone ? 'bg-red-500/20 border-l-4 border-red-500' : ''
                               }`}
                               data-testid={`tier-driver-${driver.profileId}`}
                             >
