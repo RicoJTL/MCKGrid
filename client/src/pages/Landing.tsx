@@ -45,6 +45,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
               href="/api/login" 
+              target="_top"
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-xl bg-primary text-white hover:bg-primary/90 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/25 group"
               data-testid="button-login"
             >
