@@ -963,8 +963,8 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort each tier by points
-    for (const [_, standings] of tierMap.entries()) {
-      standings.sort((a, b) => b.points - a.points);
+    for (const standings of Array.from(tierMap.values())) {
+      standings.sort((a: any, b: any) => b.points - a.points);
     }
     
     // Build result

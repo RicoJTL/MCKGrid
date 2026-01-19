@@ -150,7 +150,7 @@ async function processShuffleForTieredLeague(tieredLeague: typeof tieredLeagues.
   console.log(`[Tier Automation] Cleared tier race results for tiered league ${tieredLeague.id} after shuffle`);
   
   return {
-    tiered_league_id: tieredLeague.id,
+    tieredLeagueId: tieredLeague.id,
     movements,
   };
 }
