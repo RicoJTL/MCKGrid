@@ -515,6 +515,17 @@ export async function registerRoutes(
     
     // Atomically replace all results for this race in a transaction
     const results = await storage.replaceRaceResults(raceId, input);
+    
+    // Calculate tier race results for any tiered leagues linked to this race's competitions
+    const raceCompetitions = await storage.getRaceCompetitions(raceId);
+    for (const competition of raceCompetitions) {
+      const tieredLeague = await storage.getTieredLeagueByParentCompetition(competition.id);
+      if (tieredLeague) {
+        await storage.calculateAndSaveTierRaceResults(tieredLeague.id, raceId);
+        console.log(`[Routes] Calculated tier race results for tiered league ${tieredLeague.id}, race ${raceId}`);
+      }
+    }
+    
     res.status(201).json(results);
   });
 
