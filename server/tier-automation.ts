@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { tieredLeagues, tierAssignments, tierMovements, tierMovementNotifications, tierNames, results, races, raceCompetitions } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { checkTierBadgesAfterShuffle } from "./badge-automation";
 
@@ -40,13 +40,29 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
 
   for (const tieredLeague of tieredLeaguesData) {
     const raceCount = await countCompetitionRaces(tieredLeague.parentCompetitionId);
-    console.log(`[Tier Automation] Race ${raceId} completed. Total races for competition ${tieredLeague.parentCompetitionId}: ${raceCount}. Shuffle interval: ${tieredLeague.racesBeforeShuffle}`);
+    console.log(`[Tier Automation] Race ${raceId} results saved. Competition ${tieredLeague.parentCompetitionId} has ${raceCount} completed races. Shuffle interval: ${tieredLeague.racesBeforeShuffle}`);
     
-    if (raceCount % tieredLeague.racesBeforeShuffle === 0 && raceCount > 0) {
-      const alreadyProcessed = await hasShuffleBeenProcessedAtRaceCount(tieredLeague.id, raceCount);
-      if (alreadyProcessed) continue;
-      
-      const result = await processShuffleForTieredLeague(tieredLeague, raceCount);
+    // Check if we've reached or passed a shuffle point
+    // We check if (raceCount >= lastShuffleRace + interval)
+    const lastShuffle = await db.select({ maxRace: sql<number>`CAST(max(after_race_number) AS INTEGER)` })
+      .from(tierMovements)
+      .where(eq(tierMovements.tieredLeagueId, tieredLeague.id));
+    
+    const lastShuffleRace = lastShuffle[0]?.maxRace || 0;
+    
+    // We should shuffle if we have reached or crossed an interval point that hasn't been processed
+    // Example: interval 2. Shuffles should happen at race 2, 4, 6...
+    // If current race is 3 and last shuffle was 0, we are OVERDUE for the race 2 shuffle.
+    const nextExpectedShuffle = lastShuffleRace + tieredLeague.racesBeforeShuffle;
+    const shouldShuffle = raceCount >= nextExpectedShuffle && raceCount > 0;
+
+    console.log(`[Tier Automation] Race ${raceId} results saved. Competition ${tieredLeague.parentCompetitionId} has ${raceCount} completed races. Last shuffle at: ${lastShuffleRace}. Next expected: ${nextExpectedShuffle}. Should shuffle: ${shouldShuffle}`);
+    
+    if (shouldShuffle) {
+      // Record the shuffle as happening at the exact interval point (e.g. race 2) 
+      // even if we are processing it slightly late (at race 3)
+      const shufflePoint = lastShuffleRace + tieredLeague.racesBeforeShuffle;
+      const result = await processShuffleForTieredLeague(tieredLeague, shufflePoint);
       if (result.movements.length > 0) {
         shuffleResults.push(result);
         
@@ -79,10 +95,10 @@ async function hasShuffleBeenProcessedAtRaceCount(tieredLeagueId: number, raceCo
 }
 
 async function countCompetitionRaces(competitionId: number): Promise<number> {
-  const completedRaces = await db.select({ raceId: raceCompetitions.raceId })
-    .from(raceCompetitions)
-    .innerJoin(races, eq(races.id, raceCompetitions.raceId))
-    .innerJoin(results, eq(results.raceId, races.id))
+  const completedRaces = await db.select({ raceId: results.raceId })
+    .from(results)
+    .innerJoin(races, eq(races.id, results.raceId))
+    .innerJoin(raceCompetitions, eq(raceCompetitions.raceId, races.id))
     .where(eq(raceCompetitions.competitionId, competitionId));
   
   const uniqueRaceIds = new Set(completedRaces.map(r => r.raceId));
@@ -148,7 +164,7 @@ async function processShuffleForTieredLeague(tieredLeague: typeof tieredLeagues.
   
   // Clear tier race results after a shuffle - tier points reset for the new period
   await storage.clearTierRaceResults(tieredLeague.id);
-  console.log(`[Tier Automation] Cleared tier race results for tiered league ${tieredLeague.id} after shuffle`);
+  console.log(`[Tier Automation] Cleared tier race results for tiered league ${tieredLeague.id} after shuffle ${afterRaceNumber}`);
   
   return {
     tieredLeagueId: tieredLeague.id,
