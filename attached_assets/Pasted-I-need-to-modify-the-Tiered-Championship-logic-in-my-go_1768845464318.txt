@@ -1,0 +1,58 @@
+I need to modify the Tiered Championship logic in my go-karting league app.
+
+Important constraints:
+- Do NOT refactor the entire codebase
+- Do NOT use autonomous agent mode
+- Only update the specific logic required
+- Make changes incrementally and explain before editing files
+
+Current behaviour:
+- Tiered Championship points are mirrored directly from the Individual Championship results.
+
+Problem:
+- This creates unfair point gaps when a lower-tier racer finishes very high overall in a race.
+
+New required behaviour (this replaces the old logic):
+
+Tiered Championship Scoring Rules:
+- Tiered Championship points are calculated independently from Individual Championship points.
+- Within each tier, racers can earn a maximum of 4 points per race.
+- Points allocation within a tier:
+  - 1st in tier = 4 points
+  - 2nd in tier = 3 points
+  - 3rd in tier = 2 points
+  - Last in tier = 1 point
+
+How placement within a tier is determined:
+- Use the finishing positions from the Individual Championship race.
+- For each race:
+  1. Group racers by their current tier (S, A, B, C).
+  2. Within each tier, sort racers by their individual race finishing position (lower is better).
+  3. Assign tiered points based on their position relative only to others in the same tier.
+
+Example:
+- C-tier racers finish the race in positions: 1st, 5th, 9th, 11th overall.
+- Within C-tier:
+  - 1st overall → 1st in C-tier → 4 points
+  - 5th overall → 2nd in C-tier → 3 points
+  - 9th overall → 3rd in C-tier → 2 points
+  - 11th overall → last in C-tier → 1 point
+
+Additional requirements:
+- Individual Championship points remain unchanged.
+- Tiered Championship points are stored separately.
+- This logic must run automatically after each race result is saved.
+- No manual intervention required.
+
+Points reset rule (important):
+- After every tier shuffle, Tiered Championship points for all racers reset to zero.
+- Only Tiered Championship points reset.
+- Individual Championship points are never reset and continue accumulating.
+
+Rank/tier changes and point resets take effect immediately after the shuffle is completed.
+
+Start by:
+1) Identifying where tiered points are currently calculated
+2) Proposing the minimal logic change needed
+3) Updating only the necessary functions or services
+4) Explaining the change clearly before applying it
