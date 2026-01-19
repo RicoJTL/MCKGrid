@@ -936,7 +936,10 @@ export class DatabaseStorage implements IStorage {
     const assignments = await this.getTierAssignments(tieredLeagueId);
     
     // Get tier race results and sum points by profile
-    const raceResults = await this.getTierRaceResults(tieredLeagueId);
+    const raceResults = await db.select()
+      .from(tierRaceResults)
+      .where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId));
+
     const pointsMap = new Map<number, number>();
     for (const result of raceResults) {
       const current = pointsMap.get(result.profileId) || 0;
@@ -960,9 +963,9 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort each tier by points
-    Array.from(tierMap.values()).forEach((standings: { points: number }[]) => {
-      standings.sort((a: { points: number }, b: { points: number }) => b.points - a.points);
-    });
+    for (const [_, standings] of tierMap.entries()) {
+      standings.sort((a, b) => b.points - a.points);
+    }
     
     // Build result
     return names.map(name => ({
