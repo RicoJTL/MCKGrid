@@ -40,6 +40,7 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
 
   for (const tieredLeague of tieredLeaguesData) {
     const raceCount = await countCompetitionRaces(tieredLeague.parentCompetitionId);
+    console.log(`[Tier Automation] Race ${raceId} completed. Total races for competition ${tieredLeague.parentCompetitionId}: ${raceCount}. Shuffle interval: ${tieredLeague.racesBeforeShuffle}`);
     
     if (raceCount % tieredLeague.racesBeforeShuffle === 0 && raceCount > 0) {
       const alreadyProcessed = await hasShuffleBeenProcessedAtRaceCount(tieredLeague.id, raceCount);
