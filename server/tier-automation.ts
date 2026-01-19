@@ -146,13 +146,11 @@ async function processShuffleForTieredLeague(tieredLeague: typeof tieredLeagues.
   }
   
   // Clear tier race results after a shuffle - tier points reset for the new period
-  if (movements.length > 0) {
-    await storage.clearTierRaceResults(tieredLeague.id);
-    console.log(`[Tier Automation] Cleared tier race results for tiered league ${tieredLeague.id} after shuffle`);
-  }
+  await storage.clearTierRaceResults(tieredLeague.id);
+  console.log(`[Tier Automation] Cleared tier race results for tiered league ${tieredLeague.id} after shuffle`);
   
   return {
-    tieredLeagueId: tieredLeague.id,
+    tiered_league_id: tieredLeague.id,
     movements,
   };
 }
