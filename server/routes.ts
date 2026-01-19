@@ -523,6 +523,10 @@ export async function registerRoutes(
       if (tieredLeague) {
         await storage.calculateAndSaveTierRaceResults(tieredLeague.id, raceId);
         console.log(`[Routes] Calculated tier race results for tiered league ${tieredLeague.id}, race ${raceId}`);
+        
+        // Process any shuffles if the race count limit is reached
+        const { checkAndProcessTierShuffle } = await import("./tier-automation");
+        await checkAndProcessTierShuffle(raceId);
       }
     }
     
