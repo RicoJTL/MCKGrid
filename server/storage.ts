@@ -935,9 +935,13 @@ export class DatabaseStorage implements IStorage {
     const names = await this.getTierNames(tieredLeagueId);
     const assignments = await this.getTierAssignments(tieredLeagueId);
     
-    // Get parent competition standings
-    const parentStandings = await this.getCompetitionStandings(tieredLeague.parentCompetitionId);
-    const pointsMap = new Map(parentStandings.map((s: any) => [s.racerId, s.points]));
+    // Get tier race results and sum points by profile
+    const raceResults = await this.getTierRaceResults(tieredLeagueId);
+    const pointsMap = new Map<number, number>();
+    for (const result of raceResults) {
+      const current = pointsMap.get(result.profileId) || 0;
+      pointsMap.set(result.profileId, current + result.tierPoints);
+    }
     
     // Group assignments by tier and add points
     const tierMap = new Map<number, { profileId: number; driverName: string; fullName: string; points: number }[]>();
@@ -956,7 +960,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort each tier by points
-    Array.from(tierMap.values()).forEach(standings => {
+    Array.from(tierMap.values()).forEach((standings: { points: number }[]) => {
       standings.sort((a: { points: number }, b: { points: number }) => b.points - a.points);
     });
     
@@ -1012,13 +1016,13 @@ export class DatabaseStorage implements IStorage {
     // Points: 1st in tier = 4, 2nd = 3, 3rd = 2, last = 1
     const tierRaceResultsToInsert: InsertTierRaceResult[] = [];
     
-    for (const [tierNumber, tierResults] of resultsByTier) {
+    for (const [tierNumber, tierResults] of Array.from(resultsByTier.entries())) {
       // Sort by overall position to determine position within tier
-      tierResults.sort((a, b) => a.position - b.position);
+      tierResults.sort((a: { position: number }, b: { position: number }) => a.position - b.position);
       
       const driversInTier = tierResults.length;
       
-      tierResults.forEach((result, index) => {
+      tierResults.forEach((result: { profileId: number; position: number }, index: number) => {
         const positionInTier = index + 1; // 1-indexed position within tier
         
         // Calculate tier points
