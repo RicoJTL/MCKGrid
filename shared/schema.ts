@@ -149,6 +149,19 @@ export const tierMovementNotifications = pgTable("tier_movement_notifications", 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tier race results - stores independent tier points per race
+export const tierRaceResults = pgTable("tier_race_results", {
+  id: serial("id").primaryKey(),
+  tieredLeagueId: integer("tiered_league_id").references(() => tieredLeagues.id).notNull(),
+  raceId: integer("race_id").references(() => races.id).notNull(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  tierNumber: integer("tier_number").notNull(), // Which tier the driver was in for this race
+  positionInTier: integer("position_in_tier").notNull(), // 1st, 2nd, 3rd, etc. within tier
+  tierPoints: integer("tier_points").notNull(), // Points earned (1st=4, 2nd=3, 3rd=2, last=1)
+  overallPosition: integer("overall_position").notNull(), // Original race position
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),
   slug: text("slug").unique().notNull(),
@@ -302,6 +315,12 @@ export const tierMovementNotificationsRelations = relations(tierMovementNotifica
   movement: one(tierMovements, { fields: [tierMovementNotifications.movementId], references: [tierMovements.id] }),
 }));
 
+export const tierRaceResultsRelations = relations(tierRaceResults, ({ one }) => ({
+  tieredLeague: one(tieredLeagues, { fields: [tierRaceResults.tieredLeagueId], references: [tieredLeagues.id] }),
+  race: one(races, { fields: [tierRaceResults.raceId], references: [races.id] }),
+  profile: one(profiles, { fields: [tierRaceResults.profileId], references: [profiles.id] }),
+}));
+
 export const badgesRelations = relations(badges, ({ many }) => ({
   profileBadges: many(profileBadges),
 }));
@@ -360,6 +379,7 @@ export const insertTierNameSchema = createInsertSchema(tierNames).omit({ id: tru
 export const insertTierAssignmentSchema = createInsertSchema(tierAssignments).omit({ id: true, assignedAt: true });
 export const insertTierMovementSchema = createInsertSchema(tierMovements).omit({ id: true, createdAt: true });
 export const insertTierMovementNotificationSchema = createInsertSchema(tierMovementNotifications).omit({ id: true, isRead: true, createdAt: true });
+export const insertTierRaceResultSchema = createInsertSchema(tierRaceResults).omit({ id: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, sortOrder: true });
 export const insertProfileBadgeSchema = createInsertSchema(profileBadges).omit({ id: true });
 export const insertSeasonGoalSchema = createInsertSchema(seasonGoals).omit({ id: true, currentValue: true, outcome: true, createdAt: true });
@@ -400,6 +420,8 @@ export type TierName = typeof tierNames.$inferSelect;
 export type TierAssignment = typeof tierAssignments.$inferSelect;
 export type TierMovement = typeof tierMovements.$inferSelect;
 export type TierMovementNotification = typeof tierMovementNotifications.$inferSelect;
+export type TierRaceResult = typeof tierRaceResults.$inferSelect;
+export type InsertTierRaceResult = z.infer<typeof insertTierRaceResultSchema>;
 export type Badge = typeof badges.$inferSelect;
 export type ProfileBadge = typeof profileBadges.$inferSelect;
 export type SeasonGoal = typeof seasonGoals.$inferSelect;
