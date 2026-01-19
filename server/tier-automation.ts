@@ -54,14 +54,17 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
     // Example: interval 2. Shuffles should happen at race 2, 4, 6...
     // If current race is 3 and last shuffle was 0, we are OVERDUE for the race 2 shuffle.
     const nextExpectedShuffle = lastShuffleRace + tieredLeague.racesBeforeShuffle;
-    const shouldShuffle = raceCount >= nextExpectedShuffle && raceCount > 0;
-
-    console.log(`[Tier Automation] Race ${raceId} results saved. Competition ${tieredLeague.parentCompetitionId} has ${raceCount} completed races. Last shuffle at: ${lastShuffleRace}. Next expected: ${nextExpectedShuffle}. Should shuffle: ${shouldShuffle}`);
+    const isShuffleDue = raceCount >= nextExpectedShuffle && raceCount > 0;
     
-    if (shouldShuffle) {
+    // Check if we already have a shuffle recorded for this exact point
+    const alreadyProcessed = isShuffleDue && await hasShuffleBeenProcessedAtRaceCount(tieredLeague.id, nextExpectedShuffle);
+
+    console.log(`[Tier Automation] Race ${raceId} results saved. Competition ${tieredLeague.parentCompetitionId} has ${raceCount} completed races. Last shuffle at: ${lastShuffleRace}. Next expected: ${nextExpectedShuffle}. Should shuffle: ${isShuffleDue}. Already processed: ${alreadyProcessed}`);
+    
+    if (isShuffleDue && !alreadyProcessed) {
       // Record the shuffle as happening at the exact interval point (e.g. race 2) 
       // even if we are processing it slightly late (at race 3)
-      const shufflePoint = lastShuffleRace + tieredLeague.racesBeforeShuffle;
+      const shufflePoint = nextExpectedShuffle;
       const result = await processShuffleForTieredLeague(tieredLeague, shufflePoint);
       if (result.movements.length > 0) {
         shuffleResults.push(result);
