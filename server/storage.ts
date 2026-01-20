@@ -4,10 +4,12 @@ import {
   badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
   driverIcons, profileDriverIcons, driverIconNotifications,
   tieredLeagues, tierNames, tierAssignments, tierMovements, tierMovementNotifications,
+  tierRaceResults,
   type League, type Competition, type Race, type Result, type Profile, type Team, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
   type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
   type TieredLeague, type TierName, type TierAssignment, type TierMovement, type TierMovementNotification,
+  type TierRaceResult, type InsertTierRaceResult,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
   type InsertDriverIcon, type InsertProfileDriverIcon,
@@ -78,6 +80,11 @@ export interface IStorage {
   assignDriverToTier(tieredLeagueId: number, profileId: number, tierNumber: number): Promise<TierAssignment>;
   removeDriverFromTier(tieredLeagueId: number, profileId: number): Promise<void>;
   moveDriverToTier(tieredLeagueId: number, profileId: number, newTierNumber: number, movementType: string, afterRaceNumber: number): Promise<TierMovement>;
+  
+  // Tier Race Results
+  getTierRaceResults(tieredLeagueId: number): Promise<TierRaceResult[]>;
+  calculateTierPoints(raceId: number): Promise<void>;
+  resetTierPoints(tieredLeagueId: number): Promise<void>;
   
   // Tier Standings
   getTierStandings(tieredLeagueId: number): Promise<{ tierNumber: number; tierName: string; standings: { profileId: number; driverName: string; fullName: string; points: number }[] }[]>;
@@ -492,6 +499,10 @@ export class DatabaseStorage implements IStorage {
     
     // Check for tier promotion/relegation after race results
     const { checkAndProcessTierShuffle } = await import("./tier-automation");
+    
+    // Calculate tier points before checking for shuffle (since shuffle might reset them)
+    await this.calculateTierPoints(raceId);
+    
     await checkAndProcessTierShuffle(raceId);
     
     return insertedResults;
@@ -932,9 +943,15 @@ export class DatabaseStorage implements IStorage {
     const names = await this.getTierNames(tieredLeagueId);
     const assignments = await this.getTierAssignments(tieredLeagueId);
     
-    // Get parent competition standings
-    const parentStandings = await this.getCompetitionStandings(tieredLeague.parentCompetitionId);
-    const pointsMap = new Map(parentStandings.map((s: any) => [s.racerId, s.points]));
+    // Get tier-specific points
+    const tierResults = await this.getTierRaceResults(tieredLeagueId);
+    
+    // Sum points per profile
+    const pointsMap = new Map<number, number>();
+    for (const res of tierResults) {
+      const current = pointsMap.get(res.profileId) || 0;
+      pointsMap.set(res.profileId, current + res.points);
+    }
     
     // Group assignments by tier and add points
     const tierMap = new Map<number, { profileId: number; driverName: string; fullName: string; points: number }[]>();
@@ -2142,6 +2159,92 @@ export class DatabaseStorage implements IStorage {
     await db.update(driverIconNotifications)
       .set({ isRead: true })
       .where(eq(driverIconNotifications.profileId, profileId));
+  }
+
+  async getTierRaceResults(tieredLeagueId: number): Promise<TierRaceResult[]> {
+    return await db.select().from(tierRaceResults).where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId));
+  }
+
+  async resetTierPoints(tieredLeagueId: number): Promise<void> {
+    await db.delete(tierRaceResults).where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId));
+  }
+
+  async calculateTierPoints(raceId: number): Promise<void> {
+    const race = await this.getRace(raceId);
+    if (!race) return;
+
+    // Find all tiered leagues in this league
+    const tls = await db.select().from(tieredLeagues).where(eq(tieredLeagues.leagueId, race.leagueId));
+    
+    for (const tl of tls) {
+      // Get all results for this race
+      const raceResults = await db.select().from(results).where(eq(results.raceId, raceId)).orderBy(results.position);
+      if (raceResults.length === 0) continue;
+
+      // Get current assignments for this tiered league
+      const assignments = await this.getTierAssignments(tl.id);
+      const assignmentMap = new Map(assignments.map(a => [a.profileId, a.tierNumber]));
+
+      // Group race results by tier
+      const tierGroups = new Map<number, Result[]>();
+      for (const res of raceResults) {
+        const tier = assignmentMap.get(res.racerId);
+        if (tier !== undefined) {
+          if (!tierGroups.has(tier)) tierGroups.set(tier, []);
+          tierGroups.get(tier).push(res);
+        }
+      }
+
+      // For each tier, assign points 4, 3, 2, 1 based on relative position
+      for (const [tier, group] of tierGroups.entries()) {
+        // Group is already sorted by overall position because raceResults was sorted
+        for (let i = 0; i < group.length; i++) {
+          const res = group[i];
+          let points = 0;
+          
+          if (i === 0) points = 4; // 1st in tier
+          else if (i === 1) points = 3; // 2nd in tier
+          else if (i === 2) points = 2; // 3rd in tier
+          else if (i === group.length - 1) points = 1; // Last in tier
+          else points = 1; // Default for others if more than 4, or specified as 'last' logic? 
+          // Requirements say: 1st=4, 2nd=3, 3rd=2, Last=1. 
+          // If 4 racers: 4, 3, 2, 1.
+          // If 3 racers: 4, 3, 1 (2nd is also last? No, priority is 1st > 2nd > 3rd > Last)
+          // Let's stick to the specific mapping:
+          
+          if (group.length === 1) points = 4; // Only 1 racer gets 4 points (1st)
+          else if (i === group.length - 1) points = 1; // Always 1 point for last if more than 1
+          else if (i === 0) points = 4;
+          else if (i === 1) points = 3;
+          else if (i === 2) points = 2;
+          else points = 1; // Anyone else gets 1 point
+
+          // Store/Update result
+          const existing = await db.select().from(tierRaceResults).where(and(
+            eq(tierRaceResults.raceId, raceId),
+            eq(tierRaceResults.profileId, res.racerId),
+            eq(tierRaceResults.tieredLeagueId, tl.id)
+          ));
+
+          if (existing.length > 0) {
+            await db.update(tierRaceResults).set({ 
+              tierNumber: tier, 
+              tierPosition: i + 1, 
+              points 
+            }).where(eq(tierRaceResults.id, existing[0].id));
+          } else {
+            await db.insert(tierRaceResults).values({
+              tieredLeagueId: tl.id,
+              profileId: res.racerId,
+              raceId,
+              tierNumber: tier,
+              tierPosition: i + 1,
+              points
+            });
+          }
+        }
+      }
+    }
   }
 }
 

@@ -46,6 +46,10 @@ export async function checkAndProcessTierShuffle(raceId: number): Promise<Shuffl
       if (alreadyProcessed) continue;
       
       const result = await processShuffleForTieredLeague(tieredLeague, raceCount);
+      
+      // Reset tiered championship points after shuffle
+      await storage.resetTierPoints(tieredLeague.id);
+
       if (result.movements.length > 0) {
         shuffleResults.push(result);
         

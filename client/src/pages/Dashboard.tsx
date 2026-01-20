@@ -333,22 +333,22 @@ export default function Dashboard() {
               </h3>
               <div className="flex justify-center gap-4 md:gap-8">
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{countdown.days}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{countdown.days}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Days</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.hours).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.hours).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.minutes).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.minutes).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Mins</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-primary">{String(countdown.seconds).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.seconds).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Secs</div>
                 </div>
               </div>
