@@ -323,7 +323,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border border-primary/30 p-6"
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500/20 via-pink-500/10 to-rose-500/20 border border-rose-500/30 p-6"
             data-testid="race-countdown-banner"
           >
             <div className="text-center">
@@ -333,22 +333,22 @@ export default function Dashboard() {
               </h3>
               <div className="flex justify-center gap-4 md:gap-8">
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{countdown.days}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-rose-500">{countdown.days}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Days</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.hours).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-rose-500">{String(countdown.hours).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Hours</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.minutes).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-rose-500">{String(countdown.minutes).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Mins</div>
                 </div>
                 <div className="text-4xl md:text-5xl font-display font-bold text-white/30">:</div>
                 <div className="text-center">
-                  <div className="text-4xl md:text-5xl font-display font-bold text-amber-400">{String(countdown.seconds).padStart(2, '0')}</div>
+                  <div className="text-4xl md:text-5xl font-display font-bold text-rose-500">{String(countdown.seconds).padStart(2, '0')}</div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wider">Secs</div>
                 </div>
               </div>
