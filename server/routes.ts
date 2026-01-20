@@ -515,29 +515,6 @@ export async function registerRoutes(
     
     // Atomically replace all results for this race in a transaction
     const results = await storage.replaceRaceResults(raceId, input);
-    
-    // Process tier automation for any tiered leagues linked to this race's competitions
-    const raceCompetitions = await storage.getRaceCompetitions(raceId);
-    for (const competition of raceCompetitions) {
-      const tieredLeague = await storage.getTieredLeagueByParentCompetition(competition.id);
-      if (tieredLeague) {
-        console.log(`[Routes] Processing tier automation for race ${raceId}, tiered league ${tieredLeague.id}`);
-        
-        // 1. Process any shuffles if the race count limit is reached BEFORE saving points
-        // This ensures a clean slate if a shuffle/reset happens
-        const { checkAndProcessTierShuffle } = await import("./tier-automation");
-        const shuffleResults = await checkAndProcessTierShuffle(raceId);
-        
-        if (shuffleResults.length > 0) {
-          console.log(`[Routes] Shuffle occurred for tiered league ${tieredLeague.id}. Points have been reset.`);
-        }
-
-        // 2. Now calculate and save tier points for the CURRENT race
-        const tierResults = await storage.calculateAndSaveTierRaceResults(tieredLeague.id, raceId);
-        console.log(`[Routes] Saved ${tierResults.length} tier race results for tiered league ${tieredLeague.id}, race ${raceId}`);
-      }
-    }
-    
     res.status(201).json(results);
   });
 

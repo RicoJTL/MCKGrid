@@ -3,15 +3,15 @@ import {
   leagues, competitions, races, results, profiles, teams, raceCompetitions,
   badges, profileBadges, seasonGoals, raceCheckins, personalBests, badgeNotifications,
   driverIcons, profileDriverIcons, driverIconNotifications,
-  tieredLeagues, tierNames, tierAssignments, tierMovements, tierMovementNotifications, tierRaceResults,
+  tieredLeagues, tierNames, tierAssignments, tierMovements, tierMovementNotifications,
   type League, type Competition, type Race, type Result, type Profile, type Team, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
   type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
-  type TieredLeague, type TierName, type TierAssignment, type TierMovement, type TierMovementNotification, type TierRaceResult,
+  type TieredLeague, type TierName, type TierAssignment, type TierMovement, type TierMovementNotification,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
   type InsertDriverIcon, type InsertProfileDriverIcon,
-  type InsertTieredLeague, type InsertTierName, type InsertTierAssignment, type InsertTierRaceResult
+  type InsertTieredLeague, type InsertTierName, type InsertTierAssignment
 } from "@shared/schema";
 import { eq, desc, and, inArray, sql, gte, or } from "drizzle-orm";
 
@@ -79,11 +79,8 @@ export interface IStorage {
   removeDriverFromTier(tieredLeagueId: number, profileId: number): Promise<void>;
   moveDriverToTier(tieredLeagueId: number, profileId: number, newTierNumber: number, movementType: string, afterRaceNumber: number): Promise<TierMovement>;
   
-  // Tier Standings & Race Results
+  // Tier Standings
   getTierStandings(tieredLeagueId: number): Promise<{ tierNumber: number; tierName: string; standings: { profileId: number; driverName: string; fullName: string; points: number }[] }[]>;
-  calculateAndSaveTierRaceResults(tieredLeagueId: number, raceId: number): Promise<TierRaceResult[]>;
-  getTierRaceResults(tieredLeagueId: number): Promise<TierRaceResult[]>;
-  clearTierRaceResults(tieredLeagueId: number): Promise<void>;
   
   // Tier Movement Notifications
   getUnreadTierMovementNotifications(profileId: number): Promise<{ notification: TierMovementNotification; movement: TierMovement; tieredLeague: TieredLeague }[]>;
@@ -935,16 +932,9 @@ export class DatabaseStorage implements IStorage {
     const names = await this.getTierNames(tieredLeagueId);
     const assignments = await this.getTierAssignments(tieredLeagueId);
     
-    // Get tier race results and sum points by profile
-    const raceResults = await db.select()
-      .from(tierRaceResults)
-      .where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId));
-
-    const pointsMap = new Map<number, number>();
-    for (const result of raceResults) {
-      const current = pointsMap.get(result.profileId) || 0;
-      pointsMap.set(result.profileId, current + result.tierPoints);
-    }
+    // Get parent competition standings
+    const parentStandings = await this.getCompetitionStandings(tieredLeague.parentCompetitionId);
+    const pointsMap = new Map(parentStandings.map((s: any) => [s.racerId, s.points]));
     
     // Group assignments by tier and add points
     const tierMap = new Map<number, { profileId: number; driverName: string; fullName: string; points: number }[]>();
@@ -963,10 +953,9 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort each tier by points
-    const tierStandingsList = Array.from(tierMap.values());
-    for (const standings of tierStandingsList) {
-      standings.sort((a: any, b: any) => b.points - a.points);
-    }
+    Array.from(tierMap.values()).forEach(standings => {
+      standings.sort((a: { points: number }, b: { points: number }) => b.points - a.points);
+    });
     
     // Build result
     return names.map(name => ({
@@ -974,106 +963,6 @@ export class DatabaseStorage implements IStorage {
       tierName: name.name,
       standings: tierMap.get(name.tierNumber) || [],
     }));
-  }
-
-  async calculateAndSaveTierRaceResults(tieredLeagueId: number, raceId: number): Promise<TierRaceResult[]> {
-    const tieredLeague = await this.getTieredLeague(tieredLeagueId);
-    if (!tieredLeague) return [];
-    
-    // Get current tier assignments
-    const assignments = await this.getTierAssignments(tieredLeagueId);
-    const assignmentMap = new Map(assignments.map(a => [a.profileId, a.tierNumber]));
-    
-    // Get race results for this race
-    const raceResults = await db
-      .select()
-      .from(results)
-      .where(eq(results.raceId, raceId))
-      .orderBy(results.position);
-    
-    if (raceResults.length === 0) return [];
-    
-    // Delete any existing tier race results for this race
-    await db.delete(tierRaceResults)
-      .where(and(
-        eq(tierRaceResults.tieredLeagueId, tieredLeagueId),
-        eq(tierRaceResults.raceId, raceId)
-      ));
-    
-    // Group race results by tier
-    const resultsByTier = new Map<number, { profileId: number; position: number }[]>();
-    
-    for (const result of raceResults) {
-      const tierNumber = assignmentMap.get(result.racerId);
-      if (tierNumber === undefined) continue; // Driver not assigned to any tier
-      
-      if (!resultsByTier.has(tierNumber)) {
-        resultsByTier.set(tierNumber, []);
-      }
-      resultsByTier.get(tierNumber)!.push({
-        profileId: result.racerId,
-        position: result.position,
-      });
-    }
-    
-    // Calculate tier points for each tier
-    // Points: 1st in tier = 4, 2nd = 3, 3rd = 2, last = 1
-    const tierRaceResultsToInsert: InsertTierRaceResult[] = [];
-    
-    for (const [tierNumber, tierResults] of Array.from(resultsByTier.entries())) {
-      // Sort by overall position to determine position within tier
-      tierResults.sort((a: { position: number }, b: { position: number }) => a.position - b.position);
-      
-      const driversInTier = tierResults.length;
-      
-      tierResults.forEach((result: { profileId: number; position: number }, index: number) => {
-        const positionInTier = index + 1; // 1-indexed position within tier
-        
-        // Calculate tier points
-        let tierPoints: number;
-        if (driversInTier === 1) {
-          tierPoints = 4; // Only driver gets full points
-        } else if (positionInTier === 1) {
-          tierPoints = 4; // 1st place
-        } else if (positionInTier === 2) {
-          tierPoints = 3; // 2nd place
-        } else if (positionInTier === driversInTier) {
-          tierPoints = 1; // Last place
-        } else {
-          tierPoints = 2; // 3rd or any middle position
-        }
-        
-        tierRaceResultsToInsert.push({
-          tieredLeagueId,
-          raceId,
-          profileId: result.profileId,
-          tierNumber,
-          positionInTier,
-          tierPoints,
-          overallPosition: result.position,
-        });
-      });
-    }
-    
-    if (tierRaceResultsToInsert.length === 0) return [];
-    
-    const insertedResults = await db.insert(tierRaceResults)
-      .values(tierRaceResultsToInsert)
-      .returning();
-    
-    return insertedResults;
-  }
-
-  async getTierRaceResults(tieredLeagueId: number): Promise<TierRaceResult[]> {
-    return db.select()
-      .from(tierRaceResults)
-      .where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId))
-      .orderBy(tierRaceResults.raceId, tierRaceResults.tierNumber, tierRaceResults.positionInTier);
-  }
-
-  async clearTierRaceResults(tieredLeagueId: number): Promise<void> {
-    await db.delete(tierRaceResults)
-      .where(eq(tierRaceResults.tieredLeagueId, tieredLeagueId));
   }
 
   async getUnreadTierMovementNotifications(profileId: number): Promise<{ notification: TierMovementNotification; movement: TierMovement; tieredLeague: TieredLeague }[]> {

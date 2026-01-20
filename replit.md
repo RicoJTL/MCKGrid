@@ -57,7 +57,6 @@ Located in `shared/schema.ts`, the main entities are:
 - **tierAssignments**: Tracks which drivers are assigned to which tiers
 - **tierMovements**: Records promotion/relegation history
 - **tierMovementNotifications**: Stores notifications about tier changes
-- **tierRaceResults**: Stores per-race tier points (independent from parent competition)
 
 ### Tiered League System
 The tiered league system allows competitions to organize drivers into tiers (e.g., S, A, B, C) with promotion/relegation mechanics:
@@ -79,17 +78,10 @@ The tiered league system allows competitions to organize drivers into tiers (e.g
 - For leagues WITHOUT tiered leagues: all racers can check in freely
 - Error messages display inline while keeping retry buttons visible
 
-**Tier Standings & Independent Points** (in storage.ts):
-- Tier points are calculated independently from the parent competition
-- Uses the `tier_race_results` table to store per-race tier points
-- Points are awarded based on position within each tier for each race:
-  - 1st in tier: 4 points
-  - 2nd in tier: 3 points
-  - 3rd in tier: 2 points
-  - Last in tier: 1 point
-- `calculateAndSaveTierRaceResults()` runs after each race result submission
-- `getTierStandings()` sums tier points from the tier_race_results table
-- Tier points are reset (cleared) after each shuffle
+**Tier Standings** (in storage.ts):
+- Standings calculated from parent competition race results
+- Points aggregated and grouped by tier
+- Drivers sorted by points within each tier
 
 **Promotion/Relegation Automation** (server/tier-automation.ts):
 - Triggers automatically after race results are submitted
