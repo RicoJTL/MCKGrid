@@ -2196,7 +2196,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // For each tier, assign points 4, 3, 2, 1 based on relative position
-      for (const [tier, group] of Array.from(tierGroups.entries())) {
+      for (const [tier, group] of tierGroups.entries()) {
         // Group is already sorted by overall position because raceResults was sorted
         for (let i = 0; i < group.length; i++) {
           const res = group[i];
@@ -2205,7 +2205,7 @@ export class DatabaseStorage implements IStorage {
           if (i === 0) points = 4; // 1st in tier
           else if (i === 1) points = 3; // 2nd in tier
           else if (i === 2) points = 2; // 3rd in tier
-          else if (group.length > 1 && i === group.length - 1) points = 1; // Last in tier
+          else if (i === group.length - 1) points = 1; // Last in tier
           else points = 1; // Default for others if more than 4, or specified as 'last' logic? 
           // Requirements say: 1st=4, 2nd=3, 3rd=2, Last=1. 
           // If 4 racers: 4, 3, 2, 1.
