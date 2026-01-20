@@ -2186,17 +2186,17 @@ export class DatabaseStorage implements IStorage {
       const assignmentMap = new Map(assignments.map(a => [a.profileId, a.tierNumber]));
 
       // Group race results by tier
-      const tierGroups = new Map<number, Result[]>();
+      const tierGroups = new Map<number, any[]>();
       for (const res of raceResults) {
         const tier = assignmentMap.get(res.racerId);
         if (tier !== undefined) {
           if (!tierGroups.has(tier)) tierGroups.set(tier, []);
-          tierGroups.get(tier).push(res);
+          tierGroups.get(tier)!.push(res);
         }
       }
 
       // For each tier, assign points 4, 3, 2, 1 based on relative position
-      for (const [tier, group] of tierGroups.entries()) {
+      for (const [tier, group] of Array.from(tierGroups.entries())) {
         // Group is already sorted by overall position because raceResults was sorted
         for (let i = 0; i < group.length; i++) {
           const res = group[i];
