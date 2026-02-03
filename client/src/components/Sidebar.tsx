@@ -31,13 +31,13 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       <Link 
         href="/" 
         onClick={() => onNavigate?.()}
-        className="block px-2 py-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+        className="block px-2 py-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
         data-testid="link-logo"
       >
         <img 
           src="/logo.png" 
           alt="Man Can Kart" 
-          className="h-24 w-full object-contain"
+          className="h-40 w-full object-contain"
         />
       </Link>
 

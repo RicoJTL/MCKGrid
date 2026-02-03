@@ -28,7 +28,7 @@ export default function Landing() {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-2">
             <img 
               src="/logo.png" 
               alt="Man Can Kart" 
@@ -36,7 +36,7 @@ export default function Landing() {
             />
           </div>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6 font-light">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4 font-light">
             Professional karting league management. Track race results, manage championships, and follow your favorite drivers.
           </p>
 
