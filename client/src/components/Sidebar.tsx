@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { 
   Trophy, 
-  Flag, 
   LayoutDashboard, 
   UserCircle,
   LogOut,
@@ -32,18 +31,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       <Link 
         href="/" 
         onClick={() => onNavigate?.()}
-        className="block p-6 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+        className="block p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
         data-testid="link-logo"
       >
-        <div className="flex items-center gap-3">
-          <Flag className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-xl font-bold font-display italic tracking-wider text-white">
-              MCK <span className="text-primary">GRID</span>
-            </h1>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">Racing</p>
-          </div>
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="Man Can Kart" 
+          className="h-12 w-auto object-contain"
+        />
       </Link>
 
       <nav className="flex-1 p-4 space-y-2">

@@ -1,28 +1,22 @@
 {
-  "name": "MCK Grid - Go-Karting League",
-  "short_name": "MCK Grid",
-  "description": "MAN Can Kart Championship league management and race tracking",
+  "name": "Man Can Kart - Go-Karting League",
+  "short_name": "Man Can Kart",
+  "description": "Man Can Kart Championship league management and race tracking",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
-  "theme_color": "#dc2626",
+  "theme_color": "#00cc66",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512.svg",
+      "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/favicon.png",
-      "sizes": "48x48",
+      "src": "/logo.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     }
