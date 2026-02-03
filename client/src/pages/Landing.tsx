@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Flag, Trophy, Timer, ChevronRight } from "lucide-react";
+import { Trophy, Timer, Flag, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
@@ -28,15 +28,13 @@ export default function Landing() {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          <div className="flex justify-center mb-6">
-            <div className="p-4 rounded-full bg-primary/10 ring-1 ring-primary/50">
-              <Flag className="w-12 h-12 text-primary" />
-            </div>
+          <div className="flex justify-center mb-8">
+            <img 
+              src="/logo.png" 
+              alt="Man Can Kart" 
+              className="h-40 md:h-56 w-auto object-contain"
+            />
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-display font-bold italic uppercase tracking-tighter mb-6">
-            MCK <span className="text-gradient">GRID</span>
-          </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 font-light">
             Professional karting league management. Track race results, manage championships, and follow your favorite drivers.
