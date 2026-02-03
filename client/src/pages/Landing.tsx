@@ -32,7 +32,7 @@ export default function Landing() {
             <img 
               src="/logo.png" 
               alt="Man Can Kart" 
-              className="h-40 md:h-56 w-auto object-contain"
+              className="h-64 md:h-80 w-auto object-contain"
             />
           </div>
           
