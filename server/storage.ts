@@ -342,6 +342,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(raceCheckins).where(eq(raceCheckins.raceId, id));
     // Delete race-competition links
     await db.delete(raceCompetitions).where(eq(raceCompetitions.raceId, id));
+    // Delete tier race results for this race
+    await db.delete(tierRaceResults).where(eq(tierRaceResults.raceId, id));
+    // Delete personal bests that reference this race (will be recalculated after)
+    await db.delete(personalBests).where(eq(personalBests.raceId, id));
     // Delete the race
     await db.delete(races).where(eq(races.id, id));
     

@@ -204,6 +204,11 @@ export function useDeleteLeague() {
       queryClient.invalidateQueries({ queryKey: [api.leagues.list.path] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       queryClient.invalidateQueries({ queryKey: ['races'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions/main'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['standings'], exact: false });
       toast({ title: "League Deleted" });
     },
   });
@@ -352,6 +357,9 @@ export function useDeleteRace() {
       queryClient.invalidateQueries({ queryKey: [api.races.get.path, result.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/races/upcoming'], refetchType: 'all' });
       queryClient.invalidateQueries({ queryKey: ['results'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/competitions'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['standings'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles'], exact: false });
       toast({ title: "Race Deleted" });
     },
   });
