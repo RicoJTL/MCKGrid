@@ -23,6 +23,7 @@ const RaceDetails = lazy(() => import("@/pages/RaceDetails"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const PublicProfilePage = lazy(() => import("@/pages/PublicProfilePage"));
 const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
 
 function PageLoader() {
   return (
@@ -107,6 +108,7 @@ function Router() {
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/profiles/:id" component={() => <ProtectedRoute component={PublicProfilePage} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={AdminPanel} />} />
+      <Route path="/login" component={() => <Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
       
       <Route component={NotFound} />
     </Switch>
