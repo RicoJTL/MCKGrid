@@ -149,14 +149,15 @@ export default function ProfilePage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
-    
+
     const result = await uploadFile(file);
     if (result) {
       form.setValue("profileImage", result.objectPath);
+      updateProfile.mutate({ profileImage: result.objectPath });
     }
   };
 
