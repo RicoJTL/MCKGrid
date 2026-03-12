@@ -5,11 +5,13 @@ import {
   driverIcons, profileDriverIcons, driverIconNotifications,
   tieredLeagues, tierNames, tierAssignments, tierMovements, tierMovementNotifications,
   tierRaceResults,
+  notifications, pushSubscriptions,
   type League, type Competition, type Race, type Result, type Profile, type Team, type RaceCompetition,
   type Badge, type ProfileBadge, type SeasonGoal, type RaceCheckin, type PersonalBest, type BadgeNotification,
   type DriverIcon, type ProfileDriverIcon, type DriverIconNotification,
   type TieredLeague, type TierName, type TierAssignment, type TierMovement, type TierMovementNotification,
   type TierRaceResult, type InsertTierRaceResult,
+  type Notification,
   type InsertLeague, type InsertCompetition, type InsertRace, type InsertResult, type InsertProfile, type InsertTeam,
   type InsertBadge, type InsertSeasonGoal, type InsertRaceCheckin, type InsertPersonalBest,
   type InsertDriverIcon, type InsertProfileDriverIcon,
@@ -191,6 +193,25 @@ export interface IStorage {
   
   // Quick Results
   getRecentResults(profileId: number, limit?: number): Promise<any[]>;
+
+  // Notifications
+  createNotification(profileId: number, type: string, title: string, message: string, data?: any): Promise<void>;
+  createNotificationsForAll(profileIds: number[], type: string, title: string, message: string, data?: any): Promise<void>;
+  getNotifications(profileId: number): Promise<Notification[]>;
+  getUnreadNotificationCount(profileId: number): Promise<number>;
+  markNotificationRead(notificationId: number): Promise<void>;
+  markAllNotificationsRead(profileId: number): Promise<void>;
+
+  // Push Subscriptions
+  savePushSubscription(profileId: number, subscription: object): Promise<void>;
+  removePushSubscription(profileId: number): Promise<void>;
+  getPushSubscriptions(profileIds: number[]): Promise<{ profileId: number; subscription: object }[]>;
+
+  // Utility
+  getAllRacerProfileIds(): Promise<number[]>;
+
+  // Badge by id
+  getBadgeById(id: number): Promise<Badge | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2249,6 +2270,74 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
+  }
+
+  // === Notifications ===
+  async createNotification(profileId: number, type: string, title: string, message: string, data?: any): Promise<void> {
+    await db.insert(notifications).values({ profileId, type, title, message, data: data ?? null });
+  }
+
+  async createNotificationsForAll(profileIds: number[], type: string, title: string, message: string, data?: any): Promise<void> {
+    if (!profileIds.length) return;
+    await db.insert(notifications).values(
+      profileIds.map(profileId => ({ profileId, type, title, message, data: data ?? null }))
+    );
+  }
+
+  async getNotifications(profileId: number): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.profileId, profileId))
+      .orderBy(notifications.read, desc(notifications.createdAt))
+      .limit(50);
+  }
+
+  async getUnreadNotificationCount(profileId: number): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.profileId, profileId), eq(notifications.read, false)));
+    return row?.count ?? 0;
+  }
+
+  async markNotificationRead(notificationId: number): Promise<void> {
+    await db.update(notifications).set({ read: true }).where(eq(notifications.id, notificationId));
+  }
+
+  async markAllNotificationsRead(profileId: number): Promise<void> {
+    await db.update(notifications).set({ read: true }).where(eq(notifications.profileId, profileId));
+  }
+
+  // === Push Subscriptions ===
+  async savePushSubscription(profileId: number, subscription: object): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.profileId, profileId));
+    await db.insert(pushSubscriptions).values({ profileId, subscription });
+  }
+
+  async removePushSubscription(profileId: number): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.profileId, profileId));
+  }
+
+  async getPushSubscriptions(profileIds: number[]): Promise<{ profileId: number; subscription: object }[]> {
+    if (!profileIds.length) return [];
+    const rows = await db
+      .select({ profileId: pushSubscriptions.profileId, subscription: pushSubscriptions.subscription })
+      .from(pushSubscriptions)
+      .where(inArray(pushSubscriptions.profileId, profileIds));
+    return rows as { profileId: number; subscription: object }[];
+  }
+
+  // === Utility ===
+  async getAllRacerProfileIds(): Promise<number[]> {
+    const rows = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.role, 'racer'));
+    return rows.map(r => r.id);
+  }
+
+  // === Badge by id ===
+  async getBadgeById(id: number): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.id, id));
+    return badge;
   }
 }
 

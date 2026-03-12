@@ -5,6 +5,8 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { notify, notifyOne, notifyAllRacers } from "./notification-service";
+import cron from "node-cron";
 
 // Middleware to check if user is admin or super_admin
 async function requireAdmin(req: any, res: Response, next: NextFunction) {
@@ -456,6 +458,7 @@ export async function registerRoutes(
     const input = api.races.create.input.parse(body);
     const { competitionIds, ...raceData } = input;
     const race = await storage.createRace(raceData, competitionIds);
+    await notifyAllRacers('new_race', '🏁 New Race Added', `${race.name} has been scheduled. Check in now!`, { raceId: race.id });
     res.status(201).json(race);
   });
   
@@ -495,6 +498,12 @@ export async function registerRoutes(
     if (date !== undefined) data.date = new Date(date);
     if (status !== undefined) data.status = status;
     const updated = await storage.updateRace(Number(req.params.id), data);
+    // Notify if cancelled or rescheduled
+    if (status === 'cancelled') {
+      await notifyAllRacers('race_cancelled', '❌ Race Cancelled', `${updated.name} has been cancelled.`, { raceId: updated.id });
+    } else if (date !== undefined) {
+      await notifyAllRacers('race_rescheduled', '📅 Race Rescheduled', `${updated.name} has been rescheduled. Check the new date.`, { raceId: updated.id });
+    }
     res.json(updated);
   });
 
@@ -515,6 +524,29 @@ export async function registerRoutes(
     
     // Atomically replace all results for this race in a transaction
     const results = await storage.replaceRaceResults(raceId, input);
+
+    // Notify all racers that results are in
+    const race = await storage.getRace(raceId);
+    const raceCompetitions = await storage.getRaceCompetitions(raceId);
+    await notifyAllRacers('race_results', '🏆 Race Results Posted', `Results for ${race?.name} are now available!`, { raceId });
+
+    // For each competition this race belongs to, compare standings
+    for (const comp of raceCompetitions) {
+      const standings = await storage.getCompetitionStandings(comp.id);
+      if (standings.length > 0) {
+        const leader = standings[0];
+        // Notify everyone if leader changed (simplified - notify all racers)
+        await notifyAllRacers('leader_changed', '👑 Championship Leader Changed', `${leader.driverName} is now leading the ${comp.name}!`, { competitionId: comp.id, leaderId: leader.racerId });
+
+        // Notify each driver their current position
+        for (let i = 0; i < standings.length; i++) {
+          const driver = standings[i];
+          const position = i + 1;
+          await notifyOne(driver.racerId, 'race_results', '📊 Your Position Updated', `You are P${position} in ${comp.name} with ${driver.points} points.`, { competitionId: comp.id, position });
+        }
+      }
+    }
+
     res.status(201).json(results);
   });
 
@@ -644,6 +676,8 @@ export async function registerRoutes(
       }
       const movementType = newTierNumber < currentAssignment.tierNumber ? 'admin_promotion' : 'admin_relegation';
       const movement = await storage.moveDriverToTier(tieredLeagueId, profileId, newTierNumber, movementType, 0);
+      const isPromotion = movementType === 'admin_promotion';
+      await notifyOne(profileId, 'tier_movement', isPromotion ? '⬆️ Promoted!' : '⬇️ Relegated', isPromotion ? 'You have been promoted to a higher tier!' : 'You have been relegated to a lower tier.', { tieredLeagueId, newTierNumber });
       res.json(movement);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -791,6 +825,10 @@ export async function registerRoutes(
     const profileId = Number(req.params.id);
     const badgeId = Number(req.params.badgeId);
     const awarded = await storage.awardBadge(profileId, badgeId);
+    const badge = await storage.getBadgeById(badgeId);
+    if (badge) {
+      await notifyOne(profileId, 'badge_unlocked', '🏅 Badge Unlocked!', `You earned the "${badge.name}" badge!`, { badgeId });
+    }
     res.json(awarded);
   });
 
@@ -901,6 +939,10 @@ export async function registerRoutes(
     const profileId = Number(req.params.id);
     const iconId = Number(req.params.iconId);
     const awarded = await storage.awardDriverIcon(profileId, iconId, adminProfile.id);
+    const icon = await storage.getDriverIconById(iconId);
+    if (icon) {
+      await notifyOne(profileId, 'icon_awarded', '✨ Icon Awarded!', `You received the "${icon.name}" icon!`, { iconId });
+    }
     res.json(awarded);
   });
 
@@ -1071,6 +1113,74 @@ export async function registerRoutes(
     res.json(checkin);
   });
 
+  // === Notifications ===
+
+  // GET /api/notifications — get all notifications for logged-in user
+  app.get("/api/notifications", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.json([]);
+    const notif = await storage.getNotifications(profile.id);
+    res.json(notif);
+  });
+
+  // GET /api/notifications/unread-count
+  app.get("/api/notifications/unread-count", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.json({ count: 0 });
+    const count = await storage.getUnreadNotificationCount(profile.id);
+    res.json({ count });
+  });
+
+  // POST /api/notifications/:id/read
+  app.post("/api/notifications/:id/read", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    await storage.markNotificationRead(Number(req.params.id));
+    res.sendStatus(204);
+  });
+
+  // POST /api/notifications/read-all
+  app.post("/api/notifications/read-all", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    await storage.markAllNotificationsRead(profile.id);
+    res.sendStatus(204);
+  });
+
+  // === Push Subscriptions ===
+
+  // GET /api/push/vapid-public-key
+  app.get("/api/push/vapid-public-key", (req, res) => {
+    res.json({ key: process.env.VAPID_PUBLIC_KEY || '' });
+  });
+
+  // POST /api/push/subscribe
+  app.post("/api/push/subscribe", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    const { subscription } = req.body;
+    if (!subscription) return res.status(400).json({ error: "subscription required" });
+    await storage.savePushSubscription(profile.id, subscription);
+    res.sendStatus(201);
+  });
+
+  // POST /api/push/unsubscribe
+  app.post("/api/push/unsubscribe", async (req: any, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user.claims.sub;
+    const profile = await storage.getProfile(userId);
+    if (!profile) return res.sendStatus(404);
+    await storage.removePushSubscription(profile.id);
+    res.sendStatus(204);
+  });
+
   // === Calendar Export (iCal) ===
   app.get("/api/calendar/races.ics", async (req: any, res) => {
     const upcomingRaces = await storage.getAllUpcomingRaces();
@@ -1105,6 +1215,34 @@ END:VEVENT
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="mck-grid-races.ics"');
     res.send(ical);
+  });
+
+  // === Scheduled Jobs ===
+
+  // Run every day at 9am UTC — check for races tomorrow and send reminders
+  cron.schedule('0 9 * * *', async () => {
+    try {
+      const allRaces = await storage.getAllUpcomingRaces();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const racesTomorrow = allRaces.filter((race: any) => {
+        if (!race.date) return false;
+        return new Date(race.date).toISOString().split('T')[0] === tomorrowStr;
+      });
+
+      for (const race of racesTomorrow) {
+        await notifyAllRacers(
+          'race_day_reminder',
+          '🏎️ Race Tomorrow!',
+          `${race.name} is tomorrow. Get ready!`,
+          { raceId: race.id }
+        );
+      }
+    } catch (err) {
+      console.error('Race day reminder cron error:', err);
+    }
   });
 
   return httpServer;

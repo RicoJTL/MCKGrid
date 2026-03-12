@@ -249,6 +249,26 @@ export const driverIconNotifications = pgTable("driver_icon_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Generic notifications (unified notification system)
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"),
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Push subscriptions (web push)
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id, { onDelete: "cascade" }).notNull(),
+  subscription: jsonb("subscription").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   user: one(users, { fields: [profiles.userId], references: [users.id] }),
@@ -365,6 +385,14 @@ export const driverIconNotificationsRelations = relations(driverIconNotification
   icon: one(driverIcons, { fields: [driverIconNotifications.iconId], references: [driverIcons.id] }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  profile: one(profiles, { fields: [notifications.profileId], references: [profiles.id] }),
+}));
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  profile: one(profiles, { fields: [pushSubscriptions.profileId], references: [profiles.id] }),
+}));
+
 // Schemas
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true });
@@ -388,6 +416,8 @@ export const insertBadgeNotificationSchema = createInsertSchema(badgeNotificatio
 export const insertDriverIconSchema = createInsertSchema(driverIcons).omit({ id: true, isPredefined: true, createdAt: true });
 export const insertProfileDriverIconSchema = createInsertSchema(profileDriverIcons).omit({ id: true, awardedAt: true });
 export const insertDriverIconNotificationSchema = createInsertSchema(driverIconNotifications).omit({ id: true, isRead: true, createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, read: true, createdAt: true });
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -434,3 +464,7 @@ export type DriverIconNotification = typeof driverIconNotifications.$inferSelect
 export type InsertDriverIcon = z.infer<typeof insertDriverIconSchema>;
 export type InsertProfileDriverIcon = z.infer<typeof insertProfileDriverIconSchema>;
 export type InsertDriverIconNotification = z.infer<typeof insertDriverIconNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
