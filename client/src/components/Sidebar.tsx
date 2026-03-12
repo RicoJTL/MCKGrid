@@ -5,15 +5,18 @@ import {
   UserCircle,
   LogOut,
   Settings,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Trophy, label: "Competitions", href: "/leagues" },
   { icon: UserCircle, label: "Profile", href: "/profile" },
+  { icon: Bell, label: "Notifications", href: "/notifications" },
 ];
 
 interface SidebarProps {
@@ -25,6 +28,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const { logout } = useAuth();
   const { data: profile } = useProfile();
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
+  const { unreadCount } = useNotifications();
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">
@@ -61,6 +65,11 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             >
               <Icon className={cn("w-5 h-5", isActive ? "" : "group-hover:scale-110 transition-transform")} />
               <span className="font-medium tracking-wide">{item.label}</span>
+              {item.label === 'Notifications' && unreadCount > 0 && (
+                <span className="ml-auto w-5 h-5 bg-primary rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}

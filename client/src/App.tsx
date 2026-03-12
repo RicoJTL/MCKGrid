@@ -25,6 +25,7 @@ const PublicProfilePage = lazy(() => import("@/pages/PublicProfilePage"));
 const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 
 function PageLoader() {
   return (
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/profiles/:id" component={() => <ProtectedRoute component={PublicProfilePage} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={AdminPanel} />} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={NotificationsPage} />} />
       <Route path="/login" component={() => <Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
       <Route path="/register" component={() => <Suspense fallback={<PageLoader />}><RegisterPage /></Suspense>} />
       

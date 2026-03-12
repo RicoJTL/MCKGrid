@@ -63,3 +63,33 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+self.addEventListener('push', function(event) {
+  if (!event.data) return;
+  
+  const data = event.data.json();
+  const options = {
+    body: data.message,
+    icon: '/logo.png',
+    badge: '/logo.png',
+    vibrate: [100, 50, 100],
+    data: data.data || {},
+    actions: [
+      { action: 'open', title: 'View' },
+      { action: 'close', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  if (event.action === 'close') return;
+  
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
