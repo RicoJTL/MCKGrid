@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useState } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -29,6 +31,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const { data: profile } = useProfile();
   const isAdmin = profile?.adminLevel === 'admin' || profile?.adminLevel === 'super_admin';
   const { unreadCount } = useNotifications();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-full w-full bg-sidebar border-r border-white/5">
@@ -93,7 +96,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </Link>
         )}
         <button 
-          onClick={() => logout()}
+          onClick={() => setLogoutOpen(true)}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           data-testid="button-logout"
         >
@@ -101,6 +104,26 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <span className="font-medium">Logout</span>
         </button>
       </div>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent className="bg-card border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => logout()}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Log out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
