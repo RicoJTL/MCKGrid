@@ -22,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-white/5 z-20">
           <Link href="/">
             <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-              <img src="/logo.png" alt="MCK Grid" className="h-8 w-auto" />
+              <img src="/logo.png" alt="MCK Grid" className="h-24 w-auto" />
             </div>
           </Link>
           <div className="flex items-center gap-1">

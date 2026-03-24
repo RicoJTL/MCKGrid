@@ -252,9 +252,9 @@ export default function RaceDetails() {
                 <TableRow className="hover:bg-transparent border-white/5">
                   <TableHead className="w-8 px-2 text-white font-bold text-xs">#</TableHead>
                   <TableHead className="px-2 text-white font-bold text-xs">Driver</TableHead>
-                  <TableHead className="px-2 text-white font-bold text-xs">Qual</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Quali</TableHead>
                   <TableHead className="px-2 text-white font-bold text-xs">Time</TableHead>
-                  <TableHead className="px-2 text-white font-bold text-xs">Lap</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Best Lap</TableHead>
                   <TableHead className="px-2 text-right text-white font-bold text-xs">Pts</TableHead>
                 </TableRow>
               </TableHeader>
