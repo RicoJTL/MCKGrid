@@ -1,5 +1,5 @@
 import { Sidebar } from "./Sidebar";
-import { Menu, Flag, Bell } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "wouter";
@@ -21,11 +21,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-white/5 z-20">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-              <Flag className="w-5 h-5 text-primary" />
-              <span className="font-display font-bold italic text-lg text-white">
-                MCK <span className="text-primary">GRID</span>
-              </span>
+            <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+              <img src="/logo.png" alt="MCK Grid" className="h-8 w-auto" />
             </div>
           </Link>
           <div className="flex items-center gap-1">

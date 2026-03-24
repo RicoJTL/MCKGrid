@@ -250,28 +250,28 @@ export default function RaceDetails() {
             <Table>
               <TableHeader className="bg-white/5">
                 <TableRow className="hover:bg-transparent border-white/5">
-                  <TableHead className="w-[80px] text-white font-bold">Pos</TableHead>
-                  <TableHead className="text-white font-bold">Driver</TableHead>
-                  <TableHead className="text-white font-bold">Qualified</TableHead>
-                  <TableHead className="text-white font-bold">Race Time</TableHead>
-                  <TableHead className="text-white font-bold">Best Lap</TableHead>
-                  <TableHead className="text-right text-white font-bold">Points</TableHead>
+                  <TableHead className="w-8 px-2 text-white font-bold text-xs">#</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Driver</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Qual</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Time</TableHead>
+                  <TableHead className="px-2 text-white font-bold text-xs">Lap</TableHead>
+                  <TableHead className="px-2 text-right text-white font-bold text-xs">Pts</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {results?.map((result) => (
                   <TableRow key={result.id} className={`border-white/5 hover:bg-white/5 ${result.dnf ? 'bg-destructive/5' : ''}`}>
-                    <TableCell className="font-display font-bold text-lg italic">
+                    <TableCell className="px-2 py-2 font-display font-bold italic text-sm">
                       {result.dnf ? (
-                        <span className="text-destructive flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4" /> DNF
+                        <span className="text-destructive flex items-center gap-0.5">
+                          <AlertTriangle className="w-3 h-3" />
                         </span>
-                      ) : result.position === 1 ? <span className="text-yellow-500">1st</span> :
-                       result.position === 2 ? <span className="text-gray-400">2nd</span> :
-                       result.position === 3 ? <span className="text-amber-700">3rd</span> :
-                       `${result.position}th`}
+                      ) : result.position === 1 ? <span className="text-yellow-500">1</span> :
+                       result.position === 2 ? <span className="text-gray-400">2</span> :
+                       result.position === 3 ? <span className="text-amber-700">3</span> :
+                       result.position}
                     </TableCell>
-                    <TableCell className="font-bold">
+                    <TableCell className="px-2 py-2 font-bold text-sm">
                       <Link href={`/profiles/${result.racerId}`}>
                         <span className="hover:text-primary cursor-pointer transition-colors" data-testid={`link-driver-${result.racerId}`}>
                           <DriverNameWithIcons 
@@ -282,12 +282,12 @@ export default function RaceDetails() {
                         </span>
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="px-2 py-2 text-muted-foreground text-sm">
                       {result.qualifyingPosition ? `P${result.qualifyingPosition}` : "-"}
                     </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{result.dnf ? '--' : (result.raceTime || "--:--")}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{result.dnf ? '--' : (result.bestLapTime || "--:--")}</TableCell>
-                    <TableCell className="text-right font-bold text-lg text-primary">{result.points}</TableCell>
+                    <TableCell className="px-2 py-2 font-mono text-muted-foreground text-xs">{result.dnf ? 'DNF' : (result.raceTime || "--")}</TableCell>
+                    <TableCell className="px-2 py-2 font-mono text-muted-foreground text-xs">{result.dnf ? '--' : (result.bestLapTime || "--")}</TableCell>
+                    <TableCell className="px-2 py-2 text-right font-bold text-sm text-primary">{result.points}</TableCell>
                   </TableRow>
                 ))}
                 {(!results || results.length === 0) && (

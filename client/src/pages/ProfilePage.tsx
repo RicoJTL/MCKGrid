@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords, Sparkles, Layers, ChevronUp, ChevronDown, TrendingUp } from "lucide-react";
+import { UserCircle, Trophy, Calendar, MapPin, Upload, Shield, Car, Eye, Crown, ShieldCheck, BarChart3, Timer, Award, Target, Swords, Sparkles, Layers, ChevronUp, ChevronDown, TrendingUp, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useUpload } from "@/hooks/use-upload";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { DriverStatsDashboard, RecentResults, BadgesSection, SeasonGoals, HeadToHead, CalendarSync, DriverIconsSection } from "@/components/driver-stats";
 import { useTierMovementHistory, useDeleteTierHistory, type TierMovementHistory } from "@/hooks/use-tiered-leagues";
@@ -44,6 +45,7 @@ export default function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const { uploadFile, isUploading: isUploadingImage } = useUpload();
   const [location] = useLocation();
   
@@ -175,7 +177,10 @@ export default function ProfilePage() {
 
       <div className="p-8 rounded-2xl bg-secondary/50 border border-white/5 flex items-center gap-6 flex-wrap">
         <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+          <div
+            className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden cursor-pointer"
+            onClick={() => displayImage && setImageModalOpen(true)}
+          >
             {displayImage ? (
               <img src={displayImage} alt="Profile" className="w-full h-full object-cover" />
             ) : (
@@ -193,6 +198,14 @@ export default function ProfilePage() {
             />
           </label>
         </div>
+
+        {displayImage && (
+          <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+            <DialogContent className="bg-transparent border-none shadow-none flex items-center justify-center p-0 max-w-sm">
+              <img src={displayImage} alt="Profile" className="w-full h-auto rounded-2xl object-contain max-h-[80vh]" />
+            </DialogContent>
+          </Dialog>
+        )}
         <div>
           <h2 className="text-2xl font-bold font-display italic text-white inline-flex items-center gap-2">
             {profile?.driverName || user?.firstName || "Set up your profile"}

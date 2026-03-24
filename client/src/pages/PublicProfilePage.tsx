@@ -14,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Profile } from "@shared/schema";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface PublicProfile {
   id: number;
@@ -68,6 +70,7 @@ export default function PublicProfilePage() {
   const competitionGroups = groupedHistory ? Object.values(groupedHistory) : [];
 
   const isDriver = publicProfile?.role === 'racer' || (publicProfile?.driverName && publicProfile?.fullName);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   if (isLoadingProfile) {
     return (
@@ -129,12 +132,22 @@ export default function PublicProfilePage() {
       </div>
 
       <div className="flex items-center gap-6 p-6 rounded-2xl bg-gradient-to-br from-primary/20 via-secondary/30 to-accent/10 border border-white/10">
-        <Avatar className="w-20 h-20 ring-2 ring-primary/20">
+        <Avatar
+          className="w-20 h-20 ring-2 ring-primary/20 cursor-pointer"
+          onClick={() => displayImage && setImageModalOpen(true)}
+        >
           <AvatarImage src={displayImage || ""} alt={publicProfile.driverName || "Profile"} />
           <AvatarFallback className="text-2xl font-bold bg-primary/20 text-primary">
             {publicProfile.driverName?.charAt(0) || publicProfile.fullName?.charAt(0) || "?"}
           </AvatarFallback>
         </Avatar>
+        {displayImage && (
+          <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+            <DialogContent className="bg-transparent border-none shadow-none flex items-center justify-center p-0 max-w-sm">
+              <img src={displayImage} alt="Profile" className="w-full h-auto rounded-2xl object-contain max-h-[80vh]" />
+            </DialogContent>
+          </Dialog>
+        )}
         <div>
           <h2 className="text-2xl font-bold font-display italic text-white inline-flex items-center gap-2" data-testid="text-profile-name">
             {publicProfile.driverName || publicProfile.fullName || "Unknown Driver"}
