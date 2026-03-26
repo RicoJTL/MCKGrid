@@ -3,7 +3,7 @@ import { useResults, useSubmitResults } from "@/hooks/use-results";
 import { useRoute, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isValid } from "date-fns";
-import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical, Check, Users, AlertTriangle } from "lucide-react";
+import { Flag, Trophy, ArrowLeft, Plus, Trash2, Save, Pencil, MoreVertical, Check, Users, AlertTriangle, Zap, TrendingUp } from "lucide-react";
 import { RaceCheckinButton, RaceCheckinList, RaceCountdown } from "@/components/race-checkin";
 import { useProfile } from "@/hooks/use-profile";
 import { useState } from "react";
@@ -287,7 +287,13 @@ export default function RaceDetails() {
                     </TableCell>
                     <TableCell className="px-2 py-2 font-mono text-muted-foreground text-xs">{result.dnf ? 'DNF' : (result.raceTime || "--")}</TableCell>
                     <TableCell className="px-2 py-2 font-mono text-muted-foreground text-xs">{result.dnf ? '--' : (result.bestLapTime || "--")}</TableCell>
-                    <TableCell className="px-2 py-2 text-right font-bold text-sm text-primary">{result.points}</TableCell>
+                    <TableCell className="px-2 py-2 text-right font-bold text-sm text-primary">
+                      <span className="flex items-center justify-end gap-1">
+                        {result.fastestLap && <Zap className="w-3 h-3 text-yellow-400 shrink-0" title="Fastest Lap +1pt" />}
+                        {result.gridClimber && <TrendingUp className="w-3 h-3 text-green-400 shrink-0" title="Grid Climber +3pts" />}
+                        {result.points}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {(!results || results.length === 0) && (
@@ -451,6 +457,47 @@ export default function RaceDetails() {
   );
 }
 
+function parseLapTimeMs(lapTime: string): number | null {
+  const match = lapTime.match(/^(?:(\d+):)?(\d+)[.,](\d+)$/);
+  if (!match) return null;
+  const minutes = match[1] ? parseInt(match[1]) : 0;
+  const seconds = parseInt(match[2]);
+  const frac = match[3].padEnd(3, '0').slice(0, 3);
+  return minutes * 60000 + seconds * 1000 + parseInt(frac);
+}
+
+function detectBonuses(entries: ResultEntry[]): { fastestLapRacerId: number | null; gridClimberRacerId: number | null } {
+  const eligible = entries.filter(e => e.racerId && !e.dnf);
+
+  // Fastest Lap: driver with the lowest best lap time
+  let fastestLapRacerId: number | null = null;
+  let fastestMs = Infinity;
+  for (const e of eligible) {
+    if (!e.bestLapTime) continue;
+    const ms = parseLapTimeMs(e.bestLapTime);
+    if (ms !== null && ms < fastestMs) {
+      fastestMs = ms;
+      fastestLapRacerId = parseInt(e.racerId);
+    }
+  }
+
+  // Grid Climber: most places gained (quali - finish), tie-break: better finish
+  let gridClimberRacerId: number | null = null;
+  let maxClimb = 0;
+  let climberFinishPos = Infinity;
+  for (const e of eligible) {
+    if (!e.qualifyingPosition) continue;
+    const climb = parseInt(e.qualifyingPosition) - parseInt(e.position);
+    if (climb > 0 && (climb > maxClimb || (climb === maxClimb && parseInt(e.position) < climberFinishPos))) {
+      maxClimb = climb;
+      climberFinishPos = parseInt(e.position);
+      gridClimberRacerId = parseInt(e.racerId);
+    }
+  }
+
+  return { fastestLapRacerId, gridClimberRacerId };
+}
+
 interface ResultEntry {
   racerId: string;
   position: string;
@@ -480,7 +527,10 @@ function ResultsEditor({
 }) {
   const submitResults = useSubmitResults();
   const { toast } = useToast();
-  
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
+  const [selectedFastestLap, setSelectedFastestLap] = useState<string>("none");
+  const [selectedGridClimber, setSelectedGridClimber] = useState<string>("none");
+
   const [entries, setEntries] = useState<ResultEntry[]>(() => {
     if (existingResults.length > 0) {
       return existingResults.map(r => ({
@@ -489,7 +539,7 @@ function ResultsEditor({
         qualifyingPosition: r.qualifyingPosition ? String(r.qualifyingPosition) : "",
         raceTime: r.raceTime || "",
         bestLapTime: r.bestLapTime || "",
-        points: String(r.points),
+        points: String(r.points - (r.fastestLap ? 1 : 0) - (r.gridClimber ? 3 : 0)),
         dnf: r.dnf || false
       }));
     }
@@ -522,18 +572,34 @@ function ResultsEditor({
   };
 
   const handleSave = () => {
+    const { fastestLapRacerId, gridClimberRacerId } = detectBonuses(entries);
+    setSelectedFastestLap(fastestLapRacerId !== null ? String(fastestLapRacerId) : "none");
+    setSelectedGridClimber(gridClimberRacerId !== null ? String(gridClimberRacerId) : "none");
+    setBonusDialogOpen(true);
+  };
+
+  const confirmAndSave = () => {
+    const flId = selectedFastestLap !== "none" ? parseInt(selectedFastestLap) : null;
+    const gcId = selectedGridClimber !== "none" ? parseInt(selectedGridClimber) : null;
     const resultsData = entries
       .filter(e => e.racerId)
-      .map(e => ({
-        racerId: parseInt(e.racerId),
-        position: parseInt(e.position),
-        qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
-        raceTime: e.raceTime || null,
-        bestLapTime: e.bestLapTime || null,
-        points: parseInt(e.points),
-        dnf: e.dnf
-      }));
-
+      .map(e => {
+        const racerId = parseInt(e.racerId);
+        const isFastest = flId === racerId;
+        const isGridClimber = gcId === racerId;
+        return {
+          racerId,
+          position: parseInt(e.position),
+          qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
+          raceTime: e.raceTime || null,
+          bestLapTime: e.bestLapTime || null,
+          points: parseInt(e.points) + (isFastest ? 1 : 0) + (isGridClimber ? 3 : 0),
+          dnf: e.dnf,
+          fastestLap: isFastest,
+          gridClimber: isGridClimber,
+        };
+      });
+    setBonusDialogOpen(false);
     submitResults.mutate({ raceId, competitionId, results: resultsData }, {
       onSuccess: () => {
         toast({ title: "Results saved!" });
@@ -553,6 +619,8 @@ function ResultsEditor({
     const driver = allProfiles.find(p => p.id === id);
     return driver?.driverName || driver?.fullName || `Driver ${id}`;
   };
+
+  const nonDnfDrivers = entries.filter(e => e.racerId && !e.dnf);
 
   return (
     <div className="p-6 bg-secondary/50 rounded-xl border border-white/10 space-y-4">
@@ -655,6 +723,68 @@ function ResultsEditor({
           </Button>
         </div>
       </div>
+
+      {/* Bonus Points Confirmation Dialog */}
+      <Dialog open={bonusDialogOpen} onOpenChange={setBonusDialogOpen}>
+        <DialogContent className="bg-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>Confirm Bonus Points</DialogTitle>
+            <DialogDescription>
+              Review the auto-detected bonus winners. Override if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <Zap className="w-4 h-4 text-yellow-400" /> Fastest Lap
+                <span className="text-muted-foreground font-normal">+1 pt</span>
+              </div>
+              <Select value={selectedFastestLap} onValueChange={setSelectedFastestLap}>
+                <SelectTrigger className="bg-secondary/30">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {nonDnfDrivers.map(e => (
+                    <SelectItem key={e.racerId} value={e.racerId}>
+                      {getDriverName(parseInt(e.racerId))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <TrendingUp className="w-4 h-4 text-green-400" /> Grid Climber
+                <span className="text-muted-foreground font-normal">+3 pts</span>
+              </div>
+              <Select value={selectedGridClimber} onValueChange={setSelectedGridClimber}>
+                <SelectTrigger className="bg-secondary/30">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {nonDnfDrivers.map(e => (
+                    <SelectItem key={e.racerId} value={e.racerId}>
+                      {getDriverName(parseInt(e.racerId))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="ghost" onClick={() => setBonusDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={confirmAndSave}
+              className="bg-primary font-bold"
+              disabled={submitResults.isPending}
+            >
+              <Save className="w-4 h-4 mr-2" /> Confirm &amp; Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
