@@ -466,7 +466,7 @@ function parseLapTimeMs(lapTime: string): number | null {
   return minutes * 60000 + seconds * 1000 + parseInt(frac);
 }
 
-function detectBonuses(entries: ResultEntry[]): { fastestLapRacerId: number | null; gridClimberRacerId: number | null } {
+function detectBonuses(entries: ResultEntry[]): { fastestLapRacerId: number | null; gridClimberRacerIds: number[] } {
   const eligible = entries.filter(e => e.racerId && !e.dnf);
 
   // Fastest Lap: driver with the lowest best lap time
@@ -481,21 +481,18 @@ function detectBonuses(entries: ResultEntry[]): { fastestLapRacerId: number | nu
     }
   }
 
-  // Grid Climber: most places gained (quali - finish), tie-break: better finish
-  let gridClimberRacerId: number | null = null;
-  let maxClimb = 0;
-  let climberFinishPos = Infinity;
-  for (const e of eligible) {
-    if (!e.qualifyingPosition) continue;
-    const climb = parseInt(e.qualifyingPosition) - parseInt(e.position);
-    if (climb > 0 && (climb > maxClimb || (climb === maxClimb && parseInt(e.position) < climberFinishPos))) {
-      maxClimb = climb;
-      climberFinishPos = parseInt(e.position);
-      gridClimberRacerId = parseInt(e.racerId);
-    }
+  // Grid Climber: must gain >= 3 places; all drivers tied at the max climb share the bonus
+  const climbs = eligible
+    .filter(e => e.qualifyingPosition)
+    .map(e => ({ racerId: parseInt(e.racerId), climb: parseInt(e.qualifyingPosition) - parseInt(e.position) }))
+    .filter(c => c.climb >= 3);
+  const gridClimberRacerIds: number[] = [];
+  if (climbs.length > 0) {
+    const maxClimb = Math.max(...climbs.map(c => c.climb));
+    climbs.filter(c => c.climb === maxClimb).forEach(c => gridClimberRacerIds.push(c.racerId));
   }
 
-  return { fastestLapRacerId, gridClimberRacerId };
+  return { fastestLapRacerId, gridClimberRacerIds };
 }
 
 interface ResultEntry {
@@ -529,7 +526,7 @@ function ResultsEditor({
   const { toast } = useToast();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedFastestLap, setSelectedFastestLap] = useState<string>("none");
-  const [selectedGridClimber, setSelectedGridClimber] = useState<string>("none");
+  const [selectedGridClimbers, setSelectedGridClimbers] = useState<string[]>([]);
 
   const [entries, setEntries] = useState<ResultEntry[]>(() => {
     if (existingResults.length > 0) {
@@ -572,21 +569,21 @@ function ResultsEditor({
   };
 
   const handleSave = () => {
-    const { fastestLapRacerId, gridClimberRacerId } = detectBonuses(entries);
+    const { fastestLapRacerId, gridClimberRacerIds } = detectBonuses(entries);
     setSelectedFastestLap(fastestLapRacerId !== null ? String(fastestLapRacerId) : "none");
-    setSelectedGridClimber(gridClimberRacerId !== null ? String(gridClimberRacerId) : "none");
+    setSelectedGridClimbers(gridClimberRacerIds.map(String));
     setBonusDialogOpen(true);
   };
 
   const confirmAndSave = () => {
     const flId = selectedFastestLap !== "none" ? parseInt(selectedFastestLap) : null;
-    const gcId = selectedGridClimber !== "none" ? parseInt(selectedGridClimber) : null;
+    const gcIds = new Set(selectedGridClimbers.map(Number));
     const resultsData = entries
       .filter(e => e.racerId)
       .map(e => {
         const racerId = parseInt(e.racerId);
         const isFastest = flId === racerId;
-        const isGridClimber = gcId === racerId;
+        const isGridClimber = gcIds.has(racerId);
         return {
           racerId,
           position: parseInt(e.position),
@@ -758,19 +755,28 @@ function ResultsEditor({
                 <TrendingUp className="w-4 h-4 text-green-400" /> Grid Climber
                 <span className="text-muted-foreground font-normal">+3 pts</span>
               </div>
-              <Select value={selectedGridClimber} onValueChange={setSelectedGridClimber}>
-                <SelectTrigger className="bg-secondary/30">
-                  <SelectValue placeholder="Select driver" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {nonDnfDrivers.map(e => (
-                    <SelectItem key={e.racerId} value={e.racerId}>
-                      {getDriverName(parseInt(e.racerId))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1 max-h-40 overflow-y-auto rounded border border-white/10 p-2">
+                {nonDnfDrivers.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No eligible drivers</p>
+                )}
+                {nonDnfDrivers.map(e => (
+                  <label key={e.racerId} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-white/5">
+                    <input
+                      type="checkbox"
+                      checked={selectedGridClimbers.includes(e.racerId)}
+                      onChange={(ev) => {
+                        if (ev.target.checked) {
+                          setSelectedGridClimbers(prev => [...prev, e.racerId]);
+                        } else {
+                          setSelectedGridClimbers(prev => prev.filter(id => id !== e.racerId));
+                        }
+                      }}
+                      className="w-4 h-4 accent-green-500"
+                    />
+                    <span className="text-sm">{getDriverName(parseInt(e.racerId))}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-2">
