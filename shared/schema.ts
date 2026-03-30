@@ -94,6 +94,7 @@ export const results = pgTable("results", {
   dnf: boolean("dnf").default(false),
   fastestLap: boolean("fastest_lap").default(false),
   gridClimber: boolean("grid_climber").default(false),
+  blackFlag: boolean("black_flag").default(false),
 });
 
 // Tiered Leagues - groups drivers into tiers with promotion/relegation

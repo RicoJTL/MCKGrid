@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift, Check, X, Sparkles } from "lucide-react";
+import { Pencil, Users, Shield, Plus, Trash2, Crown, ShieldCheck, Camera, Award, Gift, Check, X, Sparkles, KeyRound } from "lucide-react";
 import { getBadgeIcon } from "@/components/badge-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -302,6 +302,8 @@ export default function AdminPanel() {
   const [editingBadge, setEditingBadge] = useState<BadgeType | null>(null);
   const [showCreateIcon, setShowCreateIcon] = useState(false);
   const [editingIcon, setEditingIcon] = useState<DriverIcon | null>(null);
+  const [resetPasswordProfile, setResetPasswordProfile] = useState<any>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
   
   const [newBadge, setNewBadge] = useState({ slug: '', name: '', description: '', category: 'milestones' as const, iconName: 'Trophy', iconColor: '#fbbf24', criteria: '' });
   const [newIcon, setNewIcon] = useState({ slug: '', name: '', description: '', iconName: 'Crown', iconColor: '#fbbf24' });
@@ -316,6 +318,20 @@ export default function AdminPanel() {
   
   const isSuperAdmin = currentProfile?.adminLevel === 'super_admin';
   
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ id, newPassword }: { id: number; newPassword: string }) => {
+      return apiRequest("POST", `/api/profiles/${id}/reset-password`, { newPassword });
+    },
+    onSuccess: () => {
+      setResetPasswordProfile(null);
+      setResetPasswordValue("");
+      toast({ title: "Password reset", description: "The user's password has been updated." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to reset password", description: error.message, variant: "destructive" });
+    },
+  });
+
   const updateProfileImage = useMutation({
     mutationFn: async ({ id, profileImage }: { id: number; profileImage: string }) => {
       await apiRequest("PATCH", `/api/profiles/${id}/profile-image`, { profileImage });
@@ -660,6 +676,18 @@ export default function AdminPanel() {
                               >
                                 <Pencil className="w-4 h-4" />
                               </Button>
+                              {isSuperAdmin && profile.userId && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-blue-400 hover:text-blue-300"
+                                  onClick={() => { setResetPasswordProfile(profile); setResetPasswordValue(""); }}
+                                  data-testid={`button-reset-password-${profile.id}`}
+                                  title="Reset Password"
+                                >
+                                  <KeyRound className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
                                 size="icon"
@@ -1029,6 +1057,46 @@ export default function AdminPanel() {
                 data-testid="button-confirm-delete"
               >
                 {deleteProfile.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Dialog */}
+        <Dialog open={!!resetPasswordProfile} onOpenChange={(open) => { if (!open) { setResetPasswordProfile(null); setResetPasswordValue(""); } }}>
+          <DialogContent className="bg-card border-white/10">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-400" /> Reset Password
+              </DialogTitle>
+              <DialogDescription>
+                Set a new password for {resetPasswordProfile?.driverName || resetPasswordProfile?.fullName || "this user"}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  className="bg-secondary/30"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => { setResetPasswordProfile(null); setResetPasswordValue(""); }}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={resetPasswordValue.length < 8 || resetPasswordMutation.isPending}
+                onClick={() => resetPasswordMutation.mutate({ id: resetPasswordProfile.id, newPassword: resetPasswordValue })}
+              >
+                <KeyRound className="w-4 h-4 mr-2" />
+                {resetPasswordMutation.isPending ? "Saving..." : "Reset Password"}
               </Button>
             </div>
           </DialogContent>

@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -203,6 +203,21 @@ export async function registerRoutes(
     }
     const updated = await storage.updateProfile(Number(req.params.id), { profileImage });
     res.json(updated);
+  });
+
+  // Super Admin: Reset a user's password
+  app.post("/api/profiles/:id/reset-password", requireSuperAdmin, async (req: any, res) => {
+    const { newPassword } = req.body;
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: "newPassword must be at least 8 characters" });
+    }
+    const targetProfile = await storage.getProfileById(Number(req.params.id));
+    if (!targetProfile) return res.status(404).json({ error: "Profile not found" });
+    if (!targetProfile.userId) return res.status(400).json({ error: "This account has no login — cannot reset password" });
+    const bcrypt = await import("bcryptjs");
+    const hash = await bcrypt.hash(newPassword, 12);
+    await authStorage.setUserPassword(targetProfile.userId, hash);
+    res.sendStatus(204);
   });
 
   // Get profile race history (only accessible to profile owner or admins)
@@ -492,17 +507,22 @@ export async function registerRoutes(
 
   app.patch("/api/races/:id", requireAdmin, async (req, res) => {
     const { name, location, date, status } = req.body;
+    const existingRace = await storage.getRace(Number(req.params.id));
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (location !== undefined) data.location = location;
     if (date !== undefined) data.date = new Date(date);
     if (status !== undefined) data.status = status;
     const updated = await storage.updateRace(Number(req.params.id), data);
-    // Notify if cancelled or rescheduled
+    // Notify if cancelled or rescheduled (only if date actually changed)
     if (status === 'cancelled') {
       await notifyAllRacers('race_cancelled', '❌ Race Cancelled', `${updated.name} has been cancelled.`, { raceId: updated.id });
-    } else if (date !== undefined) {
-      await notifyAllRacers('race_rescheduled', '📅 Race Rescheduled', `${updated.name} has been rescheduled. Check the new date.`, { raceId: updated.id });
+    } else if (date !== undefined && existingRace) {
+      const oldTime = new Date(existingRace.date).getTime();
+      const newTime = new Date(date).getTime();
+      if (oldTime !== newTime) {
+        await notifyAllRacers('race_rescheduled', '📅 Race Rescheduled', `${updated.name} has been rescheduled. Check the new date.`, { raceId: updated.id });
+      }
     }
     res.json(updated);
   });

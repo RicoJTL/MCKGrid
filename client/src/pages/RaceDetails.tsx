@@ -291,6 +291,7 @@ export default function RaceDetails() {
                       <span className="flex items-center justify-end gap-1">
                         {result.fastestLap && <Zap className="w-3 h-3 text-yellow-400 shrink-0" title="Fastest Lap +1pt" />}
                         {result.gridClimber && <TrendingUp className="w-3 h-3 text-green-400 shrink-0" title="Grid Climber +3pts" />}
+                        {result.blackFlag && <Flag className="w-3 h-3 fill-current text-white shrink-0" title="Black Flag -5pts" />}
                         {result.points}
                       </span>
                     </TableCell>
@@ -527,6 +528,7 @@ function ResultsEditor({
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedFastestLap, setSelectedFastestLap] = useState<string>("none");
   const [selectedGridClimbers, setSelectedGridClimbers] = useState<string[]>([]);
+  const [selectedBlackFlag, setSelectedBlackFlag] = useState<string>("none");
 
   const [entries, setEntries] = useState<ResultEntry[]>(() => {
     if (existingResults.length > 0) {
@@ -536,7 +538,7 @@ function ResultsEditor({
         qualifyingPosition: r.qualifyingPosition ? String(r.qualifyingPosition) : "",
         raceTime: r.raceTime || "",
         bestLapTime: r.bestLapTime || "",
-        points: String(r.points - (r.fastestLap ? 1 : 0) - (r.gridClimber ? 3 : 0)),
+        points: String(r.points - (r.fastestLap ? 1 : 0) - (r.gridClimber ? 3 : 0) + (r.blackFlag ? 5 : 0)),
         dnf: r.dnf || false
       }));
     }
@@ -572,28 +574,33 @@ function ResultsEditor({
     const { fastestLapRacerId, gridClimberRacerIds } = detectBonuses(entries);
     setSelectedFastestLap(fastestLapRacerId !== null ? String(fastestLapRacerId) : "none");
     setSelectedGridClimbers(gridClimberRacerIds.map(String));
+    const existingBlackFlagResult = existingResults.find(r => r.blackFlag);
+    setSelectedBlackFlag(existingBlackFlagResult ? String(existingBlackFlagResult.racerId) : "none");
     setBonusDialogOpen(true);
   };
 
   const confirmAndSave = () => {
     const flId = selectedFastestLap !== "none" ? parseInt(selectedFastestLap) : null;
     const gcIds = new Set(selectedGridClimbers.map(Number));
+    const bfId = selectedBlackFlag !== "none" ? parseInt(selectedBlackFlag) : null;
     const resultsData = entries
       .filter(e => e.racerId)
       .map(e => {
         const racerId = parseInt(e.racerId);
         const isFastest = flId === racerId;
         const isGridClimber = gcIds.has(racerId);
+        const hasBlackFlag = bfId === racerId;
         return {
           racerId,
           position: parseInt(e.position),
           qualifyingPosition: e.qualifyingPosition ? parseInt(e.qualifyingPosition) : null,
           raceTime: e.raceTime || null,
           bestLapTime: e.bestLapTime || null,
-          points: parseInt(e.points) + (isFastest ? 1 : 0) + (isGridClimber ? 3 : 0),
+          points: parseInt(e.points) + (isFastest ? 1 : 0) + (isGridClimber ? 3 : 0) - (hasBlackFlag ? 5 : 0),
           dnf: e.dnf,
           fastestLap: isFastest,
           gridClimber: isGridClimber,
+          blackFlag: hasBlackFlag,
         };
       });
     setBonusDialogOpen(false);
@@ -777,6 +784,25 @@ function ResultsEditor({
                   </label>
                 ))}
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <Flag className="w-4 h-4 fill-current text-white" /> Black Flag
+                <span className="text-destructive font-normal">-5 pts</span>
+              </div>
+              <Select value={selectedBlackFlag} onValueChange={setSelectedBlackFlag}>
+                <SelectTrigger className="bg-secondary/30">
+                  <SelectValue placeholder="Select driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {entries.filter(e => e.racerId).map(e => (
+                    <SelectItem key={e.racerId} value={e.racerId}>
+                      {getDriverName(parseInt(e.racerId))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex gap-2 justify-end pt-2">
