@@ -15,17 +15,29 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 
+// Wrap lazy imports to auto-reload if a stale chunk causes a load failure
+function lazyWithReload<T extends React.ComponentType<any>>(
+  fn: () => Promise<{ default: T }>
+) {
+  return lazy(() =>
+    fn().catch(() => {
+      window.location.reload();
+      return new Promise<{ default: T }>(() => {});
+    })
+  );
+}
+
 // Lazy load other pages
-const LeaguesPage = lazy(() => import("@/pages/LeaguesPage"));
-const LeagueDetails = lazy(() => import("@/pages/LeagueDetails"));
-const CompetitionDetails = lazy(() => import("@/pages/CompetitionDetails"));
-const RaceDetails = lazy(() => import("@/pages/RaceDetails"));
-const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
-const PublicProfilePage = lazy(() => import("@/pages/PublicProfilePage"));
-const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
-const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
-const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const LeaguesPage = lazyWithReload(() => import("@/pages/LeaguesPage"));
+const LeagueDetails = lazyWithReload(() => import("@/pages/LeagueDetails"));
+const CompetitionDetails = lazyWithReload(() => import("@/pages/CompetitionDetails"));
+const RaceDetails = lazyWithReload(() => import("@/pages/RaceDetails"));
+const ProfilePage = lazyWithReload(() => import("@/pages/ProfilePage"));
+const PublicProfilePage = lazyWithReload(() => import("@/pages/PublicProfilePage"));
+const AdminPanel = lazyWithReload(() => import("@/pages/AdminPanel"));
+const LoginPage = lazyWithReload(() => import("@/pages/LoginPage"));
+const RegisterPage = lazyWithReload(() => import("@/pages/RegisterPage"));
+const NotificationsPage = lazyWithReload(() => import("@/pages/NotificationsPage"));
 
 function PageLoader() {
   return (

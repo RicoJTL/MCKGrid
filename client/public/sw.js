@@ -1,6 +1,5 @@
-const CACHE_NAME = 'mck-grid-v5';
+const CACHE_NAME = 'mck-grid-v6';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/favicon.png',
   '/icons/icon-192.svg',
@@ -47,9 +46,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
+  const url = new URL(event.request.url);
+
+  // Network-first for HTML navigation and JS/CSS chunks (these change on every deploy)
+  if (event.request.mode === 'navigate' || url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      fetch(event.request).then((response) => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -57,9 +59,24 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
 
-      return cached || fetchPromise;
+  // Cache-first for immutable static assets (icons, manifest, fonts)
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      });
     })
   );
 });
